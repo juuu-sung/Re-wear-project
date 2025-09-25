@@ -1,36 +1,68 @@
-# --- Frontend (Expo RN)
+# ---------- macOS / Editors ----------
+.DS_Store
+.vscode/
+.idea/
+
+# ---------- Frontend (Expo RN) ----------
 node_modules/
 .expo/
 .expo-shared/
-.vscode/
-.idea/
-.DS_Store
+dist/
+build/
+coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-dist/
-build/
-.env
 
-# --- Backend (FastAPI)
+# ---------- Python / Backend (FastAPI) ----------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# venv
+.venv/
 backend/.venv/
 backend/venv/
+
+# env files
+.env
+.env.*
+backend/.env
+
+# backend caches
 backend/__pycache__/
 backend/app/__pycache__/
 backend/.pytest_cache/
 backend/.mypy_cache/
 backend/.ruff_cache/
-backend/.env
+
+# backend builds & logs
 backend/dist/
 backend/build/
 backend/logs/
-backend/uploads/
+backend/*.log
+
+# DB artifacts
 backend/*.db
 backend/*.sqlite*
-backend/*.log
-backend/models/**/*.pt
-backend/models/**/*.pth
-backend/models/**/*.onnx
-backend/models/**/*.engine
-backend/models/**/*.ckpt
-backend/models/**/*.bin
+
+# ---------- Models (weights/artifacts) ----------
+backend/app/models/**
+!backend/app/models/.gitkeep
+backend/models/**
+!backend/models/.gitkeep
+backend/**/models/**/*.pt
+backend/**/models/**/*.pth
+backend/**/models/**/*.onnx
+backend/**/models/**/*.engine
+backend/**/models/**/*.ckpt
+backend/**/models/**/*.bin
+
+# ---------- Uploads / Cache (runtime only) ----------
+backend/app/data/uploads/**
+backend/app/data/cache/**
+!backend/app/data/uploads/.gitkeep
+!backend/app/data/cache/.gitkeep
+backend/uploads/**
+!backend/uploads/.gitkeep
