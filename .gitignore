@@ -1,5 +1,31 @@
+# venv & 캐시
 .venv/
+venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 환경변수
 .env
+
+# 빌드/산출물
+dist/
+build/
+.coverage
+
+# OS/IDE
 .DS_Store
+.idea/
+.vscode/
+
+# 모델/데이터/로그 (가중치 등은 LFS 쓰지 않으면 커밋 금지)
+models/**/*.pt
+models/**/*.pth
+models/**/*.onnx
+models/**/*.engine
+models/**/*.ckpt
+models/**/*.bin
+uploads/
+logs/
