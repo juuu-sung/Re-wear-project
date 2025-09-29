@@ -50,8 +50,10 @@ backend/*.sqlite*
 # ---------- Models (weights/artifacts) ----------
 backend/app/models/**
 !backend/app/models/.gitkeep
+# (과거 경로 호환)
 backend/models/**
 !backend/models/.gitkeep
+# 확장자별 백업
 backend/**/models/**/*.pt
 backend/**/models/**/*.pth
 backend/**/models/**/*.onnx
@@ -64,5 +66,6 @@ backend/app/data/uploads/**
 backend/app/data/cache/**
 !backend/app/data/uploads/.gitkeep
 !backend/app/data/cache/.gitkeep
+# (과거 경로 호환)
 backend/uploads/**
 !backend/uploads/.gitkeep
