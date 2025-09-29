@@ -1,31 +1,36 @@
-# venv & 캐시
-.venv/
-venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# 환경변수
-.env
-
-# 빌드/산출물
+# --- Frontend (Expo RN)
+node_modules/
+.expo/
+.expo-shared/
+.vscode/
+.idea/
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 dist/
 build/
-.coverage
+.env
 
-# OS/IDE
-.DS_Store
-.idea/
-.vscode/
-
-# 모델/데이터/로그 (가중치 등은 LFS 쓰지 않으면 커밋 금지)
-models/**/*.pt
-models/**/*.pth
-models/**/*.onnx
-models/**/*.engine
-models/**/*.ckpt
-models/**/*.bin
-uploads/
-logs/
+# --- Backend (FastAPI)
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.env
+backend/dist/
+backend/build/
+backend/logs/
+backend/uploads/
+backend/*.db
+backend/*.sqlite*
+backend/*.log
+backend/models/**/*.pt
+backend/models/**/*.pth
+backend/models/**/*.onnx
+backend/models/**/*.engine
+backend/models/**/*.ckpt
+backend/models/**/*.bin
