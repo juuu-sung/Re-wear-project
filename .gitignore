@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ---------- macOS / Editors ----------
 .DS_Store
 .vscode/
@@ -63,10 +64,31 @@ backend/**/models/**/*.ckpt
 backend/**/models/**/*.bin
 
 # ---------- Uploads / Cache (runtime only) ----------
+=======
+# venv
+backend/.venv/
+# OS/editor
+.DS_Store
+.vscode/
+__pycache__/
+*.pyc
+
+# 모델 가중치/대용량
+backend/app/models/**
+!backend/app/models/.gitkeep
+*.pt
+*.pth
+*.onnx
+
+# 업로드/캐시
+>>>>>>> 0f10dfd (feat: add backend FastAPI skeleton)
 backend/app/data/uploads/**
 backend/app/data/cache/**
 !backend/app/data/uploads/.gitkeep
 !backend/app/data/cache/.gitkeep
+<<<<<<< HEAD
 # 과거 구조 대비
 backend/uploads/**
 !backend/uploads/.gitkeep
+=======
+>>>>>>> 0f10dfd (feat: add backend FastAPI skeleton)
