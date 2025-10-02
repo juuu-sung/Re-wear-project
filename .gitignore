@@ -1,71 +1,43 @@
-# ---------- macOS / Editors ----------
-.DS_Store
-.vscode/
-.idea/
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# ---------- Frontend (Expo RN) ----------
+# dependencies
 node_modules/
+
+# Expo
 .expo/
-.expo-shared/
 dist/
-build/
-coverage/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+web-build/
+expo-env.d.ts
 
-# ---------- Python / Backend (FastAPI) ----------
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
-# venv
-.venv/
-backend/.venv/
-backend/venv/
+# Metro
+.metro-health-check*
 
-# env files
-.env
-.env.*
-backend/.env
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 
-# backend caches
-backend/__pycache__/
-backend/app/__pycache__/
-backend/.pytest_cache/
-backend/.mypy_cache/
-backend/.ruff_cache/
+# macOS
+.DS_Store
+*.pem
 
-# backend builds & logs
-backend/dist/
-backend/build/
-backend/logs/
-backend/*.log
+# local env files
+.env*.local
 
-# DB artifacts
-backend/*.db
-backend/*.sqlite*
+# typescript
+*.tsbuildinfo
 
-# ---------- Models (weights/artifacts) ----------
-backend/app/models/**
-!backend/app/models/.gitkeep
-# (과거 경로 호환)
-backend/models/**
-!backend/models/.gitkeep
-# 확장자별 백업
-backend/**/models/**/*.pt
-backend/**/models/**/*.pth
-backend/**/models/**/*.onnx
-backend/**/models/**/*.engine
-backend/**/models/**/*.ckpt
-backend/**/models/**/*.bin
+app-example
 
-# ---------- Uploads / Cache (runtime only) ----------
-backend/app/data/uploads/**
-backend/app/data/cache/**
-!backend/app/data/uploads/.gitkeep
-!backend/app/data/cache/.gitkeep
-# (과거 경로 호환)
-backend/uploads/**
-!backend/uploads/.gitkeep
+# generated native folders
+/ios
+/android
