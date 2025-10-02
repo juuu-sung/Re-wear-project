@@ -1,69 +1,75 @@
 // app/profile.js
 
-import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
-import { useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react'; // useState를 추가합니다.
+import { SafeAreaView, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'; // Switch를 추가합니다.
 
-function ProfileScreen() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(true);
+// 사용할 SVG 아이콘들을 불러옵니다.
+import ChevronIcon from '../assets/icons/chevron-forward.svg';
+import PencilIcon from '../assets/icons/pencil.svg';
+
+// 클릭하면 다른 페이지로 이동하는 메뉴
+const accountMenuItems = [
+  { id: '1', title: '계정 정보 변경', screen: '/account-settings' },
+  { id: '2', title: '로그아웃', screen: '/logout' },
+];
+
+export default function ProfileScreen() {
+  // 토글 버튼의 상태를 관리하는 useState
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ title: '프로필' }} />
-      <ScrollView style={styles.container}>
-        {/* 프로필 정보 섹션 */}
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        {/* 상단 프로필 정보 섹션 */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            <View style={styles.profileImagePlaceholder} />
+            <View style={styles.profileImagePlaceholder} /> 
             <TouchableOpacity style={styles.editIcon}>
-              <Ionicons name="pencil" size={18} color="#333" />
+              <PencilIcon width={18} height={18} stroke="#333" />
             </TouchableOpacity>
           </View>
           <Text style={styles.name}>한태희</Text>
           <Text style={styles.email}>xogml4180@gmail.com</Text>
         </View>
 
-        {/* 설정 섹션 */}
-        <View style={styles.section}>
+        {/* 설정 섹션 (토글 버튼) */}
+        <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>설정</Text>
-          <View style={styles.card}>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>알림 설정</Text>
+          <View style={styles.menuCard}>
+            {/* 테마 설정 */}
+            <View style={styles.menuRow}>
+              <Text style={styles.menuText}>테마</Text>
               <Switch
-                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                thumbColor={notificationsEnabled ? "#f5dd4b" : "#f4f3f4"}
-                onValueChange={() => setNotificationsEnabled(previousState => !previousState)}
-                value={notificationsEnabled}
+                trackColor={{ false: "#767577", true: "green" }}
+                thumbColor={isDarkMode ? "white" : "#f4f3f4"}
+                onValueChange={() => setIsDarkMode(previousState => !previousState)}
+                value={isDarkMode}
               />
             </View>
-            <View style={styles.divider} />
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>테마 변경</Text>
-              <Switch
-                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                thumbColor={darkModeEnabled ? "#f5dd4b" : "#f4f3f4"}
-                onValueChange={() => setDarkModeEnabled(previousState => !previousState)}
-                value={darkModeEnabled}
+            {/* 알림 설정 */}
+            <View style={[styles.menuRow, styles.noBorder]}>
+              <Text style={styles.menuText}>알림</Text>
+               <Switch
+                trackColor={{ false: "#767577", true: "green" }}
+                thumbColor={isNotificationsEnabled ? "white" : "#f4f3f4"}
+                onValueChange={() => setIsNotificationsEnabled(previousState => !previousState)}
+                value={isNotificationsEnabled}
               />
             </View>
-            <View style={styles.divider} />
-            <TouchableOpacity style={styles.row}>
-              <Text style={styles.rowLabel}>언어 변경</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
           </View>
         </View>
 
-        {/* 계정 관리 섹션 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>계정 관리</Text>
-          <View style={styles.card}>
-            <TouchableOpacity style={styles.row}>
-              <Text style={styles.rowLabel}>비밀번호 변경</Text>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
+        {/* 계정 섹션 (페이지 이동 버튼) */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>계정</Text>
+          <View style={styles.menuCard}>
+            {accountMenuItems.map((item, index) => (
+              <TouchableOpacity key={item.id} style={[styles.menuRow, index === accountMenuItems.length - 1 && styles.noBorder]}>
+                <Text style={styles.menuText}>{item.title}</Text>
+                <ChevronIcon width={20} height={20} fill="#ccc" />
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -73,24 +79,24 @@ function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f0f0f0' },
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+  },
   profileSection: {
+    backgroundColor: 'white',
     alignItems: 'center',
     paddingVertical: 30,
-    backgroundColor: 'white',
-    marginBottom: 10,
   },
   profileImageContainer: {
+    position: 'relative',
     marginBottom: 15,
   },
   profileImagePlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#e9e9e9',
   },
   editIcon: {
     position: 'absolute',
@@ -98,39 +104,46 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: 'white',
     borderRadius: 15,
-    padding: 5,
+    padding: 6,
     borderWidth: 1,
     borderColor: '#eee'
   },
-  name: { fontSize: 22, fontWeight: 'bold' },
-  email: { fontSize: 16, color: 'gray', marginTop: 5 },
-  section: {
-    marginTop: 20,
+  name: {
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  email: {
+    fontSize: 16,
+    color: 'gray',
+    marginTop: 5,
+  },
+  menuSection: {
+    marginTop: 25,
     paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 14,
     color: 'gray',
     marginBottom: 10,
-    marginLeft: 5,
+    marginLeft: 10,
   },
-  card: {
+  menuCard: {
     backgroundColor: 'white',
     borderRadius: 10,
   },
-  row: {
+  menuRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
   },
-  rowLabel: { fontSize: 16 },
-  divider: {
-    height: 1,
-    backgroundColor: '#f0f0f0',
-    marginHorizontal: 15,
+  noBorder: {
+    borderBottomWidth: 0,
+  },
+  menuText: {
+    fontSize: 16,
   },
 });
-
-export default ProfileScreen;

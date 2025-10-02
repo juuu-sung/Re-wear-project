@@ -1,36 +1,52 @@
 // app/(tabs)/_layout.js
 
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+
+// SVG 아이콘들을 불러옵니다.
+import CalendarIcon from '../../assets/icons/calendar.svg';
+import HomeIcon from '../../assets/icons/home.svg';
+import ShirtIcon from '../../assets/icons/shirt.svg'; // 옷장 아이콘
+import SyncGrayIcon from '../../assets/icons/sync-circle-gray.svg';
+import SyncGreenIcon from '../../assets/icons/sync-circle-green.svg';
 
 export default function TabsLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: 'green',
-      }}
-    >
+    <Tabs screenOptions={{ tabBarActiveTintColor: 'green' }}>
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
+          title: '홈',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <HomeIcon width={24} height={24} fill={color} />,
         }}
       />
       <Tabs.Screen
         name="closet"
         options={{
-          // 이 옵션이 closet 폴더의 자체 _layout.js를 사용하게 만듭니다.
           headerShown: false,
-          title: 'Closet',
-          tabBarIcon: ({ color }) => <Ionicons name="shirt" size={24} color={color} />,
+          title: '옷장',
+          tabBarIcon: ({ color }) => <ShirtIcon width={24} height={24} fill={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="recycle"
+        options={{
+          headerShown: false,
+          title: '순환',
+          tabBarIcon: ({ focused }) => 
+            focused ? (
+              <SyncGreenIcon width={24} height={24} />
+            ) : (
+              <SyncGrayIcon width={24} height={24} />
+            ),
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Calendar',
-          tabBarIcon: ({ color }) => <Ionicons name="calendar" size={24} color={color} />,
+          title: '캘린더',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <CalendarIcon width={24} height={24} fill={color} />,
         }}
       />
     </Tabs>
