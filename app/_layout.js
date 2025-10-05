@@ -10,6 +10,9 @@ export default function RootLayout() {
       
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ title: '프로필', headerBackTitleVisible: false, }} />
+
+      <Stack.Screen name="care-label-result" options={{ title: '케어라벨 분석 결과', headerBackTitleVisible: false }} />
+      
       <Stack.Screen name="upcycling" options={{ title: '업사이클링', headerBackTitleVisible: false }} />
       <Stack.Screen name="reform" options={{ title: '리폼', headerBackTitleVisible: false }} />
     </Stack>

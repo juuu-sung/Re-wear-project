@@ -1,28 +1,29 @@
 // app/(tabs)/closet/index.js
 
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import AddIcon from '../../../assets/icons/add.svg';
 
 // 임시 옷 데이터
 const clothesData = [
-  { id: '1', name: '소라색 얇은 니트', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '2', name: '스트라이프 니트', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '3', name: '네이비 카라티', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '4', name: '회색 맨투맨', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '5', name: '블랙 슬랙스', category: '하의', image: 'https://via.placeholder.com/150' },
-  { id: '6', name: '청바지', category: '하의', image: 'https://via.placeholder.com/150' },
+  { id: '1', name: '소라색 얇은 니트', category: '상의', image: require('../../../assets/clothes/sora_knit.jpg'), method: '드라이클리닝 권장, 찬물 손세탁 가능' },
+  { id: '2', name: '스트라이프 니트', category: '상의', image: require('../../../assets/clothes/stripe_knit.jpg'), method: '세탁기 사용 가능 (울코스)' },
+  { id: '3', name: '네이비 카라티', category: '상의', image: require('../../../assets/clothes/navy_t.jpg'), method: '찬물 단독 세탁' },
+  { id: '4', name: '회색 맨투맨', category: '상의', image: require('../../../assets/clothes/gray_mtm.jpg'), method: '세탁기 사용 가능' },
+  { id: '5', name: '블랙 슬랙스', category: '하의', image: require('../../../assets/clothes/slacks.jpg') },
+  { id: '6', name: '청바지', category: '하의', image: require('../../../assets/clothes/jeans.jpg') },
 ];
 
 export default function ClosetScreen() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('상의');
   
-  // 활성화된 카테고리에 맞는 옷만 필터링
   const filteredClothes = clothesData.filter(item => item.category === activeCategory);
 
+  // '+' 버튼 눌렀을 때 실행될 함수
   const handleAddPress = () => {
     Alert.alert(
       "새 옷 추가",
@@ -69,12 +70,11 @@ export default function ClosetScreen() {
       router.push({ pathname: '/closet/add', params: { imageUri: result.assets[0].uri } });
     }
   };
-  
-  // 그리드 아이템 렌더링 함수
+
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.itemContainer} 
-      onPress={() => router.push(`/closet/${item.id}`)} // 상세 페이지로 이동
+      onPress={() => router.push(`/closet/${item.id}`)}
     >
       <Image source={{ uri: item.image }} style={styles.itemImage} />
       <Text style={styles.itemName}>{item.name}</Text>
@@ -87,7 +87,6 @@ export default function ClosetScreen() {
         <Text style={styles.headerTitle}>옷장</Text>
       </View>
 
-      {/* 카테고리 선택 탭 */}
       <View style={styles.categoryContainer}>
         {['상의', '하의', '아우터', '신발'].map(category => (
           <TouchableOpacity key={category} onPress={() => setActiveCategory(category)}>
@@ -103,17 +102,15 @@ export default function ClosetScreen() {
         ))}
       </View>
 
-      {/* 옷 목록 그리드 */}
       <FlatList
         data={filteredClothes}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        numColumns={2} // 2열 그리드
+        numColumns={2}
         contentContainerStyle={styles.gridContainer}
       />
 
-      {/* 옷 추가 버튼 */}
-      <TouchableOpacity style={styles.addButton} onPress={() => router.push('/closet/add')}>
+      <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
         <AddIcon width={32} height={32} fill="white" />
       </TouchableOpacity>
     </SafeAreaView>

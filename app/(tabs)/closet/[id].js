@@ -7,12 +7,12 @@ import PencilIcon from '../../../assets/icons/pencil.svg';
 
 // 옷장 목록과 동일한 데이터를 사용해야 합니다. (나중에는 DB에서 가져옵니다)
 const clothesData = [
-  { id: '1', name: '소라색 얇은 니트', category: '상의', image: 'https://image.msscdn.net/images/goods_img/20220221/2372473/2372473_16777385535313_500.jpg', method: '드라이클리닝 권장, 찬물 손세탁 가능' },
-  { id: '2', name: '스트라이프 니트', category: '상의', image: 'https://image.msscdn.net/images/goods_img/20230823/3490981/3490981_16927763668894_500.jpg', method: '세탁기 사용 가능 (울코스)' },
-  { id: '3', name: '네이비 카라티', category: '상의', image: 'https://image.msscdn.net/images/goods_img/20230307/3120121/3120121_16853247352319_500.jpg', method: '찬물 단독 세탁' },
-  { id: '4', name: '회색 맨투맨', category: '상의', image: 'https://image.msscdn.net/images/goods_img/20210823/2072120/2072120_1_500.jpg', method: '세탁기 사용 가능' },
-  { id: '5', name: '블랙 슬랙스', category: '하의', image: 'https://image.msscdn.net/images/goods_img/20230321/3163339/3163339_16934661858567_500.jpg', method: '드라이클리닝' },
-  { id: '6', name: '청바지', category: '하의', image: 'https://image.msscdn.net/images/goods_img/20220818/2722137/2722137_1_500.jpg', method: '찬물 세탁, 뒤집어서 세탁' },
+  { id: '1', name: '소라색 얇은 니트', category: '상의', image: require('../../../assets/clothes/sora_knit.jpg'), method: '드라이클리닝 권장, 찬물 손세탁 가능' },
+  { id: '2', name: '스트라이프 니트', category: '상의', image: require('../../../assets/clothes/stripe_knit.jpg'), method: '세탁기 사용 가능 (울코스)' },
+  { id: '3', name: '네이비 카라티', category: '상의', image: require('../../../assets/clothes/navy_t.jpg'), method: '찬물 단독 세탁' },
+  { id: '4', name: '회색 맨투맨', category: '상의', image: require('../../../assets/clothes/gray_mtm.jpg'), method: '세탁기 사용 가능' },
+  { id: '5', name: '블랙 슬랙스', category: '하의', image: require('../../../assets/clothes/slacks.jpg'), method: '드라이클리닝' },
+  { id: '6', name: '청바지', category: '하의', image: require('../../../assets/clothes/jeans.jpg'), method: '찬물 세탁, 뒤집어서 세탁' },
 ];
 
 export default function ClothDetailScreen() {
