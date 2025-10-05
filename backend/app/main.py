@@ -1,11 +1,32 @@
 # backend/app/main.py
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator
 from typing import List, Literal, Optional
 from datetime import date, datetime
+from pathlib import Path
 
+from app.db import Base, SessionLocal
+from app.routers import event as event_router, user as user_router, auth as auth_router
+
+from alembic import command
+from alembic.config import Config
 app = FastAPI(title="ReWear API", version="0.1.0")
+
+# DB 세션 의존성
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def run_migrations():
+    backend_dir = Path(__file__).resolve().parents[1]
+    cfg = Config(str(backend_dir / "alembic.ini"))
+    command.upgrade(cfg, "head")
 
 # --- CORS: 초기 개발 단계라 전체 허용(추후 도메인 제한) ---
 app.add_middleware(
@@ -33,33 +54,12 @@ class MaterialResp(BaseModel):
     material: str                 # 최종 예측 (예: "wool_knit")
     topk: List[List]              # [["wool_knit", 0.81], ["cotton_knit", 0.12]]
 
-class Event(BaseModel):
-    user_id: int = 1
-    garment_id: Optional[int] = None
-    type: Literal["wear", "wash"]
-    date: date
-
-    @field_validator("date", mode="before")
-    @classmethod
-    def parse_date(cls, v):
-        # "YYYY-MM-DD" 문자열도 허용
-        if isinstance(v, str):
-            return datetime.fromisoformat(v).date()
-        return v
-
-class CalendarResp(BaseModel):
-    wear: List[str]
-    wash: List[str]
-
-# ---------- In-memory storage (데모용) ----------
-EVENTS: List[Event] = []
-
 # ---------- Endpoints ----------
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
 
-@app.post("/v1/infer/label", response_model=LabelGuide)
+@app.post("/infer/label", response_model=LabelGuide)
 def infer_label(img: Img):
     # TODO: 추후 YOLO/라벨 인식 모델로 교체
     return {
@@ -74,26 +74,20 @@ def infer_label(img: Img):
         }
     }
 
-@app.post("/v1/infer/material", response_model=MaterialResp)
+@app.post("/infer/material", response_model=MaterialResp)
 def infer_material(img: Img):
     # TODO: 추후 EfficientNet/소재 분류 모델로 교체
     return {"material": "wool_knit", "topk": [["wool_knit", 0.81], ["cotton_knit", 0.12]]}
 
-@app.post("/v1/events")
-def create_event(ev: Event):
-    EVENTS.append(ev)
-    return {"ok": True, "count": len(EVENTS)}
+@app.get("/test-db")
+def test_db(db: Session = Depends(get_db)):
+    result = db.connection().exec_driver_sql("SELECT 1").scalar()
+    return {"db_result": result}
 
-@app.get("/v1/calendar", response_model=CalendarResp)
-def get_calendar(month: str):
-    """month 형식: 'YYYY-MM'"""
-    try:
-        y, m = map(int, month.split("-"))
-    except Exception:
-        raise HTTPException(status_code=400, detail="month must be 'YYYY-MM'")
+@app.on_event("startup")
+def on_startup():
+    run_migrations()  # 운영/개발 공통으로 안전하게 최신 스키마 적용
 
-    wear, wash = [], []
-    for e in EVENTS:
-        if e.date.year == y and e.date.month == m:
-            (wear if e.type == "wear" else wash).append(e.date.isoformat())
-    return {"wear": wear, "wash": wash}
+app.include_router(user_router.router)
+app.include_router(auth_router.router)
+app.include_router(event_router.router)
