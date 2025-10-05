@@ -17,3 +17,9 @@ uvicorn==0.37.0
 uvloop==0.21.0
 watchfiles==1.1.0
 websockets==15.0.1
+sqlalchemy==2.0.34
+psycopg2-binary==2.9.9
+email-validator==2.2.0
+python-multipart==0.0.9
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
