@@ -1,0 +1,7 @@
+#!/Users/hongjusung/Desktop/3학년/2학기/PBL/Re-wear-project/backend/venv/bin/python3
+import sys
+from rsa.cli import decrypt
+if __name__ == '__main__':
+    if sys.argv[0].endswith('.exe'):
+        sys.argv[0] = sys.argv[0][:-4]
+    sys.exit(decrypt())
