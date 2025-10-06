@@ -8,7 +8,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from app.db import Base, SessionLocal
-from app.routers import event as event_router, user as user_router, auth as auth_router
+from app.routers import event as event_router, user as user_router, infer as infer_router
 
 from alembic import command
 from alembic.config import Config
@@ -88,6 +88,7 @@ def test_db(db: Session = Depends(get_db)):
 def on_startup():
     run_migrations()  # 운영/개발 공통으로 안전하게 최신 스키마 적용
 
-app.include_router(user_router.router)
-app.include_router(auth_router.router)
+app.include_router(user_router.router)       # /users/*
+app.include_router(user_router.auth_router)  # /auth/* (회원가입용)
 app.include_router(event_router.router)
+app.include_router(infer_router.router, prefix="/infer", tags=["infer"])

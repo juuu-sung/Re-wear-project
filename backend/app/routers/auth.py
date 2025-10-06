@@ -29,53 +29,39 @@ class LoginIn(BaseModel):
 @router.post("/register")
 def register(payload: RegisterIn, db: Session = Depends(get_db)):
     print("회원가입 시도:", payload.dict())
-    try:
-        # 1️⃣ 이메일 중복 확인
-        existing_user = db.query(User).filter(User.email == payload.email).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미 존재하는 이메일입니다."
-            )
 
-        # 2️⃣ 비밀번호 해시 후 새 유저 생성
+    # ✅ 1) 이메일 정규화 (공백 제거 + 소문자)
+    email_norm = payload.email.strip().lower()
+
+    try:
+        # ✅ 2) 중복 확인 (정규화된 이메일로)
+        existing_user = db.query(User).filter(User.email == email_norm).first()
+        if existing_user:
+            # 표준적으로 409 Conflict 권장
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                detail="이미 존재하는 이메일입니다.")
+
+        # ✅ 3) 비밀번호 해시 후 저장 (정규화 이메일로 저장)
         hashed_pw = pwd_context.hash(payload.password)
         user = User(
             name=payload.name,
-            email=payload.email,
+            email=email_norm,
             password=hashed_pw
         )
-
-        # 3️⃣ DB에 저장
         db.add(user)
         db.commit()
         db.refresh(user)
 
         print("✅ 저장 완료:", user.id, user.email)
-        return {
-            "msg": "회원가입이 완료되었습니다.",
-            "user": {"name": user.name, "email": user.email}
-        }
+        return {"msg": "회원가입이 완료되었습니다.",
+                "user": {"name": user.name, "email": user.email}}
 
     except IntegrityError as e:
         db.rollback()
-        print("❌ 무결성 오류:", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 존재하는 이메일입니다."
-        )
+        # ✅ 4) DB UNIQUE 제약과 충돌 시에도 동일 메시지
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail="이미 존재하는 이메일입니다.")
 
-    except HTTPException:
-        # 이미 위에서 발생한 예외는 FastAPI가 알아서 처리
-        raise
-
-    except Exception as e:
-        db.rollback()
-        print("❌ 알 수 없는 DB 오류:", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="DB 저장 실패: " + str(e)
-        )
 @router.post("/login")
 def login(payload: LoginIn, db: Session = Depends(get_db)):
     print("🔐 로그인 시도:", payload.dict())
