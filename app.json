@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "scheme": "rewear-project",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",  
+      "resizeMode": "contain",         
+      "backgroundColor": "#ffffff"    
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
