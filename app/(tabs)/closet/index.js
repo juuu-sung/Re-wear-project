@@ -1,8 +1,9 @@
 // app/(tabs)/closet/index.js
 
+import * as ImagePicker from 'expo-image-picker'; // ImagePicker 라이브러리 추가
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import AddIcon from '../../../assets/icons/add.svg';
 
@@ -113,7 +114,7 @@ export default function ClosetScreen() {
       />
 
       {/* 옷 추가 버튼 */}
-      <TouchableOpacity style={styles.addButton} onPress={() => router.push('/closet/add')}>
+      <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
         <AddIcon width={32} height={32} fill="white" />
       </TouchableOpacity>
     </SafeAreaView>
