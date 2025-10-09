@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, constr
 from typing import Optional
 from datetime import datetime
 
@@ -12,10 +12,15 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
 
-class UserOut(UserBase):
+class UserOut(BaseModel):
     id: int
-    created_at: datetime
-    updated_at: datetime
-
+    email: EmailStr
+    name: str | None = None
     class Config:
-        from_attributes = True  # SQLAlchemy 객체 -> Pydantic 변환
+        from_attributes = True  # SQLAlchemy 객체 직렬화 허용
+
+
+class RegisterIn(BaseModel):
+    name: constr(strip_whitespace=True, min_length=1, max_length=50)
+    email: EmailStr
+    password: constr(min_length=8, max_length=72)
