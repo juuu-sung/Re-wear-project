@@ -56,3 +56,5 @@ backend/.env
 
 # (다른 환경 변형 파일)
 .env.*
+
+.DS_Store
