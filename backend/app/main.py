@@ -8,7 +8,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from app.db import Base, SessionLocal
-from app.routers import event as event_router, user as user_router, infer as infer_router
+from app.routers import event as event_router, user as user_router, infer as infer_router, auth as auth_router
 
 from alembic import command
 from alembic.config import Config
@@ -59,6 +59,10 @@ class MaterialResp(BaseModel):
 def healthz():
     return {"ok": True}
 
+@app.get("/")
+def root():
+    return {"msg": "Server running"}
+
 @app.post("/infer/label", response_model=LabelGuide)
 def infer_label(img: Img):
     # TODO: 추후 YOLO/라벨 인식 모델로 교체
@@ -88,7 +92,25 @@ def test_db(db: Session = Depends(get_db)):
 def on_startup():
     run_migrations()  # 운영/개발 공통으로 안전하게 최신 스키마 적용
 
+
+
+
 app.include_router(user_router.router)       # /users/*
 app.include_router(user_router.auth_router)  # /auth/* (회원가입용)
+app.include_router(auth_router.router)
 app.include_router(event_router.router)
 app.include_router(infer_router.router, prefix="/infer", tags=["infer"])
+
+
+
+import traceback
+from fastapi.responses import PlainTextResponse
+from fastapi.requests import Request
+
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    print("🔥🔥🔥 Internal Error Traceback ↓↓↓")
+    print(tb)
+    return PlainTextResponse(tb, status_code=500)
+
