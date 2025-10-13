@@ -50,6 +50,7 @@ __pycache__/
 # ---------- Environment Variables ----------
 # (FastAPI backend)
 backend/.env
+frontend/.env
 
 # (Expo React Native frontend)
 .env
