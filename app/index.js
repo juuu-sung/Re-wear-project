@@ -1,18 +1,70 @@
 // app/index.js
-
+import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ 추가!
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+// ✅ 서버 주소 자동 설정
+const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
+const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
 export default function LoginScreen() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = () => {
-        // 나중에 실제 로그인 로직 추가
-        // 지금은 바로 메인 화면으로 이동
-        router.replace('/home'); // 로그인 후 뒤로가기 못하게 replace 사용
+    // ✅ 로그인 처리 함수
+    const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) {
+            Alert.alert("입력 오류", "이메일과 비밀번호를 입력해주세요.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            console.log("📡 로그인 요청:", `${BASE_URL}/auth/login`);
+
+            const res = await fetch(`${BASE_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: email.trim().toLowerCase(),
+                    password: password,
+                }),
+            });
+
+            const ct = res.headers.get("content-type") || "";
+            const body = ct.includes("application/json") ? await res.json() : await res.text();
+
+            console.log("📩 서버 응답:", body);
+
+            if (!res.ok) {
+                let msg = "로그인에 실패했습니다.";
+                if (typeof body === "object" && body.detail) msg = body.detail;
+                if (typeof body === "string") msg = body;
+                Alert.alert("로그인 실패", msg);
+                return;
+            }
+
+            // ✅ 로그인 성공 시 토큰 저장
+            if (body?.access_token) {
+                await AsyncStorage.setItem("access_token", body.access_token);
+                console.log("✅ 토큰 저장 완료:", body.access_token);
+            } else {
+                console.warn("⚠️ access_token 없음:", body);
+            }
+
+            Alert.alert("로그인 성공", "홈 화면으로 이동합니다.", [
+                { text: "확인", onPress: () => router.replace('/home') },
+            ]);
+
+        } catch (err) {
+            console.error("❌ 로그인 네트워크 오류:", err);
+            Alert.alert("네트워크 오류", "서버와 연결할 수 없습니다.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -41,15 +93,23 @@ export default function LoginScreen() {
                         onChangeText={setPassword}
                         secureTextEntry
                     />
-                    <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                        <Text style={styles.loginButtonText}>로그인</Text>
+                    <TouchableOpacity
+                        style={[styles.loginButton, loading && { opacity: 0.6 }]}
+                        onPress={handleLogin}
+                        disabled={loading}
+                    >
+                        <Text style={styles.loginButtonText}>
+                            {loading ? "로그인 중..." : "로그인"}
+                        </Text>
                     </TouchableOpacity>
                     <View style={styles.linksContainer}>
                         <TouchableOpacity><Text style={styles.linkText}>아이디 찾기</Text></TouchableOpacity>
                         <Text style={styles.linkSeparator}>|</Text>
                         <TouchableOpacity><Text style={styles.linkText}>비밀번호 찾기</Text></TouchableOpacity>
                         <Text style={styles.linkSeparator}>|</Text>
-                        <TouchableOpacity onPress={() => router.push('/signup')}><Text style={styles.linkText}>회원가입</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push('/signup')}>
+                            <Text style={styles.linkText}>회원가입</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -75,6 +135,7 @@ export default function LoginScreen() {
     );
 }
 
+// ✅ 스타일 (UI 그대로)
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f0f2f5' },
     innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
