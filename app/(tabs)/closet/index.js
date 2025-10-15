@@ -1,135 +1,384 @@
-// app/(tabs)/closet/index.js
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
+const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
-import AddIcon from '../../../assets/icons/add.svg';
-
-// 임시 옷 데이터
-const clothesData = [
-  { id: '1', name: '소라색 얇은 니트', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '2', name: '스트라이프 니트', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '3', name: '네이비 카라티', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '4', name: '회색 맨투맨', category: '상의', image: 'https://via.placeholder.com/150' },
-  { id: '5', name: '블랙 슬랙스', category: '하의', image: 'https://via.placeholder.com/150' },
-  { id: '6', name: '청바지', category: '하의', image: 'https://via.placeholder.com/150' },
-];
-
-export default function ClosetScreen() {
+export default function ClosetMain() {
+  const [selected, setSelected] = useState("상의");
+  const [items, setItems] = useState([]);
+  const [userName, setUserName] = useState("");
+  const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
+  const [loading, setLoading] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState('상의');
-  
-  // 활성화된 카테고리에 맞는 옷만 필터링
-  const filteredClothes = clothesData.filter(item => item.category === activeCategory);
 
-  const handleAddPress = () => {
+  // ✅ 사용자 이름 + 카테고리 불러오기
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const rawName =
+          (await AsyncStorage.getItem("name")) ||
+          (await AsyncStorage.getItem("username"));
+        if (rawName) setUserName(rawName);
+        else setUserName("사용자");
+
+        const saved = await AsyncStorage.getItem("categories");
+        if (saved) {
+          const list = JSON.parse(saved);
+          setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
+        }
+      } catch (err) {
+        console.log("❌ 사용자 이름 불러오기 실패:", err);
+        setUserName("사용자");
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+    init();
+  }, []);
+
+  // ✅ 카테고리 추가
+  const addCategory = () => {
+    Alert.prompt("새 옷장 추가", "추가할 옷장 이름을 입력하세요.", async (text) => {
+      const name = text?.trim();
+      if (!name) return;
+      if (categories.includes(name)) {
+        Alert.alert("중복된 이름", `"${name}"은 이미 존재합니다.`);
+        return;
+      }
+      const updated = [...categories, name];
+      setCategories(updated);
+      await AsyncStorage.setItem("categories", JSON.stringify(updated));
+      Alert.alert("추가 완료", `"${name}" 옷장이 추가되었습니다.`);
+    });
+  };
+
+  // ✅ 카테고리 길게 누르면 삭제 or 수정 선택
+  const handleCategoryLongPress = (name) => {
+    if (["상의", "하의", "아우터"].includes(name)) {
+      Alert.alert("기본 옷장은 수정/삭제할 수 없습니다.");
+      return;
+    }
+
     Alert.alert(
-      "새 옷 추가",
-      "사진을 어떻게 가져올까요?",
+      `"${name}" 옷장 관리`,
+      "원하는 작업을 선택하세요.",
       [
-        { text: "사진 촬영", onPress: takePhoto },
-        { text: "앨범에서 선택", onPress: pickImage },
+        {
+          text: "이름 수정 ✏️",
+          onPress: () => {
+            Alert.prompt(
+              "옷장 이름 수정",
+              `"${name}" 옷장의 새 이름을 입력하세요.`,
+              async (text) => {
+                const newName = text?.trim();
+                if (!newName) return;
+                if (categories.includes(newName)) {
+                  Alert.alert("중복된 이름", `"${newName}"은 이미 존재합니다.`);
+                  return;
+                }
+
+                const updated = categories.map((c) => (c === name ? newName : c));
+                setCategories(updated);
+                await AsyncStorage.setItem("categories", JSON.stringify(updated));
+
+                if (selected === name) setSelected(newName);
+
+                Alert.alert("수정 완료", `"${name}" → "${newName}"으로 변경되었습니다.`);
+              }
+            );
+          },
+        },
+        {
+          text: "삭제 ❌",
+          style: "destructive",
+          onPress: async () => {
+            const updated = categories.filter((c) => c !== name);
+            setCategories(updated);
+            await AsyncStorage.setItem("categories", JSON.stringify(updated));
+
+            if (selected === name) setSelected("상의");
+
+            Alert.alert("삭제 완료", `"${name}" 옷장이 삭제되었습니다.`);
+          },
+        },
         { text: "취소", style: "cancel" },
       ]
     );
   };
 
-  // 카메라로 사진 찍기
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '카메라를 사용하려면 권한을 허용해야 합니다.');
-      return;
-    }
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      router.push({ pathname: '/closet/add', params: { imageUri: result.assets[0].uri } });
+  // ✅ 옷 목록 불러오기
+  const loadClothes = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) return;
+      const res = await fetch(`${BASE_URL}/clothes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const filtered = data.filter((i) => i.category === selected);
+        setItems(filtered);
+      }
+    } catch (err) {
+      console.error("❌ 서버 연결 오류:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 앨범에서 사진 선택
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '앨범에 접근하려면 권한을 허용해야 합니다.');
-      return;
-    }
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      router.push({ pathname: '/closet/add', params: { imageUri: result.assets[0].uri } });
-    }
-  };
-  
-  // 그리드 아이템 렌더링 함수
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.itemContainer} 
-      onPress={() => router.push(`/closet/${item.id}`)} // 상세 페이지로 이동
-    >
-      <Image source={{ uri: item.image }} style={styles.itemImage} />
-      <Text style={styles.itemName}>{item.name}</Text>
-    </TouchableOpacity>
+  useEffect(() => {
+    loadClothes();
+  }, [selected]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadClothes();
+    }, [selected])
   );
 
+  // ✅ FAB 애니메이션
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const translateYAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+
+  const handleScroll = (event) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    if (currentY > lastScrollY.current + 10) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(translateYAnim, { toValue: 50, duration: 250, useNativeDriver: true }),
+      ]).start();
+    } else if (currentY < lastScrollY.current - 10) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(translateYAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+      ]).start();
+    }
+    lastScrollY.current = currentY;
+  };
+
+  if (loadingUser) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#23422D" />
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      {/* ✅ 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>옷장</Text>
+        <Text style={styles.headerText}>{userName}의 옷장</Text>
       </View>
 
-      {/* 카테고리 선택 탭 */}
+      {/* ✅ 카테고리 목록 */}
       <View style={styles.categoryContainer}>
-        {['상의', '하의', '아우터', '신발'].map(category => (
-          <TouchableOpacity key={category} onPress={() => setActiveCategory(category)}>
-            <Text 
-              style={[
-                styles.categoryText, 
-                activeCategory === category && styles.activeCategoryText
-              ]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabRow}
+        >
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.tab, selected === cat && styles.activeTab]}
+              onPress={() => setSelected(cat)} // 짧게: 선택
+              onLongPress={() => handleCategoryLongPress(cat)} // 길게: 수정 or 삭제
             >
-              {category}
-            </Text>
+              <Text style={[styles.tabText, selected === cat && styles.activeText]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={styles.addTabBtn} onPress={addCategory}>
+            <Ionicons name="add" size={20} color="#000" />
           </TouchableOpacity>
-        ))}
+        </ScrollView>
+
+        {/* ✅ 회색 구분선 */}
+        <View style={styles.divider} />
       </View>
 
-      {/* 옷 목록 그리드 */}
-      <FlatList
-        data={filteredClothes}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        numColumns={2} // 2열 그리드
-        contentContainerStyle={styles.gridContainer}
-      />
+      {/* ✅ 옷 목록 or 없음 문구 */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#23422D" style={{ marginTop: 40 }} />
+      ) : items.length > 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.grid}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {items.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.card}
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/closet/detail",
+                  params: {
+                    id: item.id,
+                    name: item.name,
+                    category: item.category,
+                    image: `${BASE_URL}/uploads/clothes/${item.image_path}`,
+                  },
+                })
+              }
+            >
+              {item.image_path ? (
+                <Image
+                  source={{ uri: `${BASE_URL}/uploads/clothes/${item.image_path}` }}
+                  style={styles.image}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.image,
+                    { justifyContent: "center", alignItems: "center" },
+                  ]}
+                >
+                  <Ionicons name="shirt-outline" size={40} color="#ccc" />
+                </View>
+              )}
+              <Text style={styles.name}>{item.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : (
+        <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
+      )}
 
-      {/* 옷 추가 버튼 */}
-      <TouchableOpacity style={styles.addButton} onPress={() => router.push('/closet/add')}>
-        <AddIcon width={32} height={32} fill="white" />
-      </TouchableOpacity>
-    </SafeAreaView>
+      {/* ✅ 추가 버튼 */}
+      <Animated.View
+        style={[
+          styles.fabContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }, { translateY: translateYAnim }],
+          },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPressIn={() =>
+            Animated.spring(scaleAnim, { toValue: 1.1, useNativeDriver: true }).start()
+          }
+          onPressOut={() => {
+            Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+            setTimeout(() => router.push("/(tabs)/closet/add"), 80);
+          }}
+          style={styles.fab}
+        >
+          <Ionicons name="add" size={36} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: 'white' },
-    header: { paddingHorizontal: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
-    headerTitle: { fontSize: 22, fontWeight: 'bold' },
-    categoryContainer: { flexDirection: 'row', justifyContent: 'flex-start', gap: 20, paddingVertical: 15, paddingHorizontal: 20, },
-    categoryText: { fontSize: 16, color: 'gray' },
-    activeCategoryText: { color: 'green', fontWeight: 'bold' },
-    gridContainer: { paddingHorizontal: 10 },
-    itemContainer: { flex: 1, margin: 10, alignItems: 'center' },
-    itemImage: { width: '100%', aspectRatio: 1, backgroundColor: '#f0f0f0', borderRadius: 10, marginBottom: 8, },
-    itemName: { fontSize: 14, fontWeight: '500' },
-    addButton: { position: 'absolute', right: 20, bottom: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: 'green', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } },
+  container: { flex: 1, backgroundColor: "#fff" },
+  header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 5,
+    alignItems: "flex-start",
+  },
+  headerText: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#23422D",
+  },
+  categoryContainer: {
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  tabRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  divider: {
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+    marginTop: 4,
+  },
+  tab: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    marginRight: 8,
+  },
+  activeTab: { backgroundColor: "#23422D", borderColor: "#23422D" },
+  tabText: { color: "#777", fontSize: 15 },
+  activeText: { color: "#fff", fontWeight: "600" },
+  addTabBtn: {
+    borderWidth: 1,
+    borderColor: "#000",
+    borderRadius: 20,
+    padding: 8,
+    marginLeft: 5,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 100,
+  },
+  card: {
+    width: "47%",
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
+    marginBottom: 20,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  image: { width: "100%", height: 150, borderRadius: 8 },
+  name: {
+    textAlign: "center",
+    fontWeight: "600",
+    fontSize: 15,
+    marginTop: 8,
+    color: "#23422D",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#777",
+    marginTop: 30,
+    fontSize: 16,
+  },
+  fabContainer: { position: "absolute", bottom: 30, right: 25 },
+  fab: {
+    backgroundColor: "#23422D",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
