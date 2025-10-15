@@ -29,7 +29,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "@react-native-seoul/kakao-login",
+        {
+          "kakaoAppKey": "076a5cfb9cfe5f1341f96cdf7a259b8fY"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
