@@ -1,17 +1,18 @@
-# app/models/event.py
-from sqlalchemy import Column, Integer, String, Date, Index, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy.orm import relationship
 from app.db import Base
 
 class Event(Base):
     __tablename__ = "events"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    garment_id = Column(Integer, nullable=True)
-    type = Column(String(16), nullable=False, index=True)  # "wear" | "wash"
-    date = Column(Date, nullable=False, index=True)
+    date = Column(Date, nullable=False)
+    type = Column(String, nullable=False)
+    garment_id = Column(Integer, ForeignKey("clothes.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    description = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
 
-    __table_args__ = (
-        Index("ix_events_user_date", "user_id", "date"),
-        CheckConstraint("type IN ('wear','wash')", name="ck_events_type"),  # 선택
-    )
+    # ✅ 관계 설정 (명시적 foreign_keys 추가)
+    user = relationship("User", back_populates="events")
+    clothes = relationship("Clothes", back_populates="events", foreign_keys=[garment_id])

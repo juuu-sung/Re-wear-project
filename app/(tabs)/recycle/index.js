@@ -1,138 +1,267 @@
 // app/(tabs)/recycle/index.js
-
-import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { WebView } from 'react-native-webview';
-
-import CutIcon from '../../../assets/icons/cut-outline.svg';
-import LeafIcon from '../../../assets/icons/leaf-outline.svg';
-
-// 임시 의류수거함 위치 데이터 (진주시청 근처)
-const MOCK_BINS = [
-  { lat: 35.1939, lng: 128.0837, title: '진주시청 앞 수거함' },
-  { lat: 35.1960, lng: 128.0865, title: '상대동 주민센터 근처' },
-  { lat: 35.1911, lng: 128.0812, title: '진주 중앙시장 입구' },
-];
-
-// ⚠️ [중요] 카카오 개발자 사이트에서 발급받은 JavaScript 키를 입력하세요.
-const KAKAO_MAPS_API_KEY = '36cdecbb254c77b8c190c98da7a1ba64';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Asset } from "expo-asset";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import { csvCandidates } from "./csvList";
 
 export default function RecycleScreen() {
-  const router = useRouter();
-  const [userLocation, setUserLocation] = useState(null);
+  const [markers, setMarkers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [region, setRegion] = useState(null);
+  const router = useRouter();
+
+  // ✅ CSV 자동 로드
+  const loadAllCSVs = async () => {
+    try {
+      const appDataDir = `${FileSystem.documentDirectory}data/`;
+      const dirInfo = await FileSystem.getInfoAsync(appDataDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(appDataDir, { intermediates: true });
+        console.log("📂 data 폴더 생성됨:", appDataDir);
+      }
+
+      // 🔄 CSV 복사
+      for (const csv of csvCandidates) {
+        const asset = await Asset.fromModule(csv).downloadAsync();
+        const fileName = asset.name.endsWith(".csv")
+          ? asset.name
+          : `${asset.name}.csv`;
+        const dest = `${appDataDir}${fileName}`;
+        await FileSystem.copyAsync({ from: asset.localUri, to: dest });
+      }
+
+      // 📄 파일 탐색
+      const files = await FileSystem.readDirectoryAsync(appDataDir);
+      const csvFiles = files.filter((f) => f.endsWith("_bin.csv"));
+      console.log("✅ 탐색된 CSV:", csvFiles);
+
+      // 📍 마커 생성
+      const allMarkers = [];
+
+      for (const file of csvFiles) {
+        const path = `${appDataDir}${file}`;
+        const content = await FileSystem.readAsStringAsync(path, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+
+        const rows = content
+          .split("\n")
+          .map((r) => r.trim())
+          .filter(
+            (r) =>
+              r &&
+              !r.startsWith("행정동") &&
+              !r.startsWith("읍면동") &&
+              !r.startsWith("동")
+          );
+
+        for (const row of rows) {
+          const cols = row.split(",").map((v) => v.trim());
+
+          // 📌 case 1: (행정동, 위치, 기준일자, lat, lng)
+          if (cols.length === 5) {
+            const [dong, address, date, lat, lng] = cols;
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            if (!isNaN(latitude) && !isNaN(longitude)) {
+              allMarkers.push({
+                title: `${dong} ${address}`,
+                latitude,
+                longitude,
+              });
+            }
+          }
+
+          // 📌 case 2: (행정동, 도로명주소, 지번주소, 날짜, lat, lng)
+          else if (cols.length >= 6) {
+            const [dong, roadAddr, jibunAddr, date, lat, lng] = cols;
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            if (!isNaN(latitude) && !isNaN(longitude)) {
+              const addrText = roadAddr || jibunAddr || "";
+              allMarkers.push({
+                title: `${dong} ${addrText}`,
+                latitude,
+                longitude,
+              });
+            }
+          }
+        }
+      }
+
+      setMarkers(allMarkers);
+      console.log("📍 총 마커 수:", allMarkers.length);
+    } catch (err) {
+      console.error("❌ CSV 로드 실패:", err);
+      Alert.alert("CSV 로드 실패", String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ 내 위치 불러오기
+  const getUserLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("위치 권한을 허용해주세요!");
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      setRegion({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    } catch (e) {
+      console.error("위치 불러오기 실패:", e);
+    }
+  };
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('권한 거부됨', '지도 기능을 사용하려면 위치 권한이 필요합니다.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-        setUserLocation({
-          lat: location.coords.latitude,
-          lng: location.coords.longitude,
-        });
-      } catch (error) {
-        Alert.alert("위치 오류", "현재 위치를 가져오는 데 실패했습니다.");
-      } finally {
-        setLoading(false);
-      }
+      await getUserLocation();
+      await loadAllCSVs();
     })();
   }, []);
 
-  // WebView에 삽입될 HTML 코드 생성 함수
-  const getHtml = (userLoc, bins) => {
-    const markers = bins.map(bin => 
-      `new kakao.maps.Marker({ position: new kakao.maps.LatLng(${bin.lat}, ${bin.lng}), title: '${bin.title}' });`
-    ).join('');
-  
-    const userMarker = `
-      var userMarker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(${userLoc.lat}, ${userLoc.lng}),
-        image: new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png', new kakao.maps.Size(64, 69), {offset: new kakao.maps.Point(27, 69)})
-      });
-      userMarker.setMap(map);
-    `;
+  if (loading || !region) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#2e7d32" />
+        <Text style={{ marginTop: 10 }}>헌옷수거함 위치를 불러오는 중...</Text>
+      </View>
+    );
+  }
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8"/>
-        <title>Kakao Maps</title>
-        <style>html, body {width:100%;height:100%;margin:0;padding:0;}</style>
-      </head>
-      <body>
-        <div id="map" style="width:100%;height:100%;"></div>
-        <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_MAPS_API_KEY}"></script>
-        <script>
-          var container = document.getElementById('map');
-          var options = {
-            center: new kakao.maps.LatLng(${userLoc.lat}, ${userLoc.lng}),
-            level: 5
-          };
-          var map = new kakao.maps.Map(container, options);
-          
-          ${userMarker} // 사용자 위치 마커 추가
-          
-          var binMarkers = [${markers}];
-          binMarkers.forEach(function(marker) {
-            marker.setMap(map);
-          });
-        </script>
-      </body>
-      </html>
-    `;
+  const moveToMyLocation = async () => {
+    await getUserLocation();
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>순환</Text>
-      </View>
-
-      <View style={styles.mapContainer}>
-        {loading ? (
-          <ActivityIndicator size="large" color="green" />
-        ) : userLocation ? (
-          <WebView
-            originWhitelist={['*']}
-            source={{ html: getHtml(userLocation, MOCK_BINS) }}
-            style={{ flex: 1 }}
+    <View style={{ flex: 1 }}>
+      <MapView style={{ flex: 1 }} region={region} showsUserLocation={true}>
+        {markers.map((m, i) => (
+          <Marker
+            key={i}
+            coordinate={{ latitude: m.latitude, longitude: m.longitude }}
+            title={m.title}
           />
-        ) : (
-          <Text style={styles.errorText}>지도를 표시하려면 위치 권한이 필요합니다.</Text>
-        )}
-      </View>
+        ))}
+      </MapView>
 
-      <View style={styles.buttonSection}>
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/upcycling')}>
-          <LeafIcon width={24} height={24} stroke="white" />
-          <Text style={styles.buttonText}>업사이클링</Text>
+      {/* 🧭 내 위치 버튼 */}
+      <TouchableOpacity style={styles.locationButton} onPress={moveToMyLocation}>
+        <Ionicons name="navigate" size={26} color="#fff" />
+      </TouchableOpacity>
+
+      {/* 🔘 하단 버튼 3개 */}
+      <View style={styles.bottomButtons}>
+        <TouchableOpacity
+          style={styles.subButton}
+          onPress={() => router.push("/upcycling")}
+        >
+          <MaterialCommunityIcons name="recycle" size={18} color="#fff" />
+          <Text style={styles.subText}>업사이클링</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/reform')}>
-          <CutIcon width={24} height={24} stroke="white" />
-          <Text style={styles.buttonText}>리폼</Text>
+
+        <View style={styles.mainButton}>
+          <Ionicons name="trash-bin" size={22} color="#fff" />
+          <Text style={styles.mainText}>헌옷수거함</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.subButton}
+          onPress={() => router.push("/reform")}
+        >
+          <Ionicons name="cut" size={18} color="#fff" />
+          <Text style={styles.subText}>리폼</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'white' },
-  header: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 10 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold' },
-  mapContainer: { flex: 1, margin: 20, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: 'gray' },
-  buttonSection: { flexDirection: 'row', padding: 20, gap: 15 },
-  button: { flex: 1, backgroundColor: 'green', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 20, borderRadius: 10, elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
-  buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
+  loading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  locationButton: {
+    position: "absolute",
+    bottom: 90,
+    right: 20,
+    backgroundColor: "#2e7d32",
+    borderRadius: 35,
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  bottomButtons: {
+    position: "absolute",
+    bottom: 25,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
+  },
+  mainButton: {
+    backgroundColor: "#4CAF50",
+    borderRadius: 45,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    transform: [{ scale: 1.05 }],
+  },
+  mainText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  subButton: {
+    backgroundColor: "#8BC34A",
+    borderRadius: 35,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  subText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });

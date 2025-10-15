@@ -16,56 +16,84 @@ export default function LoginScreen() {
 
     // ✅ 로그인 처리 함수
     const handleLogin = async () => {
-        if (!email.trim() || !password.trim()) {
-            Alert.alert("입력 오류", "이메일과 비밀번호를 입력해주세요.");
-            return;
-        }
+  if (!email.trim() || !password.trim()) {
+    Alert.alert("입력 오류", "이메일과 비밀번호를 입력해주세요.");
+    return;
+  }
 
-        try {
-            setLoading(true);
-            console.log("📡 로그인 요청:", `${BASE_URL}/auth/login`);
+  try {
+    setLoading(true);
+    console.log("📡 로그인 요청:", `${BASE_URL}/auth/login`);
 
-            const res = await fetch(`${BASE_URL}/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
-                    password: password,
-                }),
-            });
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password: password,
+      }),
+    });
 
-            const ct = res.headers.get("content-type") || "";
-            const body = ct.includes("application/json") ? await res.json() : await res.text();
+    const ct = res.headers.get("content-type") || "";
+    const body = ct.includes("application/json") ? await res.json() : await res.text();
 
-            console.log("📩 서버 응답:", body);
+    console.log("📩 서버 응답:", body);
 
-            if (!res.ok) {
-                let msg = "로그인에 실패했습니다.";
-                if (typeof body === "object" && body.detail) msg = body.detail;
-                if (typeof body === "string") msg = body;
-                Alert.alert("로그인 실패", msg);
-                return;
-            }
+    if (!res.ok) {
+      let msg = "로그인에 실패했습니다.";
+      if (typeof body === "object" && body.detail) msg = body.detail;
+      if (typeof body === "string") msg = body;
+      Alert.alert("로그인 실패", msg);
+      return;
+    }
 
-            // ✅ 로그인 성공 시 토큰 저장
-            if (body?.access_token) {
-                await AsyncStorage.setItem("access_token", body.access_token);
-                console.log("✅ 토큰 저장 완료:", body.access_token);
-            } else {
-                console.warn("⚠️ access_token 없음:", body);
-            }
+    // ✅ 토큰 저장
+    if (body?.access_token) {
+      await AsyncStorage.setItem("access_token", body.access_token);
+      console.log("✅ 토큰 저장 완료:", body.access_token);
+    } else {
+      console.warn("⚠️ access_token 없음:", body);
+    }
 
-            Alert.alert("로그인 성공", "홈 화면으로 이동합니다.", [
-                { text: "확인", onPress: () => router.replace('/home') },
-            ]);
+    // ✅ user_id 저장 (서버 구조에 맞게)
+    if (body?.user?.id) {
+      await AsyncStorage.setItem("user_id", String(body.user.id));
+      console.log("💾 저장된 user_id (user.id):", body.user.id);
+    } else if (body?.id) {
+      await AsyncStorage.setItem("user_id", String(body.id));
+      console.log("💾 저장된 user_id (id):", body.id);
+    } else if (body?.user_id) {
+      await AsyncStorage.setItem("user_id", String(body.user_id));
+      console.log("💾 저장된 user_id (user_id):", body.user_id);
+    } else {
+      console.warn("⚠️ 로그인 응답에 user_id 없음:", body);
+    }
 
-        } catch (err) {
-            console.error("❌ 로그인 네트워크 오류:", err);
-            Alert.alert("네트워크 오류", "서버와 연결할 수 없습니다.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    // ✅ username도 저장 (옷장/홈 화면에서 표시용)
+    if (body?.username) {
+      await AsyncStorage.setItem("username", body.username);
+      console.log("💾 저장된 username:", body.username);
+    }
+
+    // ✅ 실제 저장 확인 (디버깅용)
+    const savedId = await AsyncStorage.getItem("user_id");
+    console.log("🧠 AsyncStorage에 저장된 user_id:", savedId);
+
+    // ✅ 로그인 성공 시 홈으로 이동
+    Alert.alert("로그인 성공", "홈 화면으로 이동합니다.", [
+      { text: "확인", onPress: () => router.replace("/home") },
+    ]);
+
+  } catch (err) {
+    console.error("❌ 로그인 네트워크 오류:", err);
+    Alert.alert("네트워크 오류", "서버와 연결할 수 없습니다.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+        
+
 
     return (
         <SafeAreaView style={styles.container}>
