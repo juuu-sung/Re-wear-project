@@ -1,0 +1,446 @@
+// app/(tabs)/calendar.js
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Calendar } from "react-native-calendars";
+import ClosetPickerModal from "../../components/ClosetPickerModal";
+import EventEditModal from "../../components/EventEditModal";
+import EventSelectModal from "../../components/EventSelectModal";
+
+// ✅ 서버 주소 설정
+const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
+const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
+
+export default function CalendarScreen() {
+  const [userId, setUserId] = useState(null);
+  const [calendarDots, setCalendarDots] = useState({});
+  const [allEvents, setAllEvents] = useState({});
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedEvents, setSelectedEvents] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [eventModalVisible, setEventModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedCloth, setSelectedCloth] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [closetItems, setClosetItems] = useState([]);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+
+  // ✅ 유저 ID 불러오기
+  useEffect(() => {
+    loadUserId();
+  }, []);
+
+  const loadUserId = async () => {
+    const id = await AsyncStorage.getItem("user_id");
+    console.log("🧠 불러온 user_id:", id);
+    if (id) setUserId(Number(id));
+  };
+
+  // ✅ userId 세팅 후 이벤트 로드
+  useEffect(() => {
+    console.log("🧠 userId 상태:", userId);
+    if (userId !== null && !isNaN(userId)) {
+      const today = new Date().toISOString().split("T")[0];
+      fetchCalendar(today, userId);
+      fetchEvents(userId);
+    }
+  }, [userId]);
+
+  // ✅ 옷장 데이터 불러오기
+  const loadClosetItems = async () => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) return;
+      const res = await fetch(`${BASE_URL}/clothes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) setClosetItems(data);
+      console.log("🧥 옷장 아이템 불러오기 완료:", data.length);
+    } catch (err) {
+      console.error("❌ 옷장 불러오기 실패:", err);
+    }
+  };
+
+  // ✅ 캘린더 dot 정보 불러오기
+  const fetchCalendar = async (date, uid) => {
+    const [y, m] = date.split("-");
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      const res = await fetch(`${BASE_URL}/events/calendar?month=${y}-${m}&user_id=${uid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      const formatted = {};
+      const wearDates = Array.isArray(data.wear) ? data.wear : Object.keys(data.wear || {});
+      const washDates = Array.isArray(data.wash) ? data.wash : Object.keys(data.wash || {});
+
+      wearDates.forEach((d) => {
+        const dateKey = d.split("T")[0];
+        formatted[dateKey] = { dots: [{ color: "#2E7D32" }], marked: true };
+      });
+      washDates.forEach((d) => {
+        const dateKey = d.split("T")[0];
+        if (formatted[dateKey]) formatted[dateKey].dots.push({ color: "#1565C0" });
+        else formatted[dateKey] = { dots: [{ color: "#1565C0" }], marked: true };
+      });
+
+      setCalendarDots(formatted);
+    } catch (err) {
+      console.error("❌ 캘린더 로드 실패:", err);
+    }
+  };
+
+  // ✅ 전체 이벤트 불러오기
+  const fetchEvents = async (uid) => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      const res = await fetch(`${BASE_URL}/events?user_id=${uid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log("📡 이벤트 요청 URL:", `${BASE_URL}/events?user_id=${uid}`);
+      console.log("📥 서버 상태 코드:", res.status);
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("❌ 서버 응답 오류:", errText);
+        Alert.alert("오류", `이벤트 데이터를 불러올 수 없습니다.\n(${res.status})`);
+        return;
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        console.error("⚠️ JSON 파싱 실패:", e);
+        return;
+      }
+
+      if (!Array.isArray(data)) {
+        console.warn("⚠️ 서버 응답이 배열이 아닙니다:", data);
+        return;
+      }
+
+      const grouped = {};
+      data.forEach((e) => {
+        const d = e.date ? e.date.split("T")[0] : "unknown";
+        if (!grouped[d]) grouped[d] = [];
+        grouped[d].push(e);
+      });
+
+      setAllEvents(grouped);
+      console.log("✅ 이벤트 그룹화 완료:", grouped);
+    } catch (err) {
+      console.error("❌ 이벤트 로드 실패:", err);
+    }
+  };
+
+  // ✅ 이벤트 추가
+  const saveEvent = async (date, newEvent) => {
+    try {
+      const payload = {
+        date,
+        type: newEvent.type,
+        garment_id: newEvent.cloth_id,
+      };
+      const token = await AsyncStorage.getItem("access_token");
+      const res = await fetch(`${BASE_URL}/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("이벤트 저장 실패");
+      fetchCalendar(date, userId);
+      fetchEvents(userId);
+    } catch (err) {
+      console.error("❌ 이벤트 저장 실패:", err);
+      Alert.alert("저장 실패", "서버와 통신 중 문제가 발생했습니다.");
+    }
+  };
+
+  // ✅ 이벤트 삭제
+  const deleteEvent = async (eventId, date) => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      await fetch(`${BASE_URL}/events/${eventId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchCalendar(date, userId);
+      fetchEvents(userId);
+      Alert.alert("삭제 완료", "이벤트가 삭제되었습니다.");
+    } catch (err) {
+      console.error("❌ 이벤트 삭제 실패:", err);
+    }
+  };
+
+  // ✅ 이벤트 수정
+  const updateEvent = async (eventId, newDate, newType) => {
+    try {
+      const payload = {
+        date: newDate,
+        type: newType,
+        garment_id: editingEvent.garment_id,
+      };
+      const token = await AsyncStorage.getItem("access_token");
+      const res = await fetch(`${BASE_URL}/events/${eventId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        fetchCalendar(newDate, userId);
+        fetchEvents(userId);
+        Alert.alert("수정 완료", "이벤트가 수정되었습니다.");
+      } else {
+        Alert.alert("수정 실패", "서버와의 통신 중 오류가 발생했습니다.");
+      }
+    } catch (err) {
+      console.error("❌ 이벤트 수정 실패:", err);
+    }
+  };
+
+  // ✅ 날짜 클릭 → 해당 날짜 이벤트 표시
+  const handleDayPress = (day) => {
+    const date = day.dateString;
+    setSelectedDate(date);
+    setSelectedEvents(allEvents[date] || []);
+  };
+
+  // ✅ 이미지 경로 처리
+  const getImageSource = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith("http")) return { uri: imagePath };
+    return { uri: `${BASE_URL}/uploads/clothes/${imagePath}` };
+  };
+
+  // ✅ 수정됨: 캘린더 focus 시에도 옷장 불러오기
+  useFocusEffect(
+    useCallback(() => {
+      loadClosetItems();
+    }, [])
+  );
+
+  // ✅ 수정됨: ClosetPickerModal이 열릴 때마다 옷장 새로 로드
+  useEffect(() => {
+    if (modalVisible) {
+      loadClosetItems();
+    }
+  }, [modalVisible]);
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>캘린더</Text>
+          <View style={styles.headerDivider} />
+        </View>
+
+        <Calendar
+          markingType="multi-dot"
+          markedDates={calendarDots}
+          onDayPress={handleDayPress}
+          onMonthChange={(month) => {
+            const y = month.year.toString();
+            const m = month.month.toString().padStart(2, "0");
+            fetchCalendar(`${y}-${m}-01`, userId);
+          }}
+          theme={{
+            todayTextColor: "#23422D",
+            arrowColor: "#23422D",
+            monthTextColor: "#23422D",
+          }}
+        />
+
+        <View style={styles.divider} />
+
+        {selectedDate && (
+          <View style={styles.eventSection}>
+            <Text style={styles.eventTitle}>📅 {selectedDate} 기록</Text>
+            {selectedEvents.length > 0 ? (
+              selectedEvents.map((e, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.eventItemBox}
+                  onPress={() => {
+                    setEditingEvent(e);
+                    setEditModalVisible(true);
+                  }}
+                >
+                  <View style={styles.row}>
+                    {e.image_url ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setPreviewImage(getImageSource(e.image_url));
+                          setImageModalVisible(true);
+                        }}
+                      >
+                        <Image source={getImageSource(e.image_url)} style={styles.thumb} />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.thumbPlaceholder}>
+                        <Ionicons name="shirt-outline" size={22} color="#999" />
+                      </View>
+                    )}
+                    <Text style={styles.eventItemText}>
+                      {e.type === "wear" ? "👕 착용" : "🧺 세탁"} - {e.cloth_name || "이름 없음"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={{ color: "#777", fontSize: 16 }}>기록이 없습니다.</Text>
+            )}
+          </View>
+        )}
+
+        <View style={{ height: 80 }} />
+      </ScrollView>
+
+      {/* + 버튼 */}
+      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+        <Ionicons name="add" size={34} color="#fff" />
+      </TouchableOpacity>
+
+      {/* 모달 */}
+      <ClosetPickerModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        closetItems={closetItems}
+        onSelectCloth={(cloth) => {
+          setSelectedCloth(cloth);
+          setModalVisible(false);
+          setEventModalVisible(true);
+        }}
+      />
+
+      <EventSelectModal
+        visible={eventModalVisible}
+        onClose={() => setEventModalVisible(false)}
+        cloth={selectedCloth}
+        onConfirm={(date, type) => {
+          saveEvent(date, {
+            type,
+            cloth_id: selectedCloth.id,
+            image_path: selectedCloth.image_path || null,
+          });
+          setEventModalVisible(false);
+        }}
+      />
+
+      <EventEditModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        event={editingEvent}
+        onDelete={() => {
+          deleteEvent(editingEvent.id, selectedDate);
+          setEditModalVisible(false);
+        }}
+        onUpdate={(newDate, newType) => {
+          updateEvent(editingEvent.id, newDate, newType);
+          setEditModalVisible(false);
+        }}
+      />
+
+      {/* 이미지 미리보기 */}
+      <Modal visible={imageModalVisible} transparent animationType="fade">
+        <View style={styles.imageModalOverlay}>
+          <TouchableOpacity
+            style={styles.imageModalBackground}
+            onPress={() => setImageModalVisible(false)}
+          >
+            {previewImage && (
+              <Image source={previewImage} style={styles.imageModalPreview} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, paddingHorizontal: 16 },
+  header: { marginTop: 10, marginBottom: 6 },
+  headerTitle: { fontSize: 26, fontWeight: "800", color: "#23422D", marginBottom: 6 },
+  headerDivider: { borderBottomWidth: 1, borderColor: "#ddd" },
+  divider: { borderBottomWidth: 1, borderColor: "#ddd", marginTop: 8 },
+  eventSection: { padding: 16 },
+  eventTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12, color: "#23422D" },
+  eventItemBox: {
+    backgroundColor: "#f6f6f6",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginVertical: 6,
+  },
+  row: { flexDirection: "row", alignItems: "center" },
+  thumb: { width: 40, height: 40, borderRadius: 8, marginRight: 10 },
+  thumbPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: "#eee",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  eventItemText: { fontSize: 17, color: "#23422D", flexShrink: 1 },
+  fab: {
+    position: "absolute",
+    bottom: 30,
+    right: 25,
+    backgroundColor: "#23422D",
+    borderRadius: 35,
+    width: 70,
+    height: 70,
+    justifyContent: "center",
+    alignItems: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: { elevation: 5 },
+    }),
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imageModalBackground: { flex: 1, justifyContent: "center", alignItems: "center" },
+  imageModalPreview: {
+    width: "85%",
+    height: "65%",
+    resizeMode: "contain",
+    borderRadius: 12,
+  },
+});

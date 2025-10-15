@@ -1,17 +1,26 @@
-// app/_layout.js
-
-import { Stack } from 'expo-router';
+// app/_layout.tsx
+import { Stack } from "expo-router";
+import { ThemeProvider } from "../context/ThemeContext";
 
 export default function RootLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} /> 
-      <Stack.Screen name="signup" options={{ title: '회원가입', headerBackTitleVisible: false }} />
-      
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="profile" options={{ title: '프로필', headerBackTitleVisible: false, }} />
-      <Stack.Screen name="upcycling" options={{ title: '업사이클링', headerBackTitleVisible: false }} />
-      <Stack.Screen name="reform" options={{ title: '리폼', headerBackTitleVisible: false }} />
-    </Stack>
+    <ThemeProvider>
+      <Stack
+        screenOptions={{
+          headerShown: true, // ✅ 헤더 표시
+          headerTintColor: "black", // ✅ 화살표 색상
+          headerTitle: "", // ✅ 제목 제거
+          headerTransparent: true, // ✅ 배경 투명 (필요시)
+          headerBackTitleVisible: false, // ✅ 'Back' 글자 제거
+        }}
+      >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="signup" />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="upcycling" />
+        <Stack.Screen name="reform" />
+      </Stack>
+    </ThemeProvider>
   );
 }

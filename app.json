@@ -7,7 +7,8 @@
     "scheme": "rewear-project",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
-      "**/*"
+      "**/*",
+      "assets/data/*.csv"
     ],
     "ios": {
       "supportsTablet": true,

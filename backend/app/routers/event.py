@@ -1,40 +1,81 @@
-# app/routers/event.py
-from datetime import date
-from typing import Optional, Literal
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from app.db import SessionLocal
-from app.repositories import events_repo as repo
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
+from datetime import datetime
+from app.db import get_db
+from app import models, schemas
+from app.routers.auth import get_current_user
 
-router = APIRouter(prefix="/events", tags=["events"])
+router = APIRouter(prefix="/events", tags=["Events"])
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# ✅ 이벤트 생성
+@router.post("", response_model=schemas.EventResponse)
+def create_event(
+    event: schemas.EventCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    db_event = models.Event(**event.dict(), user_id=current_user.id)
+    db.add(db_event)
+    db.commit()
+    db.refresh(db_event)
+    return db_event
 
-class EventIn(BaseModel):
-    user_id: int = 1
-    garment_id: Optional[int] = None
-    type: Literal["wear", "wash"] 
-    date: date
 
-@router.post("")
-def create_event(payload: EventIn, db: Session = Depends(get_db)):
-    row = repo.create_event(
-        db, user_id=payload.user_id, garment_id=payload.garment_id, type=payload.type, date_=payload.date
+# ✅ 전체 이벤트 조회 (user_id별)
+@router.get("", response_model=list[schemas.EventResponse])
+def get_events(user_id: int = Query(...), db: Session = Depends(get_db)):
+    events = (
+        db.query(models.Event)
+        .options(joinedload(models.Event.clothes))  # 👈 Clothes까지 한번에 로드
+        .filter(models.Event.user_id == user_id)
+        .all()
     )
-    return {"ok": True, "id": row.id}
+    return events
 
-@router.get("")
-def list_events(user_id: Optional[int] = None, db: Session = Depends(get_db)):
-    return repo.list_events(db, user_id=user_id)
 
+# ✅ 월별 캘린더용 (wear/wash 날짜만)
 @router.get("/calendar")
-def calendar(month: str, db: Session = Depends(get_db)):
-    y, m = map(int, month.split("-"))
-    wear, wash = repo.aggregate_month(db, year=y, month=m)
-    return {"wear": wear, "wash": wash}
+def get_calendar(month: str, user_id: int, db: Session = Depends(get_db)):
+    year, month = map(int, month.split("-"))
+    start = datetime(year, month, 1)
+    end = datetime(year + (month == 12), (month % 12) + 1, 1)
+
+    events = (
+        db.query(models.Event)
+        .filter(models.Event.user_id == user_id)
+        .filter(models.Event.date >= start, models.Event.date < end)
+        .all()
+    )
+
+    wear_dates, wash_dates = set(), set()
+    for e in events:
+        if e.type == "wear":
+            wear_dates.add(e.date.isoformat())
+        elif e.type == "wash":
+            wash_dates.add(e.date.isoformat())
+
+    return {"wear": list(wear_dates), "wash": list(wash_dates)}
+
+
+# ✅ 이벤트 수정
+@router.put("/{event_id}", response_model=schemas.EventResponse)
+def update_event(event_id: int, new: schemas.EventUpdate, db: Session = Depends(get_db)):
+    db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not db_event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    for key, value in new.dict().items():
+        setattr(db_event, key, value)
+    db.commit()
+    db.refresh(db_event)
+    return db_event
+
+
+# ✅ 이벤트 삭제
+@router.delete("/{event_id}")
+def delete_event(event_id: int, db: Session = Depends(get_db)):
+    db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not db_event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    db.delete(db_event)
+    db.commit()
+    return {"ok": True}
