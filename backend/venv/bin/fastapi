@@ -1,4 +1,4 @@
-#!/Users/hongjusung/Desktop/3학년/2학기/PBL/Re-wear-project/backend/venv/bin/python3
+#!/Users/taehee/Documents/rewear-project/backend/venv/bin/python3.13
 import sys
 from fastapi.cli import main
 if __name__ == '__main__':
