@@ -8,7 +8,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg2://DB_USER:DB_PASSWORD@localhost:5432/reweardb"
+    "postgresql+psycopg2://DB_USER:DB_PASSWORD@localhost:5432/rewear_db"
 )
 
 engine = create_engine(DATABASE_URL)
