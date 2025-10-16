@@ -101,9 +101,9 @@ def test_db(db: Session = Depends(get_db)):
     return {"db_result": result}
 
 
-@app.on_event("startup")
-def on_startup():
-    run_migrations()  # 최신 스키마 적용
+# @app.on_event("startup")
+# def on_startup():
+#     run_migrations()  # 최신 스키마 적용
 
 
 # ---------- Router 등록 ----------
