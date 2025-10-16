@@ -24,3 +24,8 @@ class RegisterIn(BaseModel):
     name: constr(strip_whitespace=True, min_length=1, max_length=50)
     email: EmailStr
     password: constr(min_length=8, max_length=72)
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: int

@@ -1,4 +1,9 @@
 # backend/app/routers/auth.py
+
+import httpx
+from app.crud import user as crud_user
+from app.schemas.user import RegisterIn, TokenOut # 스키마 (회원가입 양식, 토큰 양식)
+
 from fastapi import Header, APIRouter, Depends, HTTPException, status, Form
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -217,3 +222,42 @@ def login_form(
 def read_me(current: User = Depends(get_current_user)):
     """내 정보 확인"""
     return {"id": current.id, "name": current.name or "", "email": current.email}
+
+# --- 카카오 관련 추가 내용
+
+class KakaoToken(BaseModel):
+    access_token: str
+
+@router.post("/kakao", response_model=TokenOut)
+async def kakao_login(token: KakaoToken, db: Session = Depends(get_db)):
+    KAKAO_USER_INFO_API = "https://kapi.kakao.com/v2/user/me"
+    headers = {"Authorization": f"Bearer {token.access_token}"}
+
+    async with httpx.AsyncClient() as client:
+        res = await client.get(KAKAO_USER_INFO_API, headers=headers)
+
+    if res.status_code != 200:
+        raise HTTPException(status_code=400, detail="카카오 토큰이 유효하지 않습니다.")
+    
+    kakao_user_info = res.json()
+    kakao_id = kakao_user_info.get("id") # ✅ 이메일 대신 고유 ID를 가져옵니다.
+    nickname = kakao_user_info.get("properties", {}).get("nickname", "Kakao User")
+
+    if not kakao_id:
+        raise HTTPException(status_code=400, detail="카카오 ID를 가져올 수 없습니다.")
+
+    # ✅ 이메일 대신 kakao_id로 사용자를 찾습니다.
+    user = crud_user.get_by_kakao_id(db, kakao_id=kakao_id)
+
+    if not user:
+        # 사용자가 없으면, kakao_id와 임시 이메일로 새로 가입시킵니다.
+        new_user_data = RegisterIn(
+            email=f"kakao_{kakao_id}@rewear.com", # 👈 중복되지 않는 임시 이메일 생성
+            name=nickname,
+            password=f"kakao_pw_{kakao_id}"
+        )
+        user = crud_user.create_user(db, user_in=new_user_data, kakao_id=kakao_id) # ✅ kakao_id 전달
+
+    # 우리 앱 전용 JWT 토큰 생성 및 반환
+    access_token = create_access_token(sub=str(user.id))
+    return TokenOut(access_token=access_token, user_id=user.id)

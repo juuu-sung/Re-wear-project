@@ -8,7 +8,17 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from app.db import Base  # ✅ Base import
 from app.models import *  # ✅ 모든 모델 import
 
+# ✅ --- .env 파일 로드 기능 추가 ---
+from dotenv import load_dotenv
+load_dotenv()
+# ✅ ---------------------------------
+
 config = context.config
+
+# ✅ --- DB URL을 .env 값으로 설정 ---
+# alembic.ini의 sqlalchemy.url 값을 .env의 DATABASE_URL 값으로 덮어씁니다.
+config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL'))
+# ✅ ---------------------------------
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

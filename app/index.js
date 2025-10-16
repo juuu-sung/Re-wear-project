@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { login } from '@react-native-seoul/kakao-login';
+
 // ✅ 서버 주소 자동 설정
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
@@ -13,6 +15,48 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // ✅ 카카오 로그인 버튼을 눌렀을 때 실행될 함수
+    const handleKakaoLogin = async () => {
+        try {
+            console.log("카카오 로그인 시도...");
+            // 1. 입구에서 '임시 팔찌' 받기
+            const kakaoToken = await login();
+            console.log("✅ 카카오 임시 팔찌 확보:", kakaoToken.accessToken);
+
+            // 2. 백엔드 VIP 카운터로 가서 'VIP 팔찌'로 교환 요청
+            const res = await fetch(`${BASE_URL}/auth/kakao`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_token: kakaoToken.accessToken }),
+            });
+
+            const body = await res.json();
+
+            if (!res.ok) {
+                console.error("❌ VIP 팔찌 교환 실패 (백엔드 오류):", body);
+                throw new Error(body.detail || "서버에서 토큰 교환에 실패했습니다.");
+            }
+
+            console.log("✅ 진짜 VIP 팔찌(JWT) 확보:", body.access_token);
+
+            // 3. 받은 VIP 팔찌와 내 정보를 주머니(AsyncStorage)에 잘 보관
+            await AsyncStorage.setItem('access_token', body.access_token);
+            await AsyncStorage.setItem('user_id', String(body.user_id));
+            
+            // 4. 이제 VIP가 되었으니 메인 화면으로 이동!
+            Alert.alert("로그인 성공", "환영합니다!");
+            router.replace("/home"); // ✅ '/home'은 실제 메인 화면 경로로 수정하세요.
+
+        } catch (error) {
+            console.error("❌ 전체 로그인 과정 실패:", error);
+            // 사용자가 카카오 창을 그냥 닫은 경우는 'cancelled' 오류가 발생하며, 이건 정상적인 행동이므로 조용히 처리합니다.
+            if (error.message.includes('cancelled')) {
+                return;
+            }
+            Alert.alert("로그인 실패", "로그인 중 오류가 발생했습니다. 서버 연결을 확인해주세요.");
+        }
+    };
 
     // ✅ 로그인 처리 함수
     const handleLogin = async () => {
@@ -151,8 +195,11 @@ export default function LoginScreen() {
                     <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
                         <Text style={styles.socialButtonText}>구글로 시작하기</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.socialButton, styles.kakaoButton]}>
-                        <Text style={[styles.socialButtonText, styles.kakaoButtonText]}>카카오로 시작하기</Text>
+                    <TouchableOpacity 
+                        style={[styles.socialButton, { backgroundColor: '#FEE500' }]}
+                        onPress={handleKakaoLogin} // onPress에 handleKakaoLogin 연결
+                    >
+                      <Text style={[styles.socialButtonText, { color: '#000000' }]}>카카오로 시작하기</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.socialButton, styles.naverButton]}>
                         <Text style={styles.socialButtonText}>네이버로 시작하기</Text>
