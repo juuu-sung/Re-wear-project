@@ -1,22 +1,25 @@
+// app/(tabs)/home.js
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import axios from "axios"; // ✅ 뉴스 API 요청용 추가
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Image,
-  Linking,
   Modal,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
+// ✅ 외부 브라우저 열기 함수
 const openLink = async (url) => {
   try {
     await WebBrowser.openBrowserAsync(url);
@@ -25,6 +28,7 @@ const openLink = async (url) => {
   }
 };
 
+// ✅ 백엔드 기본 URL
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
@@ -34,11 +38,14 @@ export default function HomeScreen() {
   const [calendarDots, setCalendarDots] = useState({});
   const [userId, setUserId] = useState(null);
   const [weekDates, setWeekDates] = useState([]);
-
   const [allEvents, setAllEvents] = useState({});
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // ✅ 뉴스 상태
+  const [news, setNews] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   // ✅ 이번 주 날짜 계산
   useEffect(() => {
@@ -122,15 +129,33 @@ export default function HomeScreen() {
     }
   };
 
+  // ✅ 뉴스 불러오기 (백엔드 연동)
+  const loadNews = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/v1/news`);
+      setNews(res.data);
+    } catch (err) {
+      console.error("❌ 뉴스 불러오기 실패:", err);
+    }
+  };
+
   // ✅ 탭 전환 시 자동 새로고침
   useFocusEffect(
     useCallback(() => {
       if (userId) {
         loadClosetPreview();
         loadCalendarPreview();
+        loadNews();
       }
     }, [userId])
   );
+
+  // ✅ 스와이프 새로고침
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([loadClosetPreview(), loadCalendarPreview(), loadNews()]);
+    setRefreshing(false);
+  };
 
   const getImageSource = (img) => {
     if (!img) return null;
@@ -147,16 +172,12 @@ export default function HomeScreen() {
     setModalVisible(true);
   };
 
-  // ✅ 외부 링크 열기
-  const openLink = async (url) => {
-    const supported = await Linking.canOpenURL(url);
-    if (supported) await Linking.openURL(url);
-    else Alert.alert("링크 오류", "해당 링크를 열 수 없습니다.");
-  };
-
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {/* 헤더 */}
         <View style={styles.header}>
           <Text style={styles.logo}>Re:wear</Text>
@@ -171,18 +192,18 @@ export default function HomeScreen() {
         </View>
 
         {/* 케어라벨 */}
-        <View style={styles.card}>
-          <Text style={styles.title}>케어라벨 검색</Text>
-          <View style={styles.row}>
+        <View style={[styles.card, { paddingVertical: 22 }]}>
+          <Text style={[styles.title, { marginBottom: 14 }]}>케어라벨 검색</Text>
+          <View style={[styles.row, { marginTop: 4 }]}>
             <TouchableOpacity
               style={styles.iconBox}
               onPress={() => Alert.alert("라벨 촬영", "카메라 기능은 준비 중입니다.")}
             >
-              <Ionicons name="camera-outline" size={40} color="#000" />
+              <Ionicons name="camera-outline" size={32} color="#000" />
               <Text style={styles.iconText}>라벨 촬영하기</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBox} onPress={() => router.push("/carelabel")}>
-              <Ionicons name="hand-left-outline" size={40} color="#000" />
+              <Ionicons name="hand-left-outline" size={32} color="#000" />
               <Text style={styles.iconText}>직접 선택하기</Text>
             </TouchableOpacity>
           </View>
@@ -190,7 +211,6 @@ export default function HomeScreen() {
 
         {/* 옷장 미리보기 */}
         <View style={styles.card}>
-          {/* 오른쪽 상단 + 버튼 복구 */}
           <View style={styles.calendarHeader}>
             <Text style={styles.title}>옷을 추가해 보세요!</Text>
             <TouchableOpacity onPress={() => router.push("/(tabs)/closet")}>
@@ -202,7 +222,6 @@ export default function HomeScreen() {
             {closetItems.map((cloth) => (
               <Image key={cloth.id} source={getImageSource(cloth.image_path)} style={styles.clothImg} />
             ))}
-            {/* ✅ 기존 큰 + 버튼 → (tabs)/closet/add.js 이동 */}
             <TouchableOpacity style={styles.addBox} onPress={() => router.push("/(tabs)/closet/add")}>
               <Ionicons name="add" size={36} color="#999" />
             </TouchableOpacity>
@@ -248,19 +267,42 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 🌱 환경 기사 요약 */}
+        {/* 🌱 오늘의 환경 뉴스 */}
         <View style={styles.card}>
-          <Text style={styles.title}>오늘의 환경 이슈</Text>
-          <View style={styles.newsBox}>
-            <Text style={styles.newsText}>
-              👕 매년 약 9200만 톤의 의류가 버려집니다. 재활용 섬유와 친환경 소재가
-              새로운 대안으로 주목받고 있습니다.
-            </Text>
-            <Text style={styles.newsText}>
-              🌿 유럽연합은 2030년까지 ‘수리 가능 의류’ 기준을 도입해 패스트패션 생산을
-              규제하고 있습니다.
-            </Text>
-          </View>
+          <Text style={styles.title}>오늘의 환경 뉴스</Text>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+            {news.map((a, idx) => (
+              <TouchableOpacity
+                key={idx}
+                onPress={() => openLink(a.url)}
+                style={{
+                  width: 280,
+                  marginRight: 12,
+                  backgroundColor: "#f5f9f6",
+                  borderRadius: 12,
+                  padding: 14,
+                }}
+              >
+                {a.urlToImage ? (
+                  <Image
+                    source={{ uri: a.urlToImage }}
+                    style={{ width: "100%", height: 120, borderRadius: 8, marginBottom: 8 }}
+                    resizeMode="cover"
+                  />
+                ) : null}
+                <Text style={{ fontSize: 16, fontWeight: "700", color: "#23422D" }} numberOfLines={2}>
+                  {a.title}
+                </Text>
+                {a.source?.name ? <Text style={{ color: "#777", marginTop: 4 }}>{a.source.name}</Text> : null}
+                {a.description ? (
+                  <Text style={{ color: "#333", marginTop: 6 }} numberOfLines={3}>
+                    {a.description}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {/* 👗 슬로우패션 브랜드 추천 */}
@@ -278,7 +320,9 @@ export default function HomeScreen() {
 
             <TouchableOpacity style={styles.brandCard} onPress={() => openLink("https://pleatsmama.com")}>
               <Image
-                source={{ uri: "https://pleatsmama.com/web/product/big/202305/f6e8db08708e38d34e98f1efb735d03c.png" }}
+                source={{
+                  uri: "https://pleatsmama.com/web/product/big/202305/f6e8db08708e38d34e98f1efb735d03c.png",
+                }}
                 style={styles.brandImage}
               />
               <Text style={styles.brandName}>플리츠마마</Text>
@@ -298,7 +342,12 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* ✅ 기록 모달 */}
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
@@ -339,7 +388,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 20,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
     marginBottom: 15,
     shadowColor: "#000",
     shadowOpacity: 0.05,
@@ -354,10 +404,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 15,
-    paddingVertical: 20,
+    paddingVertical: 16,
     marginHorizontal: 6,
   },
-  iconText: { marginTop: 8, fontSize: 14, fontWeight: "500" },
+  iconText: { marginTop: 6, fontSize: 13, fontWeight: "500" },
   clothImg: { width: 90, height: 90, borderRadius: 10, marginRight: 10, backgroundColor: "#eee" },
   addBox: {
     width: 90,
@@ -374,8 +424,6 @@ const styles = StyleSheet.create({
   weekDay: { fontSize: 14, color: "#555" },
   weekDate: { fontSize: 16, color: "#222", marginTop: 4 },
   dotContainer: { flexDirection: "row", marginTop: 4 },
-  newsBox: { backgroundColor: "#f5f9f6", borderRadius: 12, padding: 14, marginTop: 8 },
-  newsText: { color: "#23422D", fontSize: 15, marginBottom: 8, lineHeight: 22 },
   brandRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
   brandCard: {
     backgroundColor: "#fff",
@@ -391,7 +439,12 @@ const styles = StyleSheet.create({
   brandImage: { width: 60, height: 60, borderRadius: 8, marginBottom: 8 },
   brandName: { fontWeight: "700", color: "#23422D", fontSize: 14 },
   brandDesc: { fontSize: 12, color: "#555", textAlign: "center", marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modalBox: {
     width: "85%",
     backgroundColor: "#fff",
@@ -401,9 +454,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
   },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
   modalTitle: { fontSize: 18, fontWeight: "700", color: "#23422D" },
-  eventRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderColor: "#eee" },
+  eventRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+  },
   thumb: { width: 40, height: 40, borderRadius: 8, marginRight: 10 },
   thumbPlaceholder: {
     width: 40,
