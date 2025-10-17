@@ -1,4 +1,3 @@
-# backend/app/main.py
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -14,11 +13,18 @@ from app.routers import (
     user as user_router,
     auth as auth_router,
     infer as infer_router,
-    clothes as clothes_router
+    clothes as clothes_router,
+    news as news_router,
+    
 )
 
 from alembic import command
 from alembic.config import Config
+from app.core.scheduler import start_scheduler
+
+
+
+
 
 app = FastAPI(title="ReWear API", version="0.1.0")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -100,15 +106,16 @@ def test_db(db: Session = Depends(get_db)):
     result = db.connection().exec_driver_sql("SELECT 1").scalar()
     return {"db_result": result}
 
+@app.on_event("startup")
+def startup_event():
+    start_scheduler()
 
-# @app.on_event("startup")
-# def on_startup():
-#     run_migrations()  # 최신 스키마 적용
 
 
 # ---------- Router 등록 ----------
-app.include_router(user_router.router)       # /users/*
-app.include_router(auth_router.router)       # /auth/*
+app.include_router(user_router.router)       
+app.include_router(auth_router.router)       
 app.include_router(event_router.router)
 app.include_router(infer_router.router, prefix="/infer", tags=["infer"])
 app.include_router(clothes_router.router)
+app.include_router(news_router.router)

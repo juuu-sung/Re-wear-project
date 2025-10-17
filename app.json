@@ -35,7 +35,8 @@
         {
           "kakaoAppKey": "076a5cfb9cfe5f1341f96cdf7a259b8f"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
