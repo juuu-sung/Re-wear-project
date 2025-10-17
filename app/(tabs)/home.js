@@ -1,183 +1,418 @@
-// app/(tabs)/index.js
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import { useRouter } from 'expo-router';
-import { FlatList, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+const openLink = async (url) => {
+  try {
+    await WebBrowser.openBrowserAsync(url);
+  } catch (error) {
+    console.error("❌ 브라우저 열기 실패:", error);
+  }
+};
 
-// 아이콘들을 불러옵니다.
-import AddIcon from '../../assets/icons/add.svg';
-import CameraIcon from '../../assets/icons/camera-outline.svg';
-import CheckboxIcon from '../../assets/icons/checkbox-outline.svg';
-import ProfileIcon from '../../assets/icons/person-circle-outline.svg';
-
-// 옷장 페이지에 있던 임시 옷 데이터 (최근 추가된 3개만 잘라서 사용)
-const clothesData = [
-  { id: '6', name: '청바지', category: '하의', image: 'https://image.msscdn.net/images/goods_img/20220818/2722137/2722137_1_500.jpg' },
-  { id: '5', name: '블랙 슬랙스', category: '하의', image: 'https://image.msscdn.net/images/goods_img/20230321/3163339/3163339_16934661858567_500.jpg' },
-  { id: '4', name: '회색 맨투맨', category: '상의', image: 'https://image.msscdn.net/images/goods_img/20210823/2072120/2072120_1_500.jpg' },
-].reverse(); // 최신순으로 보이게 배열을 뒤집습니다.
+const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
+const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [closetItems, setClosetItems] = useState([]);
+  const [calendarDots, setCalendarDots] = useState({});
+  const [userId, setUserId] = useState(null);
+  const [weekDates, setWeekDates] = useState([]);
 
-  const goToProfile = () => {
-    router.push('/profile');
+  const [allEvents, setAllEvents] = useState({});
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedEvents, setSelectedEvents] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // ✅ 이번 주 날짜 계산
+  useEffect(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((day + 6) % 7));
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      week.push(d.toISOString().split("T")[0]);
+    }
+    setWeekDates(week);
+  }, []);
+
+  // ✅ 사용자 ID 로드
+  useEffect(() => {
+    const loadUser = async () => {
+      const id = await AsyncStorage.getItem("user_id");
+      if (id) setUserId(Number(id));
+    };
+    loadUser();
+  }, []);
+
+  // ✅ 옷장 미리보기 로드
+  const loadClosetPreview = async () => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      const res = await fetch(`${BASE_URL}/clothes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) setClosetItems(data.slice(0, 3));
+    } catch (err) {
+      console.error("❌ 옷장 로드 실패:", err);
+    }
   };
 
-  // 미니 옷장 아이템 렌더링 함수
-  const renderClosetItem = ({ item }) => {
-    if (item.type === 'add') {
-      return (
-        <TouchableOpacity style={styles.addItemContainer} onPress={() => router.push('/closet')}>
-          <AddIcon width={40} height={40} fill="gray" />
-        </TouchableOpacity>
-      );
+  // ✅ 캘린더 점 + 이벤트 로드
+  const loadCalendarPreview = async () => {
+    if (!userId) return;
+    const today = new Date().toISOString().split("T")[0];
+    const [y, m] = today.split("-");
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+
+      const res = await fetch(`${BASE_URL}/events/calendar?month=${y}-${m}&user_id=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      const formatted = {};
+      const wearDates = Array.isArray(data.wear) ? data.wear : Object.keys(data.wear || {});
+      const washDates = Array.isArray(data.wash) ? data.wash : Object.keys(data.wash || {});
+
+      wearDates.forEach((d) => {
+        const dateKey = d.split("T")[0];
+        formatted[dateKey] = { dots: [{ color: "#2E7D32" }] };
+      });
+      washDates.forEach((d) => {
+        const dateKey = d.split("T")[0];
+        if (formatted[dateKey]) formatted[dateKey].dots.push({ color: "#1565C0" });
+        else formatted[dateKey] = { dots: [{ color: "#1565C0" }] };
+      });
+      setCalendarDots(formatted);
+
+      const eventRes = await fetch(`${BASE_URL}/events?user_id=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const eventData = await eventRes.json();
+      const grouped = {};
+      eventData.forEach((e) => {
+        const date = e.date?.split("T")[0];
+        if (!grouped[date]) grouped[date] = [];
+        grouped[date].push(e);
+      });
+      setAllEvents(grouped);
+    } catch (err) {
+      console.error("❌ 캘린더 로드 실패:", err);
     }
-    return (
-      <TouchableOpacity style={styles.closetItem} onPress={() => router.push(`/closet/${item.id}`)}>
-        <Image source={{ uri: item.image }} style={styles.closetItemImage} />
-      </TouchableOpacity>
-    );
+  };
+
+  // ✅ 탭 전환 시 자동 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) {
+        loadClosetPreview();
+        loadCalendarPreview();
+      }
+    }, [userId])
+  );
+
+  const getImageSource = (img) => {
+    if (!img) return null;
+    if (img.startsWith("http")) return { uri: img };
+    return { uri: `${BASE_URL}/uploads/clothes/${img}` };
+  };
+
+  // ✅ 날짜 클릭 시 팝업
+  const handleDatePress = (date) => {
+    const events = allEvents[date] || [];
+    if (events.length === 0) return;
+    setSelectedDate(date);
+    setSelectedEvents(events);
+    setModalVisible(true);
+  };
+
+  // ✅ 외부 링크 열기
+  const openLink = async (url) => {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) await Linking.openURL(url);
+    else Alert.alert("링크 오류", "해당 링크를 열 수 없습니다.");
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        {/* 1. 상단 헤더 */}
+    <SafeAreaView style={styles.safe}>
+      <ScrollView style={styles.container}>
+        {/* 헤더 */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Re:wear</Text>
-          <TouchableOpacity onPress={goToProfile}>
-            <ProfileIcon width={32} height={32} fill="black" />
+          <Text style={styles.logo}>Re:wear</Text>
+          <TouchableOpacity onPress={() => router.push("/profile")}>
+            <Ionicons name="person-circle-outline" size={40} color="#23422D" />
           </TouchableOpacity>
         </View>
 
-        {/* 2. 오늘의 알림 카드 */}
+        {/* 오늘의 알림 */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>오늘의 알림</Text>
-          <Text>오늘은 청바지를 세탁할 차례입니다!</Text>
+          <Text style={styles.title}>오늘의 알림</Text>
         </View>
-        
-        {/* 3. 케어라벨 검색 카드 */}
+
+        {/* 케어라벨 */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>케어라벨 검색</Text>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.primaryButton}>
-              <CameraIcon width={24} height={24} />
-              <Text style={styles.primaryButtonText}>라벨 촬영하기</Text>
+          <Text style={styles.title}>케어라벨 검색</Text>
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={styles.iconBox}
+              onPress={() => Alert.alert("라벨 촬영", "카메라 기능은 준비 중입니다.")}
+            >
+              <Ionicons name="camera-outline" size={40} color="#000" />
+              <Text style={styles.iconText}>라벨 촬영하기</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton}>
-              <CheckboxIcon width={24} height={24} stroke="#333" />
-              <Text style={styles.secondaryButtonText}>직접 선택하기</Text>
+            <TouchableOpacity style={styles.iconBox} onPress={() => router.push("/carelabel")}>
+              <Ionicons name="hand-left-outline" size={40} color="#000" />
+              <Text style={styles.iconText}>직접 선택하기</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* --- 4. 미니 옷장 섹션 (새로 추가) --- */}
+        {/* 옷장 미리보기 */}
         <View style={styles.card}>
-            <Text style={styles.cardTitle}>옷을 추가해 보세요!</Text>
-            <FlatList
-              data={[...clothesData, { type: 'add' }]} // 기존 옷 데이터에 '추가' 버튼용 데이터를 합칩니다.
-              renderItem={renderClosetItem}
-              keyExtractor={(item, index) => item.id || `add-${index}`}
-              horizontal // 가로 스크롤
-              showsHorizontalScrollIndicator={false} // 스크롤바 숨기기
-              contentContainerStyle={{ gap: 15 }}
-            />
+          {/* 오른쪽 상단 + 버튼 복구 */}
+          <View style={styles.calendarHeader}>
+            <Text style={styles.title}>옷을 추가해 보세요!</Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/closet")}>
+              <Ionicons name="add-circle-outline" size={26} color="#1C7C54" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {closetItems.map((cloth) => (
+              <Image key={cloth.id} source={getImageSource(cloth.image_path)} style={styles.clothImg} />
+            ))}
+            {/* ✅ 기존 큰 + 버튼 → (tabs)/closet/add.js 이동 */}
+            <TouchableOpacity style={styles.addBox} onPress={() => router.push("/(tabs)/closet/add")}>
+              <Ionicons name="add" size={36} color="#999" />
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* 이번 주 캘린더 */}
+        <View style={styles.card}>
+          <View style={styles.calendarHeader}>
+            <Text style={styles.title}>이번 주 캘린더</Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/calendar")}>
+              <Ionicons name="add-circle-outline" size={26} color="#1C7C54" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.weekRow}>
+            {weekDates.map((date) => {
+              const dayName = new Date(date).toLocaleDateString("ko-KR", { weekday: "short" });
+              const isToday = date === new Date().toISOString().split("T")[0];
+              const dots = calendarDots[date]?.dots || [];
+
+              return (
+                <TouchableOpacity key={date} style={styles.weekCell} onPress={() => handleDatePress(date)}>
+                  <Text style={[styles.weekDay, isToday && { color: "#23422D", fontWeight: "bold" }]}>{dayName}</Text>
+                  <Text style={styles.weekDate}>{date.split("-")[2]}</Text>
+                  <View style={styles.dotContainer}>
+                    {dots.map((d, i) => (
+                      <View
+                        key={i}
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: d.color,
+                          marginHorizontal: 1,
+                        }}
+                      />
+                    ))}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* 🌱 환경 기사 요약 */}
+        <View style={styles.card}>
+          <Text style={styles.title}>오늘의 환경 이슈</Text>
+          <View style={styles.newsBox}>
+            <Text style={styles.newsText}>
+              👕 매년 약 9200만 톤의 의류가 버려집니다. 재활용 섬유와 친환경 소재가
+              새로운 대안으로 주목받고 있습니다.
+            </Text>
+            <Text style={styles.newsText}>
+              🌿 유럽연합은 2030년까지 ‘수리 가능 의류’ 기준을 도입해 패스트패션 생산을
+              규제하고 있습니다.
+            </Text>
+          </View>
+        </View>
+
+        {/* 👗 슬로우패션 브랜드 추천 */}
+        <View style={styles.card}>
+          <Text style={styles.title}>추천 슬로우패션 브랜드</Text>
+          <View style={styles.brandRow}>
+            <TouchableOpacity style={styles.brandCard} onPress={() => openLink("https://www.recode.co.kr")}>
+              <Image
+                source={{ uri: "https://www.recode.co.kr/_next/image?url=%2Fimg%2Flogo.png&w=256&q=75" }}
+                style={styles.brandImage}
+              />
+              <Text style={styles.brandName}>RE;CODE</Text>
+              <Text style={styles.brandDesc}>업사이클링 패션 선도 브랜드</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.brandCard} onPress={() => openLink("https://pleatsmama.com")}>
+              <Image
+                source={{ uri: "https://pleatsmama.com/web/product/big/202305/f6e8db08708e38d34e98f1efb735d03c.png" }}
+                style={styles.brandImage}
+              />
+              <Text style={styles.brandName}>플리츠마마</Text>
+              <Text style={styles.brandDesc}>폐페트병으로 만든 니트백</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.brandCard} onPress={() => openLink("https://www.fabrikr.com")}>
+              <Image
+                source={{ uri: "https://www.fabrikr.com/assets/img/logo.png" }}
+                style={styles.brandImage}
+              />
+              <Text style={styles.brandName}>패브리커</Text>
+              <Text style={styles.brandDesc}>지속 가능한 소재 기반 브랜드</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
+
+      {/* ✅ 기록 모달 */}
+      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📅 {selectedDate} 기록</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close-circle" size={28} color="#444" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {selectedEvents.map((e, i) => (
+                <View key={i} style={styles.eventRow}>
+                  {e.clothes?.image_url ? (
+                    <Image source={getImageSource(e.clothes.image_url)} style={styles.thumb} />
+                  ) : (
+                    <View style={styles.thumbPlaceholder}>
+                      <Ionicons name="shirt-outline" size={22} color="#777" />
+                    </View>
+                  )}
+                  <Text style={styles.eventText}>
+                    {e.type === "wear" ? "👕 착용" : "🧺 세탁"} - {e.clothes?.name || "이름 없음"}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-// 스타일 코드
+// ✅ 스타일
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
+  safe: { flex: 1, backgroundColor: "#f0f2f5" },
+  container: { flex: 1, padding: 16 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  logo: { fontSize: 36, fontWeight: "bold", color: "#1C7C54" },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  title: { fontSize: 18, fontWeight: "700", color: "#1C7C54" },
+  row: { flexDirection: "row", justifyContent: "space-between" },
+  iconBox: {
+    flex: 1,
+    backgroundColor: "#f9f9f9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 15,
+    paddingVertical: 20,
+    marginHorizontal: 6,
+  },
+  iconText: { marginTop: 8, fontSize: 14, fontWeight: "500" },
+  clothImg: { width: 90, height: 90, borderRadius: 10, marginRight: 10, backgroundColor: "#eee" },
+  addBox: {
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#ddd",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  calendarHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  weekRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
+  weekCell: { alignItems: "center", flex: 1 },
+  weekDay: { fontSize: 14, color: "#555" },
+  weekDate: { fontSize: 16, color: "#222", marginTop: 4 },
+  dotContainer: { flexDirection: "row", marginTop: 4 },
+  newsBox: { backgroundColor: "#f5f9f6", borderRadius: 12, padding: 14, marginTop: 8 },
+  newsText: { color: "#23422D", fontSize: 15, marginBottom: 8, lineHeight: 22 },
+  brandRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
+  brandCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    width: "31%",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  brandImage: { width: 60, height: 60, borderRadius: 8, marginBottom: 8 },
+  brandName: { fontWeight: "700", color: "#23422D", fontSize: 14 },
+  brandDesc: { fontSize: 12, color: "#555", textAlign: "center", marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalBox: {
+    width: "85%",
+    backgroundColor: "#fff",
     borderRadius: 15,
     padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 15,
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#23422D" },
+  eventRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderColor: "#eee" },
+  thumb: { width: 40, height: 40, borderRadius: 8, marginRight: 10 },
+  thumbPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: "#f2f2f2",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: '#4a4a4a',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#e9e9e9',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: '#333',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  // --- 미니 옷장 스타일 (새로 추가) ---
-  closetItem: {
-    width: 100,
-    height: 100,
-  },
-  closetItemImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 10,
-  },
-  addItemContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    borderStyle: 'dashed',
-  },
+  eventText: { fontSize: 16, color: "#333" },
 });
