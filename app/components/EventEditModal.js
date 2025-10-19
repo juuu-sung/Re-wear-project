@@ -1,12 +1,12 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import {
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function EventEditModal({
@@ -84,18 +84,22 @@ export default function EventEditModal({
 
           {/* ✅ 수정 & 삭제 버튼 */}
           <View style={styles.actionRow}>
+            {/* ✅ 저장 버튼 */}
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#23422D" }]}
-              onPress={() =>
-                onUpdate(
-                  selectedDate.toISOString().split("T")[0],
-                  selectedType
-                )
-              }
+              onPress={() => {
+                // ✅ 타임존 보정 (UTC → KST)
+                const local = new Date(selectedDate);
+                local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
+                const formatted = local.toISOString().split("T")[0]; // YYYY-MM-DD
+                console.log("🧩 최종 전송 날짜:", formatted);
+                onUpdate(formatted, selectedType);
+              }}
             >
               <Text style={styles.actionText}>저장</Text>
             </TouchableOpacity>
 
+            {/* ✅ 삭제 버튼 */}
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#B71C1C" }]}
               onPress={onDelete}
@@ -104,7 +108,7 @@ export default function EventEditModal({
             </TouchableOpacity>
           </View>
 
-          {/* ✅ 닫기 버튼 (맨 아래로 이동) */}
+          {/* ✅ 닫기 버튼 */}
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Text style={styles.closeText}>닫기</Text>
           </TouchableOpacity>

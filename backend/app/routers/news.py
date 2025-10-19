@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 import feedparser
 import requests
 import datetime
@@ -9,12 +9,19 @@ router = APIRouter(prefix="/v1/news", tags=["news"])
 
 NEWS_CACHE = {"date": None, "articles": []}
 
+
 @router.get("/")
-async def get_daily_news():
+async def get_daily_news(refresh: int = Query(None, description="강제 새로고침 여부")):
+    """
+    ✅ 뉴스 자동 수집 (Google RSS)
+    - 기본: 하루 1회 캐시 유지
+    - refresh 파라미터 있을 경우 강제 새 수집
+    """
     today = datetime.date.today().isoformat()
 
-    # ✅ 하루 한 번만 캐시
-    if NEWS_CACHE["date"] == today and NEWS_CACHE["articles"]:
+    # ✅ 캐시 사용 조건 (오늘 날짜 + 새로고침 아님)
+    if refresh is None and NEWS_CACHE["date"] == today and NEWS_CACHE["articles"]:
+        # 하루 1회 캐시 유지
         return NEWS_CACHE["articles"]
 
     try:
@@ -38,6 +45,7 @@ async def get_daily_news():
             feed = feedparser.parse(res.text)
             print(f"[RSS] '{kw}' 기사 {len(feed.entries)}개 수집됨")
 
+            # ✅ 각 키워드당 상위 5개 기사만 사용
             for entry in feed.entries[:5]:
                 all_articles.append({
                     "title": entry.title,
@@ -46,7 +54,7 @@ async def get_daily_news():
                     "published": entry.get("published", ""),
                 })
 
-        # ✅ 중복 제거
+        # ✅ 중복 제거 (제목 기준)
         unique_articles = list({a["title"]: a for a in all_articles}.values())
 
         # ✅ 기사 없을 경우 예비 기사 사용
@@ -74,6 +82,7 @@ async def get_daily_news():
         num_articles = random.randint(4, 5)
         selected = random.sample(unique_articles, k=min(num_articles, len(unique_articles)))
 
+        # ✅ 캐시 갱신
         NEWS_CACHE["date"] = today
         NEWS_CACHE["articles"] = selected
 

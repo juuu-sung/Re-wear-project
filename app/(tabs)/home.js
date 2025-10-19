@@ -1,13 +1,14 @@
-// app/(tabs)/home.js
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import axios from "axios"; // ✅ 뉴스 API 요청용 추가
+import axios from "axios";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
+  Easing,
   Image,
   Modal,
   RefreshControl,
@@ -16,7 +17,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 
 // ✅ 외부 브라우저 열기 함수
@@ -46,6 +48,23 @@ export default function HomeScreen() {
   // ✅ 뉴스 상태
   const [news, setNews] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingNews, setLoadingNews] = useState(false);
+
+  // ✅ 회전 애니메이션 설정
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const spin = () => {
+    spinValue.setValue(0);
+    Animated.timing(spinValue, {
+      toValue: 1,
+      duration: 800,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start();
+  };
+  const spinAnimation = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
 
   // ✅ 이번 주 날짜 계산
   useEffect(() => {
@@ -93,14 +112,19 @@ export default function HomeScreen() {
     try {
       const token = await AsyncStorage.getItem("access_token");
 
-      const res = await fetch(`${BASE_URL}/events/calendar?month=${y}-${m}&user_id=${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${BASE_URL}/events/calendar?month=${y}-${m}&user_id=${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       const data = await res.json();
 
       const formatted = {};
-      const wearDates = Array.isArray(data.wear) ? data.wear : Object.keys(data.wear || {});
-      const washDates = Array.isArray(data.wash) ? data.wash : Object.keys(data.wash || {});
+      const wearDates = Array.isArray(data.wear)
+        ? data.wear
+        : Object.keys(data.wear || {});
+      const washDates = Array.isArray(data.wash)
+        ? data.wash
+        : Object.keys(data.wash || {});
 
       wearDates.forEach((d) => {
         const dateKey = d.split("T")[0];
@@ -108,11 +132,13 @@ export default function HomeScreen() {
       });
       washDates.forEach((d) => {
         const dateKey = d.split("T")[0];
-        if (formatted[dateKey]) formatted[dateKey].dots.push({ color: "#1565C0" });
+        if (formatted[dateKey])
+          formatted[dateKey].dots.push({ color: "#1565C0" });
         else formatted[dateKey] = { dots: [{ color: "#1565C0" }] };
       });
       setCalendarDots(formatted);
 
+      // 🟢 이벤트도 같이 로드
       const eventRes = await fetch(`${BASE_URL}/events?user_id=${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -129,23 +155,44 @@ export default function HomeScreen() {
     }
   };
 
-  // ✅ 뉴스 불러오기 (백엔드 연동)
+  // ✅ 뉴스 비동기 로드 (홈 진입 후 약간 딜레이)
+  useEffect(() => {
+    if (userId) {
+      const t = setTimeout(() => {
+        loadNews();
+      }, 300); // 0.3초 후 실행
+      return () => clearTimeout(t);
+    }
+  }, [userId]);
+
+  // ✅ 뉴스 불러오기
   const loadNews = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/v1/news`);
+      setLoadingNews(true);
+      spin();
+      const res = await axios.get(`${BASE_URL}/v1/news?refresh=${Date.now()}`);
       setNews(res.data);
     } catch (err) {
       console.error("❌ 뉴스 불러오기 실패:", err);
+    } finally {
+      setLoadingNews(false);
     }
   };
 
-  // ✅ 탭 전환 시 자동 새로고침
+  // ✅ 뉴스 자동 셔플
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNews((prev) => [...prev].sort(() => Math.random() - 0.5));
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ✅ 탭 전환 시 캘린더 + 옷장만 즉시 로드
   useFocusEffect(
     useCallback(() => {
       if (userId) {
         loadClosetPreview();
-        loadCalendarPreview();
-        loadNews();
+        loadCalendarPreview(); // 뉴스는 따로 useEffect에서 처리
       }
     }, [userId])
   );
@@ -153,20 +200,22 @@ export default function HomeScreen() {
   // ✅ 스와이프 새로고침
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadClosetPreview(), loadCalendarPreview(), loadNews()]);
+    await Promise.all([loadClosetPreview(), loadCalendarPreview()]);
+    // 뉴스는 독립적으로 호출
+    loadNews();
     setRefreshing(false);
   };
 
+  // ✅ 이미지 경로
   const getImageSource = (img) => {
     if (!img) return null;
     if (img.startsWith("http")) return { uri: img };
     return { uri: `${BASE_URL}/uploads/clothes/${img}` };
   };
 
-  // ✅ 날짜 클릭 시 팝업
+  // ✅ 날짜 클릭 시 모달 즉시 열기 (뉴스 기다리지 않음)
   const handleDatePress = (date) => {
     const events = allEvents[date] || [];
-    if (events.length === 0) return;
     setSelectedDate(date);
     setSelectedEvents(events);
     setModalVisible(true);
@@ -176,7 +225,9 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView
         style={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* 헤더 */}
         <View style={styles.header}>
@@ -202,7 +253,10 @@ export default function HomeScreen() {
               <Ionicons name="camera-outline" size={32} color="#000" />
               <Text style={styles.iconText}>라벨 촬영하기</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBox} onPress={() => router.push("/carelabel")}>
+            <TouchableOpacity
+              style={styles.iconBox}
+              onPress={() => router.push("/carelabel")}
+            >
               <Ionicons name="hand-left-outline" size={32} color="#000" />
               <Text style={styles.iconText}>직접 선택하기</Text>
             </TouchableOpacity>
@@ -220,9 +274,16 @@ export default function HomeScreen() {
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {closetItems.map((cloth) => (
-              <Image key={cloth.id} source={getImageSource(cloth.image_path)} style={styles.clothImg} />
+              <Image
+                key={cloth.id}
+                source={getImageSource(cloth.image_path)}
+                style={styles.clothImg}
+              />
             ))}
-            <TouchableOpacity style={styles.addBox} onPress={() => router.push("/(tabs)/closet/add")}>
+            <TouchableOpacity
+              style={styles.addBox}
+              onPress={() => router.push("/(tabs)/closet/add")}
+            >
               <Ionicons name="add" size={36} color="#999" />
             </TouchableOpacity>
           </ScrollView>
@@ -239,13 +300,26 @@ export default function HomeScreen() {
 
           <View style={styles.weekRow}>
             {weekDates.map((date) => {
-              const dayName = new Date(date).toLocaleDateString("ko-KR", { weekday: "short" });
+              const dayName = new Date(date).toLocaleDateString("ko-KR", {
+                weekday: "short",
+              });
               const isToday = date === new Date().toISOString().split("T")[0];
               const dots = calendarDots[date]?.dots || [];
 
               return (
-                <TouchableOpacity key={date} style={styles.weekCell} onPress={() => handleDatePress(date)}>
-                  <Text style={[styles.weekDay, isToday && { color: "#23422D", fontWeight: "bold" }]}>{dayName}</Text>
+                <TouchableOpacity
+                  key={date}
+                  style={styles.weekCell}
+                  onPress={() => handleDatePress(date)}
+                >
+                  <Text
+                    style={[
+                      styles.weekDay,
+                      isToday && { color: "#23422D", fontWeight: "bold" },
+                    ]}
+                  >
+                    {dayName}
+                  </Text>
                   <Text style={styles.weekDate}>{date.split("-")[2]}</Text>
                   <View style={styles.dotContainer}>
                     {dots.map((d, i) => (
@@ -269,9 +343,24 @@ export default function HomeScreen() {
 
         {/* 🌱 오늘의 환경 뉴스 */}
         <View style={styles.card}>
-          <Text style={styles.title}>오늘의 환경 뉴스</Text>
+          <View style={styles.calendarHeader}>
+            <Text style={styles.title}>오늘의 환경 뉴스</Text>
+            <TouchableOpacity onPress={loadNews} disabled={loadingNews}>
+              <Animated.View style={{ transform: [{ rotate: spinAnimation }] }}>
+                <Ionicons
+                  name="refresh-outline"
+                  size={22}
+                  color={loadingNews ? "#999" : "#1C7C54"}
+                />
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 10 }}
+          >
             {news.map((a, idx) => (
               <TouchableOpacity
                 key={idx}
@@ -284,22 +373,16 @@ export default function HomeScreen() {
                   padding: 14,
                 }}
               >
-                {a.urlToImage ? (
-                  <Image
-                    source={{ uri: a.urlToImage }}
-                    style={{ width: "100%", height: 120, borderRadius: 8, marginBottom: 8 }}
-                    resizeMode="cover"
-                  />
-                ) : null}
-                <Text style={{ fontSize: 16, fontWeight: "700", color: "#23422D" }} numberOfLines={2}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "700",
+                    color: "#23422D",
+                  }}
+                  numberOfLines={2}
+                >
                   {a.title}
                 </Text>
-                {a.source?.name ? <Text style={{ color: "#777", marginTop: 4 }}>{a.source.name}</Text> : null}
-                {a.description ? (
-                  <Text style={{ color: "#333", marginTop: 6 }} numberOfLines={3}>
-                    {a.description}
-                  </Text>
-                ) : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -309,16 +392,24 @@ export default function HomeScreen() {
         <View style={styles.card}>
           <Text style={styles.title}>추천 슬로우패션 브랜드</Text>
           <View style={styles.brandRow}>
-            <TouchableOpacity style={styles.brandCard} onPress={() => openLink("https://www.recode.co.kr")}>
+            <TouchableOpacity
+              style={styles.brandCard}
+              onPress={() => openLink("https://www.recode.co.kr")}
+            >
               <Image
-                source={{ uri: "https://www.recode.co.kr/_next/image?url=%2Fimg%2Flogo.png&w=256&q=75" }}
+                source={{
+                  uri: "https://www.recode.co.kr/_next/image?url=%2Fimg%2Flogo.png&w=256&q=75",
+                }}
                 style={styles.brandImage}
               />
               <Text style={styles.brandName}>RE;CODE</Text>
               <Text style={styles.brandDesc}>업사이클링 패션 선도 브랜드</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.brandCard} onPress={() => openLink("https://pleatsmama.com")}>
+            <TouchableOpacity
+              style={styles.brandCard}
+              onPress={() => openLink("https://pleatsmama.com")}
+            >
               <Image
                 source={{
                   uri: "https://pleatsmama.com/web/product/big/202305/f6e8db08708e38d34e98f1efb735d03c.png",
@@ -329,61 +420,97 @@ export default function HomeScreen() {
               <Text style={styles.brandDesc}>폐페트병으로 만든 니트백</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.brandCard} onPress={() => openLink("https://www.fabrikr.com")}>
+            <TouchableOpacity
+              style={styles.brandCard}
+              onPress={() => openLink("https://www.fabrikr.com")}
+            >
               <Image
-                source={{ uri: "https://www.fabrikr.com/assets/img/logo.png" }}
+                source={{
+                  uri: "https://www.fabrikr.com/assets/img/logo.png",
+                }}
                 style={styles.brandImage}
               />
               <Text style={styles.brandName}>패브리커</Text>
-              <Text style={styles.brandDesc}>지속 가능한 소재 기반 브랜드</Text>
+              <Text style={styles.brandDesc}>
+                지속 가능한 소재 기반 브랜드
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
-      {/* ✅ 기록 모달 */}
+      {/* 📅 슬라이드업 모달 */}
       <Modal
+        transparent
         visible={modalVisible}
         animationType="slide"
-        transparent
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>📅 {selectedDate} 기록</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close-circle" size={28} color="#444" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: 400 }}>
-              {selectedEvents.map((e, i) => (
-                <View key={i} style={styles.eventRow}>
-                  {e.clothes?.image_url ? (
-                    <Image source={getImageSource(e.clothes.image_url)} style={styles.thumb} />
-                  ) : (
-                    <View style={styles.thumbPlaceholder}>
-                      <Ionicons name="shirt-outline" size={22} color="#777" />
-                    </View>
-                  )}
-                  <Text style={styles.eventText}>
-                    {e.type === "wear" ? "👕 착용" : "🧺 세탁"} - {e.clothes?.name || "이름 없음"}
+        <TouchableWithoutFeedback onPressOut={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>
+                  {selectedDate
+                    ? `${selectedDate}의 기록`
+                    : "기록 없음"}
+                </Text>
+
+                {selectedEvents.length === 0 ? (
+                  <Text
+                    style={{ textAlign: "center", color: "#555" }}
+                  >
+                    기록이 없습니다.
                   </Text>
-                </View>
-              ))}
-            </ScrollView>
+                ) : (
+                  selectedEvents.map((event, idx) => (
+                    <View key={idx} style={styles.eventItem}>
+                      <Text style={styles.eventType}>
+                        {event.type === "wear"
+                          ? "👕 착용"
+                          : event.type === "wash"
+                          ? "🧺 세탁"
+                          : "📦 기타"}
+                      </Text>
+                      {event.description && (
+                        <Text style={styles.eventDesc}>
+                          메모: {event.description}
+                        </Text>
+                      )}
+                      {event.clothes && (
+                        <View style={styles.clothRow}>
+                          {event.clothes.image_url && (
+                            <Image
+                              source={{ uri: event.clothes.image_url }}
+                              style={styles.eventImage}
+                            />
+                          )}
+                          <Text style={styles.clothName}>
+                            {event.clothes.name}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ))
+                )}
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );
 }
 
-// ✅ 스타일
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f0f2f5" },
   container: { flex: 1, padding: 16 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   logo: { fontSize: 36, fontWeight: "bold", color: "#1C7C54" },
   card: {
     backgroundColor: "#fff",
@@ -408,7 +535,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   iconText: { marginTop: 6, fontSize: 13, fontWeight: "500" },
-  clothImg: { width: 90, height: 90, borderRadius: 10, marginRight: 10, backgroundColor: "#eee" },
+  clothImg: {
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+    marginRight: 10,
+    backgroundColor: "#eee",
+  },
   addBox: {
     width: 90,
     height: 90,
@@ -418,13 +551,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  calendarHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  weekRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  weekRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
   weekCell: { alignItems: "center", flex: 1 },
   weekDay: { fontSize: 14, color: "#555" },
   weekDate: { fontSize: 16, color: "#222", marginTop: 4 },
   dotContainer: { flexDirection: "row", marginTop: 4 },
-  brandRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
+  brandRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
   brandCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -442,41 +588,31 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "flex-end",
   },
-  modalBox: {
-    width: "85%",
+  modalContainer: {
     backgroundColor: "#fff",
-    borderRadius: 15,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    maxHeight: "60%",
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1C7C54",
+    marginBottom: 12,
+    textAlign: "center",
   },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: "#23422D" },
-  eventRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+  eventItem: {
+    marginBottom: 14,
+    backgroundColor: "#f8f9f8",
+    borderRadius: 12,
+    padding: 12,
   },
-  thumb: { width: 40, height: 40, borderRadius: 8, marginRight: 10 },
-  thumbPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    marginRight: 10,
-    backgroundColor: "#f2f2f2",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  eventText: { fontSize: 16, color: "#333" },
+  eventType: { fontSize: 16, fontWeight: "600", color: "#23422D" },
+  eventDesc: { fontSize: 13, color: "#444", marginTop: 4 },
+  clothRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  eventImage: { width: 50, height: 50, borderRadius: 8, marginRight: 10 },
+  clothName: { fontSize: 14, color: "#222", fontWeight: "500" },
 });
