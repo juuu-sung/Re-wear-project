@@ -1,10 +1,10 @@
 import { useState } from "react";
 import {
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 
@@ -12,17 +12,36 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedType, setSelectedType] = useState("");
 
+  const handleSave = () => {
+    if (!selectedDate || !selectedType) {
+      return; // 선택 안했을 때만 무시
+    }
+    onConfirm(selectedDate, selectedType);
+    setSelectedDate("");
+    setSelectedType("");
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
+    <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.title}>📅 {cloth?.name}</Text>
+          <Text style={styles.title}>{cloth?.name}</Text>
 
-          {/* 날짜 선택 */}
+          {/* ✅ 날짜 선택 */}
           <Calendar
             onDayPress={(day) => setSelectedDate(day.dateString)}
             markedDates={
-              selectedDate ? { [selectedDate]: { selected: true, selectedColor: "#b8e2b1" } } : {}
+              selectedDate
+                ? {
+                    [selectedDate]: {
+                      selected: true,
+                      selectedColor:
+                        selectedType === "wash"
+                          ? "#6AB7FF" // 세탁(파랑)
+                          : "#b8e2b1", // 착용(연두)
+                    },
+                  }
+                : {}
             }
             theme={{
               todayTextColor: "#23422D",
@@ -30,59 +49,63 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
             }}
           />
 
-          {/* Wear / Wash 선택 */}
+          {/* ✅ 착용 / 세탁 버튼 */}
           <View style={styles.typeContainer}>
+            {/* 착용 */}
             <TouchableOpacity
               style={[
                 styles.typeBtn,
-                selectedType === "wear" && styles.activeBtn,
+                selectedType === "wear" && {
+                  backgroundColor: "#b8e2b1",
+                  borderColor: "#b8e2b1",
+                },
               ]}
               onPress={() => setSelectedType("wear")}
             >
               <Text
                 style={[
                   styles.typeText,
-                  selectedType === "wear" && styles.activeText,
+                  selectedType === "wear" && { color: "#fff" },
                 ]}
               >
-                👕 착용
+                착용
               </Text>
             </TouchableOpacity>
 
+            {/* 세탁 */}
             <TouchableOpacity
               style={[
                 styles.typeBtn,
-                selectedType === "wash" && styles.activeBtn,
+                selectedType === "wash" && {
+                  backgroundColor: "#6AB7FF",
+                  borderColor: "#6AB7FF",
+                },
               ]}
               onPress={() => setSelectedType("wash")}
             >
               <Text
                 style={[
                   styles.typeText,
-                  selectedType === "wash" && styles.activeText,
+                  selectedType === "wash" && { color: "#fff" },
                 ]}
               >
-                🧺 세탁
+                세탁
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* 저장 버튼 */}
+          {/* ✅ 저장 버튼 */}
           <TouchableOpacity
-            disabled={!selectedDate || !selectedType}
-            onPress={() => {
-              onConfirm(selectedDate, selectedType);
-              setSelectedDate("");
-              setSelectedType("");
-            }}
+            onPress={handleSave}
             style={[
               styles.saveBtn,
-              (!selectedDate || !selectedType) && { backgroundColor: "#ccc" },
+              (!selectedDate || !selectedType) && { opacity: 0.4 },
             ]}
           >
             <Text style={styles.saveText}>저장</Text>
           </TouchableOpacity>
 
+          {/* ✅ 닫기 버튼 */}
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Text style={styles.closeText}>닫기</Text>
           </TouchableOpacity>
@@ -124,28 +147,35 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
   },
-  activeBtn: {
-    backgroundColor: "#23422D",
-  },
   typeText: {
     fontSize: 18,
     color: "#23422D",
     fontWeight: "600",
   },
-  activeText: {
-    color: "#fff",
-  },
+
+  // ✅ 저장 버튼 (닫기보다 큼)
   saveBtn: {
-    backgroundColor: "#23422D",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
+    alignSelf: "center",
+    marginTop: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 50,
   },
   saveText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#23422D", // 닫기와 동일 색
   },
-  closeBtn: { marginTop: 10, alignSelf: "center" },
-  closeText: { color: "#23422D", fontWeight: "700", fontSize: 16 },
+
+  // ✅ 닫기 버튼 (살짝 작음)
+  closeBtn: {
+    marginTop: 14,
+    alignSelf: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 35,
+  },
+  closeText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#23422D", // 동일 색상
+  },
 });

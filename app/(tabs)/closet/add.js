@@ -195,7 +195,7 @@ export default function AddClothesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   content: { alignItems: "center", padding: 20 },
-  title: { fontSize: 22, fontWeight: "700", color: "#23422D", marginBottom: 20 },
+  title: { fontSize: 22, fontWeight: "700", color: "#1C7C54", marginBottom: 20 },
   imageBox: {
     width: 180,
     height: 180,
@@ -230,14 +230,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 18,
   },
-  catBtnActive: { backgroundColor: "#23422D", borderColor: "#23422D" },
+  catBtnActive: { backgroundColor: "#1C7C54", borderColor: "#1C7C54" },
   catText: { color: "#777", fontSize: 15 },
   catTextActive: { color: "#fff", fontWeight: "600" },
   submitBtn: {
-    backgroundColor: "#23422D",
+    backgroundColor: "#1C7C54",
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 40,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

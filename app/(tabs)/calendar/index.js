@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
@@ -68,7 +69,7 @@ export default function CalendarScreen() {
       const data = await res.json();
       if (res.ok) setClosetItems(data);
     } catch (err) {
-      console.error("❌ 옷장 불러오기 실패:", err);
+      console.error("옷장 불러오기 실패:", err);
     }
   };
 
@@ -98,7 +99,7 @@ export default function CalendarScreen() {
 
       setCalendarDots(formatted);
     } catch (err) {
-      console.error("❌ 캘린더 로드 실패:", err);
+      console.error("캘린더 로드 실패:", err);
     }
   };
 
@@ -112,6 +113,7 @@ export default function CalendarScreen() {
 
       if (!res.ok) return;
       const data = await res.json();
+      console.log("📦 서버에서 받은 이벤트:", data);
 
       const grouped = {};
       data.forEach((e) => {
@@ -122,7 +124,7 @@ export default function CalendarScreen() {
 
       setAllEvents(grouped);
     } catch (err) {
-      console.error("❌ 이벤트 로드 실패:", err);
+      console.error("이벤트 로드 실패:", err);
     }
   };
 
@@ -147,7 +149,7 @@ export default function CalendarScreen() {
       fetchCalendar(date, userId);
       fetchEvents(userId);
     } catch (err) {
-      console.error("❌ 이벤트 저장 실패:", err);
+      console.error("이벤트 저장 실패:", err);
       Alert.alert("저장 실패", "서버와 통신 중 문제가 발생했습니다.");
     }
   };
@@ -162,9 +164,9 @@ export default function CalendarScreen() {
       });
       fetchCalendar(date, userId);
       fetchEvents(userId);
-      Alert.alert("삭제 완료", "이벤트가 삭제되었습니다.");
+      Alert.alert("삭제 완료", "기록이 삭제되었습니다.");
     } catch (err) {
-      console.error("❌ 이벤트 삭제 실패:", err);
+      console.error("기록 삭제 실패:", err);
     }
   };
 
@@ -189,12 +191,12 @@ export default function CalendarScreen() {
       if (res.ok) {
         fetchCalendar(newDate, userId);
         fetchEvents(userId);
-        Alert.alert("수정 완료", "이벤트가 수정되었습니다.");
+        Alert.alert("수정 완료", "기록이 수정되었습니다.");
       } else {
         Alert.alert("수정 실패", "서버와의 통신 중 오류가 발생했습니다.");
       }
     } catch (err) {
-      console.error("❌ 이벤트 수정 실패:", err);
+      console.error("기록 수정 실패:", err);
     }
   };
 
@@ -207,11 +209,11 @@ export default function CalendarScreen() {
 
   // ✅ 이미지 경로 처리
   const getImageSource = (path) => {
-  if (!path) return null;
-  if (path.startsWith("http")) return { uri: path };
-  if (path.startsWith("/uploads")) return { uri: `${BASE_URL}${path}` }; // ✅ 절대 경로일 때
-  return { uri: `${BASE_URL}/uploads/clothes/${path}` }; // ✅ 파일명만 있을 때
-};
+    if (!path) return null;
+    if (path.startsWith("http")) return { uri: path };
+    if (path.startsWith("/uploads")) return { uri: `${BASE_URL}${path}` };
+    return { uri: `${BASE_URL}/uploads/clothes/${path}` };
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -251,7 +253,7 @@ export default function CalendarScreen() {
 
         {selectedDate && (
           <View style={styles.eventSection}>
-            <Text style={styles.eventTitle}>📅 {selectedDate} 기록</Text>
+            <Text style={styles.eventTitle}> {selectedDate} 기록</Text>
             {selectedEvents.length > 0 ? (
               selectedEvents.map((e, i) => (
                 <TouchableOpacity
@@ -263,16 +265,16 @@ export default function CalendarScreen() {
                   }}
                 >
                   <View style={styles.row}>
-                    {e.image_url || e.clothes?.image_path ? (
+                    {e.clothes?.image_path ? (
                       <TouchableOpacity
                         onPress={() => {
-                          const img = e.image_url || e.clothes?.image_path;
+                          const img = e.clothes.image_path;
                           setPreviewImage(getImageSource(img));
                           setImageModalVisible(true);
                         }}
                       >
                         <Image
-                          source={getImageSource(e.image_url || e.clothes?.image_path)}
+                          source={getImageSource(e.clothes.image_path)}
                           style={styles.thumb}
                         />
                       </TouchableOpacity>
@@ -283,7 +285,7 @@ export default function CalendarScreen() {
                     )}
 
                     <Text style={styles.eventItemText}>
-                      {e.type === "wear" ? "👕 착용" : "🧺 세탁"} -{" "}
+                      {e.type === "wear" ? "착용" : "세탁"} -{" "}
                       {e.clothes?.name || "이름 없음"}
                     </Text>
                   </View>
@@ -342,18 +344,18 @@ export default function CalendarScreen() {
         }}
       />
 
-      {/* 이미지 미리보기 */}
+      {/* ✅ 사진 미리보기 팝업 */}
       <Modal visible={imageModalVisible} transparent animationType="fade">
-        <View style={styles.imageModalOverlay}>
-          <TouchableOpacity
-            style={styles.imageModalBackground}
-            onPress={() => setImageModalVisible(false)}
-          >
-            {previewImage && (
-              <Image source={previewImage} style={styles.imageModalPreview} />
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableWithoutFeedback onPress={() => setImageModalVisible(false)}>
+          <View style={styles.imageModalOverlay}>
+            <TouchableWithoutFeedback>
+              <Image
+                source={previewImage}
+                style={styles.imageModalPreview}
+              />
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );
@@ -407,13 +409,14 @@ const styles = StyleSheet.create({
       android: { elevation: 5 },
     }),
   },
+
+  // ✅ 팝업 스타일
   imageModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
     alignItems: "center",
   },
-  imageModalBackground: { flex: 1, justifyContent: "center", alignItems: "center" },
   imageModalPreview: {
     width: "85%",
     height: "65%",
