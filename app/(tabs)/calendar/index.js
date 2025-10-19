@@ -1,4 +1,3 @@
-// app/(tabs)/calendar.js
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -46,13 +45,11 @@ export default function CalendarScreen() {
 
   const loadUserId = async () => {
     const id = await AsyncStorage.getItem("user_id");
-    console.log("🧠 불러온 user_id:", id);
     if (id) setUserId(Number(id));
   };
 
   // ✅ userId 세팅 후 이벤트 로드
   useEffect(() => {
-    console.log("🧠 userId 상태:", userId);
     if (userId !== null && !isNaN(userId)) {
       const today = new Date().toISOString().split("T")[0];
       fetchCalendar(today, userId);
@@ -70,7 +67,6 @@ export default function CalendarScreen() {
       });
       const data = await res.json();
       if (res.ok) setClosetItems(data);
-      console.log("🧥 옷장 아이템 불러오기 완료:", data.length);
     } catch (err) {
       console.error("❌ 옷장 불러오기 실패:", err);
     }
@@ -114,28 +110,8 @@ export default function CalendarScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("📡 이벤트 요청 URL:", `${BASE_URL}/events?user_id=${uid}`);
-      console.log("📥 서버 상태 코드:", res.status);
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("❌ 서버 응답 오류:", errText);
-        Alert.alert("오류", `이벤트 데이터를 불러올 수 없습니다.\n(${res.status})`);
-        return;
-      }
-
-      let data;
-      try {
-        data = await res.json();
-      } catch (e) {
-        console.error("⚠️ JSON 파싱 실패:", e);
-        return;
-      }
-
-      if (!Array.isArray(data)) {
-        console.warn("⚠️ 서버 응답이 배열이 아닙니다:", data);
-        return;
-      }
+      if (!res.ok) return;
+      const data = await res.json();
 
       const grouped = {};
       data.forEach((e) => {
@@ -145,7 +121,6 @@ export default function CalendarScreen() {
       });
 
       setAllEvents(grouped);
-      console.log("✅ 이벤트 그룹화 완료:", grouped);
     } catch (err) {
       console.error("❌ 이벤트 로드 실패:", err);
     }
@@ -231,24 +206,21 @@ export default function CalendarScreen() {
   };
 
   // ✅ 이미지 경로 처리
-  const getImageSource = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) return { uri: imagePath };
-    return { uri: `${BASE_URL}/uploads/clothes/${imagePath}` };
-  };
+  const getImageSource = (path) => {
+  if (!path) return null;
+  if (path.startsWith("http")) return { uri: path };
+  if (path.startsWith("/uploads")) return { uri: `${BASE_URL}${path}` }; // ✅ 절대 경로일 때
+  return { uri: `${BASE_URL}/uploads/clothes/${path}` }; // ✅ 파일명만 있을 때
+};
 
-  // ✅ 수정됨: 캘린더 focus 시에도 옷장 불러오기
   useFocusEffect(
     useCallback(() => {
       loadClosetItems();
     }, [])
   );
 
-  // ✅ 수정됨: ClosetPickerModal이 열릴 때마다 옷장 새로 로드
   useEffect(() => {
-    if (modalVisible) {
-      loadClosetItems();
-    }
+    if (modalVisible) loadClosetItems();
   }, [modalVisible]);
 
   return (
@@ -291,22 +263,28 @@ export default function CalendarScreen() {
                   }}
                 >
                   <View style={styles.row}>
-                    {e.image_url ? (
+                    {e.image_url || e.clothes?.image_path ? (
                       <TouchableOpacity
                         onPress={() => {
-                          setPreviewImage(getImageSource(e.image_url));
+                          const img = e.image_url || e.clothes?.image_path;
+                          setPreviewImage(getImageSource(img));
                           setImageModalVisible(true);
                         }}
                       >
-                        <Image source={getImageSource(e.image_url)} style={styles.thumb} />
+                        <Image
+                          source={getImageSource(e.image_url || e.clothes?.image_path)}
+                          style={styles.thumb}
+                        />
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.thumbPlaceholder}>
                         <Ionicons name="shirt-outline" size={22} color="#999" />
                       </View>
                     )}
+
                     <Text style={styles.eventItemText}>
-                      {e.type === "wear" ? "👕 착용" : "🧺 세탁"} - {e.cloth_name || "이름 없음"}
+                      {e.type === "wear" ? "👕 착용" : "🧺 세탁"} -{" "}
+                      {e.clothes?.name || "이름 없음"}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -325,7 +303,6 @@ export default function CalendarScreen() {
         <Ionicons name="add" size={34} color="#fff" />
       </TouchableOpacity>
 
-      {/* 모달 */}
       <ClosetPickerModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
