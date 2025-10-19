@@ -1,114 +1,112 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import {
   Modal,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Calendar } from "react-native-calendars";
 
-export default function EventEditModal({
-  visible,
-  onClose,
-  event,
-  onDelete,
-  onUpdate,
-}) {
-  const [selectedDate, setSelectedDate] = useState(
-    event ? new Date(event.date) : new Date()
-  );
+export default function EventEditModal({ visible, onClose, event, onDelete, onUpdate }) {
+  const [selectedDate, setSelectedDate] = useState(event ? event.date : "");
   const [selectedType, setSelectedType] = useState(event?.type || "wear");
 
   if (!event) return null;
 
+  const handleSave = () => {
+    if (!selectedDate || !selectedType) return;
+    onUpdate(selectedDate, selectedType);
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           {/* ✅ 제목 */}
           <Text style={styles.title}>기록 수정</Text>
 
-          {/* ✅ 날짜 선택 */}
-          <View style={styles.section}>
-            <Text style={styles.label}>날짜 변경</Text>
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(e, date) => date && setSelectedDate(date)}
-              style={{ alignSelf: "center" }}
-            />
+          {/* ✅ 달력 (추가 모달과 동일) */}
+          <Calendar
+            onDayPress={(day) => setSelectedDate(day.dateString)}
+            markedDates={
+              selectedDate
+                ? {
+                    [selectedDate]: {
+                      selected: true,
+                      selectedColor:
+                        selectedType === "wash" ? "#6AB7FF" : "#b8e2b1",
+                    },
+                  }
+                : {}
+            }
+            theme={{
+              todayTextColor: "#23422D",
+              arrowColor: "#23422D",
+            }}
+          />
+
+          {/* ✅ 타입 선택 (추가 모달과 동일) */}
+          <View style={styles.typeContainer}>
+            <TouchableOpacity
+              style={[
+                styles.typeBtn,
+                selectedType === "wear" && {
+                  backgroundColor: "#b8e2b1",
+                  borderColor: "#b8e2b1",
+                },
+              ]}
+              onPress={() => setSelectedType("wear")}
+            >
+              <Text
+                style={[
+                  styles.typeText,
+                  selectedType === "wear" && { color: "#fff" },
+                ]}
+              >
+                착용
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.typeBtn,
+                selectedType === "wash" && {
+                  backgroundColor: "#6AB7FF",
+                  borderColor: "#6AB7FF",
+                },
+              ]}
+              onPress={() => setSelectedType("wash")}
+            >
+              <Text
+                style={[
+                  styles.typeText,
+                  selectedType === "wash" && { color: "#fff" },
+                ]}
+              >
+                세탁
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          {/* ✅ 타입 선택 */}
-          <View style={styles.section}>
-            <Text style={styles.label}>종류 변경</Text>
-            <View style={styles.typeRow}>
-              <TouchableOpacity
-                style={[
-                  styles.typeButton,
-                  selectedType === "wear" && styles.activeType,
-                ]}
-                onPress={() => setSelectedType("wear")}
-              >
-                <Text
-                  style={[
-                    styles.typeText,
-                    selectedType === "wear" && styles.activeTypeText,
-                  ]}
-                >
-                  👕 착용
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.typeButton,
-                  selectedType === "wash" && styles.activeType,
-                ]}
-                onPress={() => setSelectedType("wash")}
-              >
-                <Text
-                  style={[
-                    styles.typeText,
-                    selectedType === "wash" && styles.activeTypeText,
-                  ]}
-                >
-                  🧺 세탁
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* ✅ 수정 & 삭제 버튼 */}
+          {/* ✅ 저장 / 삭제 버튼 (좌우 배치) */}
           <View style={styles.actionRow}>
-            {/* ✅ 저장 버튼 */}
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#23422D" }]}
-              onPress={() => {
-                // ✅ 타임존 보정 (UTC → KST)
-                const local = new Date(selectedDate);
-                local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
-                const formatted = local.toISOString().split("T")[0]; // YYYY-MM-DD
-                console.log("🧩 최종 전송 날짜:", formatted);
-                onUpdate(formatted, selectedType);
-              }}
+              onPress={handleSave}
+              style={styles.saveBtn}
             >
-              <Text style={styles.actionText}>저장</Text>
+              <Text style={styles.saveText}>저장</Text>
             </TouchableOpacity>
 
-            {/* ✅ 삭제 버튼 */}
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#B71C1C" }]}
               onPress={onDelete}
+              style={styles.deleteBtn}
             >
-              <Text style={styles.actionText}>삭제</Text>
+              <Text style={styles.deleteText}>삭제</Text>
             </TouchableOpacity>
           </View>
 
-          {/* ✅ 닫기 버튼 */}
+          {/* ✅ 닫기 버튼 (맨 아래) */}
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Text style={styles.closeText}>닫기</Text>
           </TouchableOpacity>
@@ -121,12 +119,13 @@ export default function EventEditModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContainer: {
-    width: "88%",
+    width: "90%",
+    height: "85%",
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
@@ -138,57 +137,60 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center",
   },
-  section: {
-    marginBottom: 18,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#23422D",
-    marginBottom: 6,
-  },
-  typeRow: {
+
+  // ✅ 타입 선택 영역
+  typeContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
+    marginVertical: 20,
   },
-  typeButton: {
+  typeBtn: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#23422D",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 20,
   },
-  activeType: {
-    backgroundColor: "#23422D",
-    borderColor: "#23422D",
-  },
-  typeText: { color: "#23422D", fontWeight: "600", fontSize: 16 },
-  activeTypeText: { color: "#fff" },
-  actionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  actionBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  actionText: {
-    color: "#fff",
-    fontSize: 16,
+  typeText: {
+    fontSize: 18,
+    color: "#23422D",
     fontWeight: "600",
   },
+
+  // ✅ 저장 / 삭제 버튼 나란히
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 25,
+  },
+  saveBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+  },
+  saveText: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#23422D",
+  },
+  deleteBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+  },
+  deleteText: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#B71C1C",
+  },
+
+  // ✅ 닫기 버튼 (맨 아래)
   closeBtn: {
-    marginTop: 20,
+    marginTop: 15,
     alignSelf: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   closeText: {
     color: "#23422D",
     fontWeight: "700",
-    fontSize: 16,
+    fontSize: 20,
   },
 });
