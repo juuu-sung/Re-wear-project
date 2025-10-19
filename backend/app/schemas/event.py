@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from datetime import date
-from typing import Optional
+from typing import Optional, Union
 
-# 👕 Clothes (옷 정보) 스키마
+# 👕 Clothes (옷 정보)
 class ClothesResponse(BaseModel):
     id: int
     name: str
@@ -19,25 +19,25 @@ class EventBase(BaseModel):
     garment_id: int
 
 
-# 📌 생성 시
+# 📌 생성용
 class EventCreate(EventBase):
     description: Optional[str] = None
 
 
-# 🛠 수정 시
+# 🛠 수정용 (None은 제외되게 + 문자열 date 허용)
 class EventUpdate(BaseModel):
-    date: Optional[date] = None
+    date: Optional[Union[str, date]] = None
     type: Optional[str] = None
     garment_id: Optional[int] = None
+    description: Optional[str] = None
 
 
-# 🔍 조회 시 (이제 옷 정보 포함)
+# 🔍 조회용 (Clothes 정보 포함)
 class EventResponse(EventBase):
     id: int
     user_id: int
     description: Optional[str] = None
-    clothes: Optional[ClothesResponse] = None  # ✅ 옷 이름 + 사진 정보
+    clothes: Optional[ClothesResponse] = None  # ✅ 옷 정보까지 반환
 
     class Config:
         orm_mode = True
-

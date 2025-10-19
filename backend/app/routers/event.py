@@ -7,6 +7,7 @@ from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
+
 # ✅ 이벤트 생성
 @router.post("", response_model=schemas.EventResponse)
 def create_event(
@@ -26,14 +27,14 @@ def create_event(
 def get_events(user_id: int = Query(...), db: Session = Depends(get_db)):
     events = (
         db.query(models.Event)
-        .options(joinedload(models.Event.clothes))  # 👈 Clothes까지 한번에 로드
+        .options(joinedload(models.Event.clothes))
         .filter(models.Event.user_id == user_id)
         .all()
     )
     return events
 
 
-# ✅ 월별 캘린더용 (wear/wash 날짜만)
+# ✅ 월별 캘린더용
 @router.get("/calendar")
 def get_calendar(month: str, user_id: int, db: Session = Depends(get_db)):
     year, month = map(int, month.split("-"))
@@ -57,16 +58,28 @@ def get_calendar(month: str, user_id: int, db: Session = Depends(get_db)):
     return {"wear": list(wear_dates), "wash": list(wash_dates)}
 
 
-# ✅ 이벤트 수정
+# ✅ 이벤트 수정 (exclude_unset으로 None 무시)
 @router.put("/{event_id}", response_model=schemas.EventResponse)
-def update_event(event_id: int, new: schemas.EventUpdate, db: Session = Depends(get_db)):
+def update_event(
+    event_id: int,
+    new: schemas.EventUpdate,
+    db: Session = Depends(get_db)
+):
     db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
-    for key, value in new.dict().items():
+
+    update_data = new.dict(exclude_unset=True)  # ✅ None 필드 무시
+    for key, value in update_data.items():
         setattr(db_event, key, value)
-    db.commit()
-    db.refresh(db_event)
+
+    try:
+        db.commit()
+        db.refresh(db_event)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
     return db_event
 
 
