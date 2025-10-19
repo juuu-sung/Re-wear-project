@@ -1,17 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
@@ -42,7 +41,7 @@ export default function ClosetMain() {
           setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
         }
       } catch (err) {
-        console.log("❌ 사용자 이름 불러오기 실패:", err);
+        console.log("사용자 이름 불러오기 실패:", err);
         setUserName("사용자");
       } finally {
         setLoadingUser(false);
@@ -67,58 +66,54 @@ export default function ClosetMain() {
     });
   };
 
-  // ✅ 카테고리 길게 누르면 삭제 or 수정 선택
+  // ✅ 카테고리 길게 누르면 수정/삭제
   const handleCategoryLongPress = (name) => {
     if (["상의", "하의", "아우터"].includes(name)) {
       Alert.alert("기본 옷장은 수정/삭제할 수 없습니다.");
       return;
     }
 
-    Alert.alert(
-      `"${name}" 옷장 관리`,
-      "원하는 작업을 선택하세요.",
-      [
-        {
-          text: "이름 수정 ✏️",
-          onPress: () => {
-            Alert.prompt(
-              "옷장 이름 수정",
-              `"${name}" 옷장의 새 이름을 입력하세요.`,
-              async (text) => {
-                const newName = text?.trim();
-                if (!newName) return;
-                if (categories.includes(newName)) {
-                  Alert.alert("중복된 이름", `"${newName}"은 이미 존재합니다.`);
-                  return;
-                }
-
-                const updated = categories.map((c) => (c === name ? newName : c));
-                setCategories(updated);
-                await AsyncStorage.setItem("categories", JSON.stringify(updated));
-
-                if (selected === name) setSelected(newName);
-
-                Alert.alert("수정 완료", `"${name}" → "${newName}"으로 변경되었습니다.`);
+    Alert.alert(`"${name}" 옷장 관리`, "원하는 작업을 선택하세요.", [
+      {
+        text: "이름 수정",
+        onPress: () => {
+          Alert.prompt(
+            "옷장 이름 수정",
+            `"${name}" 옷장의 새 이름을 입력하세요.`,
+            async (text) => {
+              const newName = text?.trim();
+              if (!newName) return;
+              if (categories.includes(newName)) {
+                Alert.alert("중복된 이름", `"${newName}"은 이미 존재합니다.`);
+                return;
               }
-            );
-          },
-        },
-        {
-          text: "삭제 ❌",
-          style: "destructive",
-          onPress: async () => {
-            const updated = categories.filter((c) => c !== name);
-            setCategories(updated);
-            await AsyncStorage.setItem("categories", JSON.stringify(updated));
 
-            if (selected === name) setSelected("상의");
+              const updated = categories.map((c) => (c === name ? newName : c));
+              setCategories(updated);
+              await AsyncStorage.setItem("categories", JSON.stringify(updated));
 
-            Alert.alert("삭제 완료", `"${name}" 옷장이 삭제되었습니다.`);
-          },
+              if (selected === name) setSelected(newName);
+
+              Alert.alert("수정 완료", `"${name}" → "${newName}"으로 변경되었습니다.`);
+            }
+          );
         },
-        { text: "취소", style: "cancel" },
-      ]
-    );
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          const updated = categories.filter((c) => c !== name);
+          setCategories(updated);
+          await AsyncStorage.setItem("categories", JSON.stringify(updated));
+
+          if (selected === name) setSelected("상의");
+
+          Alert.alert("삭제 완료", `"${name}" 옷장이 삭제되었습니다.`);
+        },
+      },
+      { text: "취소", style: "cancel" },
+    ]);
   };
 
   // ✅ 옷 목록 불러오기
@@ -136,7 +131,7 @@ export default function ClosetMain() {
         setItems(filtered);
       }
     } catch (err) {
-      console.error("❌ 서버 연결 오류:", err);
+      console.error("서버 연결 오류:", err);
     } finally {
       setLoading(false);
     }
@@ -152,32 +147,10 @@ export default function ClosetMain() {
     }, [selected])
   );
 
-  // ✅ FAB 애니메이션
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const translateYAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const lastScrollY = useRef(0);
-
-  const handleScroll = (event) => {
-    const currentY = event.nativeEvent.contentOffset.y;
-    if (currentY > lastScrollY.current + 10) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-        Animated.timing(translateYAnim, { toValue: 50, duration: 250, useNativeDriver: true }),
-      ]).start();
-    } else if (currentY < lastScrollY.current - 10) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-        Animated.timing(translateYAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-      ]).start();
-    }
-    lastScrollY.current = currentY;
-  };
-
   if (loadingUser) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color="#23422D" />
+        <ActivityIndicator size="large" color="#1C7C54" />
       </View>
     );
   }
@@ -200,8 +173,8 @@ export default function ClosetMain() {
             <TouchableOpacity
               key={cat}
               style={[styles.tab, selected === cat && styles.activeTab]}
-              onPress={() => setSelected(cat)} // 짧게: 선택
-              onLongPress={() => handleCategoryLongPress(cat)} // 길게: 수정 or 삭제
+              onPress={() => setSelected(cat)}
+              onLongPress={() => handleCategoryLongPress(cat)}
             >
               <Text style={[styles.tabText, selected === cat && styles.activeText]}>
                 {cat}
@@ -213,19 +186,15 @@ export default function ClosetMain() {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* ✅ 회색 구분선 */}
+        {/* ✅ 구분선 */}
         <View style={styles.divider} />
       </View>
 
-      {/* ✅ 옷 목록 or 없음 문구 */}
+      {/* ✅ 옷 목록 */}
       {loading ? (
-        <ActivityIndicator size="large" color="#23422D" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color="#000" style={{ marginTop: 40 }} />
       ) : items.length > 0 ? (
-        <ScrollView
-          contentContainerStyle={styles.grid}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        >
+        <ScrollView contentContainerStyle={styles.grid}>
           {items.map((item) => (
             <TouchableOpacity
               key={item.id}
@@ -248,12 +217,7 @@ export default function ClosetMain() {
                   style={styles.image}
                 />
               ) : (
-                <View
-                  style={[
-                    styles.image,
-                    { justifyContent: "center", alignItems: "center" },
-                  ]}
-                >
+                <View style={[styles.image, { justifyContent: "center", alignItems: "center" }]}>
                   <Ionicons name="shirt-outline" size={40} color="#ccc" />
                 </View>
               )}
@@ -265,30 +229,16 @@ export default function ClosetMain() {
         <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
       )}
 
-      {/* ✅ 추가 버튼 */}
-      <Animated.View
-        style={[
-          styles.fabContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }, { translateY: translateYAnim }],
-          },
-        ]}
-      >
+      {/* ✅ + 버튼 (고정) */}
+      <View style={styles.fabContainer}>
         <TouchableOpacity
           activeOpacity={0.8}
-          onPressIn={() =>
-            Animated.spring(scaleAnim, { toValue: 1.1, useNativeDriver: true }).start()
-          }
-          onPressOut={() => {
-            Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }).start();
-            setTimeout(() => router.push("/(tabs)/closet/add"), 80);
-          }}
+          onPress={() => router.push("/(tabs)/closet/add")}
           style={styles.fab}
         >
           <Ionicons name="add" size={36} color="#fff" />
         </TouchableOpacity>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -304,7 +254,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#23422D",
+    color: "#1C7C54",
   },
   categoryContainer: {
     marginTop: 8,
@@ -329,7 +279,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginRight: 8,
   },
-  activeTab: { backgroundColor: "#23422D", borderColor: "#23422D" },
+  activeTab: { backgroundColor: "#1C7C54", borderColor: "#1C7C54" },
   tabText: { color: "#777", fontSize: 15 },
   activeText: { color: "#fff", fontWeight: "600" },
   addTabBtn: {
@@ -364,7 +314,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 15,
     marginTop: 8,
-    color: "#23422D",
+    color: "#1C7C54",
   },
   emptyText: {
     textAlign: "center",
@@ -372,13 +322,25 @@ const styles = StyleSheet.create({
     marginTop: 30,
     fontSize: 16,
   },
-  fabContainer: { position: "absolute", bottom: 30, right: 25 },
+
+  // ✅ FAB 고정 스타일
+  fabContainer: {
+    position: "absolute",
+    bottom: 30,
+    right: 25,
+    zIndex: 999,
+    elevation: 10,
+  },
   fab: {
-    backgroundColor: "#23422D",
+    backgroundColor: "#1C7C54",
     width: 70,
     height: 70,
     borderRadius: 35,
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 5,
   },
 });

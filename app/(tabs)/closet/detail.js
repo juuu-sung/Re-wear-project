@@ -2,19 +2,19 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    ActionSheetIOS,
-    Alert,
-    Image,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActionSheetIOS,
+  Alert,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
@@ -28,9 +28,27 @@ export default function ClothesDetail() {
   const [editedName, setEditedName] = useState(name);
   const [editedCategory, setEditedCategory] = useState(category);
   const [imageUri, setImageUri] = useState(image);
+  const [washingInfo, setWashingInfo] = useState("");
+  const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ 사진 변경
+  // ✅ 사용자 추가 카테고리 불러오기
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("categories");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setCategories([...new Set(["상의", "하의", "아우터", ...parsed])]);
+        }
+      } catch (err) {
+        console.log("카테고리 불러오기 실패:", err);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // ✅ 사진 변경 (카메라/앨범 선택)
   const changePhoto = async () => {
     const options = ["카메라로 촬영", "앨범에서 선택", "취소"];
     const cancelIndex = 2;
@@ -93,6 +111,7 @@ export default function ClothesDetail() {
       const formData = new FormData();
       formData.append("name", editedName);
       formData.append("category", editedCategory);
+      formData.append("washing_info", washingInfo || "");
 
       if (imageUri && !imageUri.startsWith(BASE_URL)) {
         const filename = imageUri.split("/").pop();
@@ -119,14 +138,14 @@ export default function ClothesDetail() {
       }
 
       if (res.ok) {
-        Alert.alert("수정 완료 ✅", `"${editedName}" 정보가 업데이트되었습니다.`);
+        Alert.alert("수정 완료", `"${editedName}" 정보가 업데이트되었습니다.`);
         setEditMode(false);
         router.replace("/(tabs)/closet");
       } else {
         Alert.alert("오류", data.detail || "수정 실패");
       }
     } catch (err) {
-      console.error("❌ 수정 오류:", err);
+      console.error("수정 오류:", err);
       Alert.alert("서버 오류", "수정 중 문제가 발생했습니다.");
     } finally {
       setLoading(false);
@@ -154,14 +173,14 @@ export default function ClothesDetail() {
             });
 
             if (res.ok) {
-              Alert.alert("삭제 완료 ✅", `"${name}"이(가) 삭제되었습니다.`);
+              Alert.alert("삭제 완료", `"${name}"이(가) 삭제되었습니다.`);
               router.replace("/(tabs)/closet");
             } else {
               const errData = await res.json();
               Alert.alert("삭제 실패", errData.detail || "삭제 중 오류 발생");
             }
           } catch (err) {
-            console.error("❌ 삭제 오류:", err);
+            console.error("삭제 오류:", err);
             Alert.alert("오류", "서버에 연결할 수 없습니다.");
           }
         },
@@ -171,17 +190,15 @@ export default function ClothesDetail() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={26} color="#000" />
-      </TouchableOpacity>
-
       <ScrollView contentContainerStyle={styles.content}>
         {/* 이미지 */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUri }} style={styles.image} />
+
+          {/* 연필 버튼 */}
           {editMode && (
-            <TouchableOpacity style={styles.cameraBtn} onPress={changePhoto}>
-              <Ionicons name="camera-outline" size={26} color="#fff" />
+            <TouchableOpacity style={styles.editPhotoBtn} onPress={changePhoto}>
+              <Ionicons name="create-outline" size={22} color="#fff" />
             </TouchableOpacity>
           )}
         </View>
@@ -195,8 +212,9 @@ export default function ClothesDetail() {
               onChangeText={setEditedName}
               placeholder="옷 이름을 입력하세요"
             />
+
             <View style={styles.categoryRow}>
-              {["상의", "하의", "아우터"].map((cat) => (
+              {categories.map((cat) => (
                 <TouchableOpacity
                   key={cat}
                   style={[styles.catBtn, editedCategory === cat && styles.catBtnActive]}
@@ -218,39 +236,51 @@ export default function ClothesDetail() {
           <>
             <Text style={styles.name}>{editedName}</Text>
             <Text style={styles.category}>{editedCategory}</Text>
+
+            {/* 세탁법 */}
+            <View style={styles.washDisplay}>
+              <Ionicons
+                name="water-outline"
+                size={20}
+                color="#1C7C54"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.washText}>
+                {washingInfo
+                  ? washingInfo
+                  : "세탁법을 입력하거나 AI가 분석하면 여기에 표시됩니다."}
+              </Text>
+            </View>
           </>
         )}
 
         {/* 버튼 */}
         <View style={styles.btnRow}>
           {editMode ? (
-            <TouchableOpacity
-              onPress={handleUpdate}
-              style={[styles.actionBtn, { backgroundColor: "#23422D" }]}
-              disabled={loading}
-            >
-              <Ionicons name="checkmark" size={20} color="#fff" />
-              <Text style={styles.btnText}>
-                {loading ? "저장 중..." : "저장"}
-              </Text>
-            </TouchableOpacity>
-          ) : (
             <>
-              <TouchableOpacity
-                onPress={() => setEditMode(true)}
-                style={[styles.actionBtn, { backgroundColor: "#23422D" }]}
-              >
-                <Ionicons name="create-outline" size={20} color="#fff" />
-                <Text style={styles.btnText}>수정</Text>
+              <TouchableOpacity onPress={handleUpdate} disabled={loading}>
+                <View style={styles.textButton}>
+                  <Ionicons name="checkmark" size={20} color="#000" />
+                  <Text style={styles.textBtnLabel}>
+                    {loading ? "저장 중..." : "저장"}
+                  </Text>
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDelete}
-                style={[styles.actionBtn, { backgroundColor: "#B3261E" }]}
-              >
-                <Ionicons name="trash-outline" size={20} color="#fff" />
-                <Text style={styles.btnText}>삭제</Text>
+
+              <TouchableOpacity onPress={handleDelete}>
+                <View style={styles.textButton}>
+                  <Ionicons name="trash-outline" size={20} color="#000" />
+                  <Text style={styles.textBtnLabel}>삭제</Text>
+                </View>
               </TouchableOpacity>
             </>
+          ) : (
+            <TouchableOpacity onPress={() => setEditMode(true)}>
+              <View style={styles.textButton}>
+                <Ionicons name="create-outline" size={20} color="#000" />
+                <Text style={styles.textBtnLabel}>수정</Text>
+              </View>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>
@@ -260,19 +290,28 @@ export default function ClothesDetail() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  backBtn: { position: "absolute", top: 60, left: 20, zIndex: 10 },
   content: { alignItems: "center", paddingTop: 100, paddingBottom: 60 },
   imageContainer: { position: "relative" },
   image: { width: 260, height: 260, borderRadius: 16, marginBottom: 25 },
-  cameraBtn: {
+
+  // ✅ 연필 버튼
+  editPhotoBtn: {
     position: "absolute",
-    bottom: 25,
-    right: 10,
-    backgroundColor: "rgba(0,0,0,0.65)",
+    bottom: 30,
+    right: 5,
+    backgroundColor: "#1C7C54",
+    width: 45,
+    height: 45,
     borderRadius: 25,
-    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  name: { fontSize: 26, fontWeight: "700", color: "#23422D", marginBottom: 6 },
+
+  name: { fontSize: 26, fontWeight: "700", color: "#1C7C54", marginBottom: 6 },
   category: { fontSize: 18, color: "#666", marginBottom: 30 },
   input: {
     width: "90%",
@@ -285,8 +324,10 @@ const styles = StyleSheet.create({
   },
   categoryRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    flexWrap: "wrap",
+    justifyContent: "center",
     width: "90%",
+    gap: 10,
     marginBottom: 30,
   },
   catBtn: {
@@ -296,22 +337,36 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 18,
   },
-  catBtnActive: { backgroundColor: "#23422D", borderColor: "#23422D" },
+  catBtnActive: { backgroundColor: "#1C7C54", borderColor: "#1C7C54" },
   catText: { color: "#777", fontSize: 15 },
   catTextActive: { color: "#fff", fontWeight: "600" },
+
+  washDisplay: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#F5FAF7",
+    borderRadius: 12,
+    padding: 10,
+    width: "90%",
+    marginBottom: 30,
+  },
+  washText: { flex: 1, color: "#333", fontSize: 15, lineHeight: 22 },
+
+  // ✅ 텍스트 버튼 스타일
   btnRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-    width: "90%",
+    width: "70%",
     marginTop: 10,
   },
-  actionBtn: {
+  textButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
   },
-  btnText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  textBtnLabel: {
+    fontSize: 16,
+    color: "#000",
+    fontWeight: "600",
+  },
 });

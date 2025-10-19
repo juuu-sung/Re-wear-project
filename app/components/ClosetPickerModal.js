@@ -36,7 +36,7 @@ export default function ClosetPickerModal({
             setCategories(["상의", "하의", "아우터"]);
           }
         } catch (err) {
-          console.log("❌ 카테고리 불러오기 실패:", err);
+          console.log("카테고리 불러오기 실패:", err);
         }
       })();
     }

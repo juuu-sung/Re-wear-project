@@ -6,7 +6,7 @@ from typing import Optional, Union
 class ClothesResponse(BaseModel):
     id: int
     name: str
-    image_url: Optional[str] = None
+    image_path: Optional[str] = None
 
     class Config:
         orm_mode = True
