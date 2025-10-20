@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  logo: { fontSize: 36, fontWeight: "bold", color: "#1C7C54" },
+  logo: { fontSize: 36, fontWeight: "bold", color: "#2e7d32" },
   card: {
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  title: { fontSize: 18, fontWeight: "700", color: "#1C7C54" },
+  title: { fontSize: 18, fontWeight: "700", color: "#2e7d32" },
   row: { flexDirection: "row", justifyContent: "space-between" },
   iconBox: {
     flex: 1,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1C7C54",
+    color: "#2e7d32",
     marginBottom: 12,
     textAlign: "center",
   },
