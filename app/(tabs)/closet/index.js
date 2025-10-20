@@ -150,7 +150,7 @@ export default function ClosetMain() {
   if (loadingUser) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color="#1C7C54" />
+        <ActivityIndicator size="large" color="#2e7d32" />
       </View>
     );
   }
@@ -161,6 +161,8 @@ export default function ClosetMain() {
       <View style={styles.header}>
         <Text style={styles.headerText}>{userName}의 옷장</Text>
       </View>
+
+      <View style={styles.headerDivider} />
 
       {/* ✅ 카테고리 목록 */}
       <View style={styles.categoryContainer}>
@@ -246,15 +248,19 @@ export default function ClosetMain() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   header: {
-    paddingTop: 60,
+    paddingTop: 50,
     paddingHorizontal: 20,
-    paddingBottom: 5,
+    paddingBottom: 6,
     alignItems: "flex-start",
   },
   headerText: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1C7C54",
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#2e7d32",
+  },
+  headerDivider: {
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
   },
   categoryContainer: {
     marginTop: 8,
@@ -279,7 +285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginRight: 8,
   },
-  activeTab: { backgroundColor: "#1C7C54", borderColor: "#1C7C54" },
+  activeTab: { backgroundColor: "#2e7d32", borderColor: "#2e7d32" },
   tabText: { color: "#777", fontSize: 15 },
   activeText: { color: "#fff", fontWeight: "600" },
   addTabBtn: {
@@ -314,7 +320,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 15,
     marginTop: 8,
-    color: "#1C7C54",
+    color: "#000",
   },
   emptyText: {
     textAlign: "center",
@@ -332,7 +338,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   fab: {
-    backgroundColor: "#1C7C54",
+    backgroundColor: "#2e7d32",
     width: 70,
     height: 70,
     borderRadius: 35,
