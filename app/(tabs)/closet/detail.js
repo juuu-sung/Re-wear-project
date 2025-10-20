@@ -31,8 +31,12 @@ export default function ClothesDetail() {
   const [washingInfo, setWashingInfo] = useState("");
   const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]);
 
-  // ✅ 사용자 추가 카테고리 불러오기
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [showAll, setShowAll] = useState(false);
+
+  // ✅ 카테고리 불러오기
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -48,7 +52,56 @@ export default function ClothesDetail() {
     loadCategories();
   }, []);
 
-  // ✅ 사진 변경 (카메라/앨범 선택)
+  // ✅ “이 옷의 기록” 불러오기 (홈 화면과 동일한 이벤트 API)
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const token = await AsyncStorage.getItem("access_token");
+        const userId = await AsyncStorage.getItem("user_id");
+        if (!token || !userId) return;
+
+        const eventRes = await fetch(`${BASE_URL}/events?user_id=${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!eventRes.ok) {
+          console.error("❌ 이벤트 불러오기 실패:", eventRes.status);
+          return;
+        }
+
+        const eventData = await eventRes.json();
+
+        // 🔍 현재 옷 ID에 해당하는 이벤트만 필터링
+        const filtered = eventData
+          .filter((e) => String(e.garment_id) === String(id))
+          .map((e) => ({
+            date: e.date?.split("T")[0],
+            type: e.type,
+          }));
+
+        setHistory(filtered);
+      } catch (err) {
+        console.error("❌ 이 옷의 기록 불러오기 실패:", err);
+      }
+    };
+
+    fetchHistory();
+  }, [id]);
+
+  // ✅ 정렬된 배열
+  const sortedHistory = [...history].sort((a, b) => {
+    const da = new Date(a.date);
+    const db = new Date(b.date);
+    return sortOrder === "asc" ? da - db : db - da;
+  });
+
+  // ✅ 날짜 포맷 함수
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    return dateStr.replace(/-/g, ".");
+  };
+
+  // ✅ 사진 변경
   const changePhoto = async () => {
     const options = ["카메라로 촬영", "앨범에서 선택", "취소"];
     const cancelIndex = 2;
@@ -98,7 +151,7 @@ export default function ClothesDetail() {
     }
   };
 
-  // ✅ 옷 수정 (PUT)
+  // ✅ 옷 수정
   const handleUpdate = async () => {
     try {
       setLoading(true);
@@ -152,7 +205,7 @@ export default function ClothesDetail() {
     }
   };
 
-  // ✅ 옷 삭제 (DELETE)
+  // ✅ 옷 삭제
   const handleDelete = async () => {
     Alert.alert("삭제 확인", `"${name}"을(를) 삭제할까요?`, [
       { text: "취소", style: "cancel" },
@@ -194,11 +247,9 @@ export default function ClothesDetail() {
         {/* 이미지 */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUri }} style={styles.image} />
-
-          {/* 연필 버튼 */}
           {editMode && (
             <TouchableOpacity style={styles.editPhotoBtn} onPress={changePhoto}>
-              <Ionicons name="create-outline" size={22} color="#fff" />
+              <Ionicons name="create-outline" size={22} color="#000" />
             </TouchableOpacity>
           )}
         </View>
@@ -217,7 +268,10 @@ export default function ClothesDetail() {
               {categories.map((cat) => (
                 <TouchableOpacity
                   key={cat}
-                  style={[styles.catBtn, editedCategory === cat && styles.catBtnActive]}
+                  style={[
+                    styles.catBtn,
+                    editedCategory === cat && styles.catBtnActive,
+                  ]}
                   onPress={() => setEditedCategory(cat)}
                 >
                   <Text
@@ -250,6 +304,72 @@ export default function ClothesDetail() {
                   ? washingInfo
                   : "세탁법을 입력하거나 AI가 분석하면 여기에 표시됩니다."}
               </Text>
+            </View>
+
+            {/* ✅ 이 옷의 기록 */}
+            <View style={styles.historyContainer}>
+              <View style={styles.historyHeader}>
+                <Text style={styles.historyTitle}>이 옷의 기록</Text>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    setSortOrder(sortOrder === "desc" ? "asc" : "desc")
+                  }
+                >
+                  <Ionicons
+                    name={
+                      sortOrder === "desc"
+                        ? "arrow-down-outline"
+                        : "arrow-up-outline"
+                    }
+                    size={20}
+                    color="#1C7C54"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {history.length === 0 ? (
+                <Text style={styles.historyEmpty}>아직 기록이 없습니다.</Text>
+              ) : (
+                (showAll ? sortedHistory : sortedHistory.slice(0, 3)).map(
+                  (event, idx) => (
+                    <View
+                      key={`${event.date}-${event.type}-${idx}`}
+                      style={styles.historyItem}
+                    >
+                      <Ionicons
+                        name={
+                          event.type === "wear"
+                            ? "shirt-outline"
+                            : "water-outline"
+                        }
+                        size={18}
+                        color={
+                          event.type === "wear" ? "#2E8B57" : "#1565C0" // ✅ 세탁은 파랑색
+                        }
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={styles.historyText}>
+                        {formatDate(event.date)} —{" "}
+                        {event.type === "wear" ? "착용" : "세탁"}
+                      </Text>
+                    </View>
+                  )
+                )
+              )}
+
+              {sortedHistory.length > 3 && (
+                <TouchableOpacity
+                  onPress={() => setShowAll(!showAll)}
+                  style={styles.moreBtn}
+                >
+                  <Text style={styles.moreBtnText}>
+                    {showAll
+                      ? "접기 ▲"
+                      : `더보기 (${sortedHistory.length - 3}개) ▼`}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </>
         )}
@@ -293,13 +413,11 @@ const styles = StyleSheet.create({
   content: { alignItems: "center", paddingTop: 100, paddingBottom: 60 },
   imageContainer: { position: "relative" },
   image: { width: 260, height: 260, borderRadius: 16, marginBottom: 25 },
-
-  // ✅ 연필 버튼
   editPhotoBtn: {
     position: "absolute",
-    bottom: 30,
-    right: 5,
-    backgroundColor: "#1C7C54",
+    bottom: 23,
+    right: -7,
+    backgroundColor: "#FFFFFF00",
     width: 45,
     height: 45,
     borderRadius: 25,
@@ -310,8 +428,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 4,
   },
-
-  name: { fontSize: 26, fontWeight: "700", color: "#1C7C54", marginBottom: 6 },
+  name: { fontSize: 26, fontWeight: "700", color: "#000", marginBottom: 6 },
   category: { fontSize: 18, color: "#666", marginBottom: 30 },
   input: {
     width: "90%",
@@ -340,7 +457,6 @@ const styles = StyleSheet.create({
   catBtnActive: { backgroundColor: "#1C7C54", borderColor: "#1C7C54" },
   catText: { color: "#777", fontSize: 15 },
   catTextActive: { color: "#fff", fontWeight: "600" },
-
   washDisplay: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -351,22 +467,36 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   washText: { flex: 1, color: "#333", fontSize: 15, lineHeight: 22 },
-
-  // ✅ 텍스트 버튼 스타일
+  historyContainer: {
+    width: "90%",
+    backgroundColor: "#F7F7F7",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 30,
+  },
+  historyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  historyTitle: { fontSize: 17, fontWeight: "700", color: "#000" },
+  historyItem: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
+  historyText: { fontSize: 15, color: "#333" },
+  historyEmpty: { fontSize: 14, color: "#888", fontStyle: "italic" },
+  moreBtn: {
+    marginTop: 8,
+    alignSelf: "flex-end",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  moreBtnText: { color: "#1C7C54", fontSize: 14, fontWeight: "600" },
   btnRow: {
     flexDirection: "row",
     justifyContent: "space-around",
     width: "70%",
     marginTop: 10,
   },
-  textButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  textBtnLabel: {
-    fontSize: 16,
-    color: "#000",
-    fontWeight: "600",
-  },
+  textButton: { flexDirection: "row", alignItems: "center", gap: 6 },
+  textBtnLabel: { fontSize: 16, color: "#000", fontWeight: "600" },
 });

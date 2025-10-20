@@ -22,10 +22,6 @@ from alembic import command
 from alembic.config import Config
 from app.core.scheduler import start_scheduler
 
-
-
-
-
 app = FastAPI(title="ReWear API", version="0.1.0")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

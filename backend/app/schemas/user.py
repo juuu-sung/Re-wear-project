@@ -5,6 +5,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: EmailStr = Field(..., example="user@example.com")
     name: Optional[str] = Field(None, example="홍주성")
+    
 
 class UserCreate(UserBase):
     pass
