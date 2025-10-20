@@ -296,7 +296,7 @@ export default function ClothesDetail() {
               <Ionicons
                 name="water-outline"
                 size={20}
-                color="#1C7C54"
+                color="#2e7d32"
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.washText}>
@@ -323,7 +323,7 @@ export default function ClothesDetail() {
                         : "arrow-up-outline"
                     }
                     size={20}
-                    color="#1C7C54"
+                    color="#2e7d32"
                   />
                 </TouchableOpacity>
               </View>
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 18,
   },
-  catBtnActive: { backgroundColor: "#1C7C54", borderColor: "#1C7C54" },
+  catBtnActive: { backgroundColor: "#2e7d32", borderColor: "#2e7d32" },
   catText: { color: "#777", fontSize: 15 },
   catTextActive: { color: "#fff", fontWeight: "600" },
   washDisplay: {
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
-  moreBtnText: { color: "#1C7C54", fontSize: 14, fontWeight: "600" },
+  moreBtnText: { color: "#2e7d32", fontSize: 14, fontWeight: "600" },
   btnRow: {
     flexDirection: "row",
     justifyContent: "space-around",

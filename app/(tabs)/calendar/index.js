@@ -7,13 +7,12 @@ import {
   Image,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 import ClosetPickerModal from "../../components/ClosetPickerModal";
@@ -226,12 +225,13 @@ export default function CalendarScreen() {
   }, [modalVisible]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      <ScrollView>
+        {/* 👇 header와 headerDivider 순서는 이전에 완벽하게 고치셨습니다! */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>캘린더</Text>
-          <View style={styles.headerDivider} />
         </View>
+        <View style={styles.headerDivider} />
 
         <Calendar
           markingType="multi-dot"
@@ -243,9 +243,9 @@ export default function CalendarScreen() {
             fetchCalendar(`${y}-${m}-01`, userId);
           }}
           theme={{
-            todayTextColor: "#23422D",
-            arrowColor: "#23422D",
-            monthTextColor: "#23422D",
+            todayTextColor: "#2e7d32",
+            arrowColor: "#2e7d32",
+            monthTextColor: "#2e7d32",
           }}
         />
 
@@ -357,19 +357,25 @@ export default function CalendarScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
-  container: { flex: 1, paddingHorizontal: 16 },
-  header: { marginTop: 10, marginBottom: 6 },
-  headerTitle: { fontSize: 26, fontWeight: "800", color: "#23422D", marginBottom: 6 },
-  headerDivider: { borderBottomWidth: 1, borderColor: "#ddd" },
+  container: { flex: 1, backgroundColor: "#fff" },
+  header: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 6,
+  },
+  headerTitle: { fontSize: 26, fontWeight: "800", color: "#2e7d32", marginBottom: 6 },
+  headerDivider: {
+    borderBottomWidth: 1,
+    borderColor: '#ddd',
+  },
   divider: { borderBottomWidth: 1, borderColor: "#ddd", marginTop: 8 },
   eventSection: { padding: 16 },
-  eventTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12, color: "#23422D" },
+  eventTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12, color: "#2e7d32" },
   eventItemBox: {
     backgroundColor: "#f6f6f6",
     borderRadius: 10,
@@ -388,12 +394,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  eventItemText: { fontSize: 17, color: "#23422D", flexShrink: 1 },
+  eventItemText: { fontSize: 17, color: "#2e7d32", flexShrink: 1 },
   fab: {
     position: "absolute",
     bottom: 30,
     right: 25,
-    backgroundColor: "#23422D",
+    backgroundColor: "#2e7d32",
     borderRadius: 35,
     width: 70,
     height: 70,
