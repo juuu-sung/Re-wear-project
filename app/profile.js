@@ -90,11 +90,20 @@ export default function ProfileScreen() {
   };
 
   // ✅ 로그아웃 기능 (전체 스토리지 초기화)
+  // ✅ 로그아웃 기능 (선택 삭제 방식)
   const handleLogout = async () => {
     try {
-      await AsyncStorage.clear();
+      // 로그인 관련 키만 삭제
+      await AsyncStorage.multiRemove([
+        "access_token",
+        "refresh_token",
+        "username",
+        "name",
+    ]);
+
       setUserInfo({ name: "", email: "" });
-      setProfileImage(null);
+      // 프로필 이미지는 유지, categories도 그대로 남음
+
       Alert.alert("로그아웃 완료", "로그인 화면으로 이동합니다.", [
         { text: "확인", onPress: () => router.replace("/") },
       ]);
@@ -103,6 +112,7 @@ export default function ProfileScreen() {
       Alert.alert("오류", "로그아웃 중 문제가 발생했습니다.");
     }
   };
+
 
   return (
     <SafeAreaView style={styles.container}>
