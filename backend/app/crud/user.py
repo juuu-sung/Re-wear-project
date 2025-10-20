@@ -61,3 +61,12 @@ def delete_user(db: Session, user_id: int) -> bool:
     db.delete(obj)
     db.commit()
     return True
+
+def update_profile_image(db: Session, user_id: int, image_url: str):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    user.profile_image = image_url
+    db.commit()
+    db.refresh(user)
+    return user

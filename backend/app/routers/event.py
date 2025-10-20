@@ -92,3 +92,21 @@ def delete_event(event_id: int, db: Session = Depends(get_db)):
     db.delete(db_event)
     db.commit()
     return {"ok": True}
+
+@router.get("/by-clothes/{garment_id}", response_model=list[schemas.EventResponse])
+def get_events_by_clothes(
+    garment_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    events = (
+        db.query(models.Event)
+        .options(joinedload(models.Event.clothes))
+        .filter(
+            models.Event.user_id == current_user.id,
+            models.Event.garment_id == garment_id,
+        )
+        .order_by(models.Event.date.desc())
+        .all()
+    )
+    return events
