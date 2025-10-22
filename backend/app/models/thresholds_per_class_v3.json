@@ -1,0 +1,15 @@
+{
+  "cellulose_fiber_others": 0.35,
+  "cotton": 0.60,
+  "linen": 0.50,
+  "nylon": 0.50,
+  "others": 0.55,
+  "polyester": 0.55,
+  "protein_fiber_others": 0.35,
+  "rayon": 0.50,
+  "regenerated_fiber_others": 0.30,
+  "silk": 0.33,
+  "spandex": 0.50,
+  "synthetic": 0.55,
+  "wool": 0.45
+}
