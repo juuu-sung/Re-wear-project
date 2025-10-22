@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,26 +23,25 @@ export default function ClosetMain() {
   const [userName, setUserName] = useState("");
   const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
 
-  // ✅ 사용자 이름 + 카테고리 불러오기
+  // 사용자 이름 + 카테고리 불러오기
   useEffect(() => {
     const init = async () => {
       try {
         const rawName =
           (await AsyncStorage.getItem("name")) ||
           (await AsyncStorage.getItem("username"));
-        if (rawName) setUserName(rawName);
-        else setUserName("사용자");
+        setUserName(rawName ? rawName : "사용자");
 
         const saved = await AsyncStorage.getItem("categories");
         if (saved) {
           const list = JSON.parse(saved);
           setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
         }
-      } catch (err) {
-        console.log("사용자 이름 불러오기 실패:", err);
+      } catch {
         setUserName("사용자");
       } finally {
         setLoadingUser(false);
@@ -50,7 +50,54 @@ export default function ClosetMain() {
     init();
   }, []);
 
-  // ✅ 카테고리 추가
+  // 옷 목록 불러오기
+  const loadClothes = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) return;
+
+      const res = await fetch(`${BASE_URL}/clothes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        // 서버가 내려주는 필드: id, name, category, image_path, material, washing_info
+        const filtered = data.filter((i) => i.category === selected);
+        setItems(filtered);
+      } else {
+        console.warn("옷 목록 응답 오류:", data);
+      }
+    } catch (err) {
+      console.error("서버 연결 오류:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 탭 변경 시 / 포커스 시 새로고침
+  useEffect(() => {
+    loadClothes();
+  }, [selected]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadClothes();
+    }, [selected])
+  );
+
+  // 당겨서 새로고침
+  const onRefresh = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      await loadClothes();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selected]);
+
+  // 카테고리 추가/관리(기존 로직 유지)
   const addCategory = () => {
     Alert.prompt("새 옷장 추가", "추가할 옷장 이름을 입력하세요.", async (text) => {
       const name = text?.trim();
@@ -66,13 +113,11 @@ export default function ClosetMain() {
     });
   };
 
-  // ✅ 카테고리 길게 누르면 수정/삭제
   const handleCategoryLongPress = (name) => {
     if (["상의", "하의", "아우터"].includes(name)) {
       Alert.alert("기본 옷장은 수정/삭제할 수 없습니다.");
       return;
     }
-
     Alert.alert(`"${name}" 옷장 관리`, "원하는 작업을 선택하세요.", [
       {
         text: "이름 수정",
@@ -87,13 +132,10 @@ export default function ClosetMain() {
                 Alert.alert("중복된 이름", `"${newName}"은 이미 존재합니다.`);
                 return;
               }
-
               const updated = categories.map((c) => (c === name ? newName : c));
               setCategories(updated);
               await AsyncStorage.setItem("categories", JSON.stringify(updated));
-
               if (selected === name) setSelected(newName);
-
               Alert.alert("수정 완료", `"${name}" → "${newName}"으로 변경되었습니다.`);
             }
           );
@@ -106,46 +148,13 @@ export default function ClosetMain() {
           const updated = categories.filter((c) => c !== name);
           setCategories(updated);
           await AsyncStorage.setItem("categories", JSON.stringify(updated));
-
           if (selected === name) setSelected("상의");
-
           Alert.alert("삭제 완료", `"${name}" 옷장이 삭제되었습니다.`);
         },
       },
       { text: "취소", style: "cancel" },
     ]);
   };
-
-  // ✅ 옷 목록 불러오기
-  const loadClothes = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("access_token");
-      if (!token) return;
-      const res = await fetch(`${BASE_URL}/clothes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const filtered = data.filter((i) => i.category === selected);
-        setItems(filtered);
-      }
-    } catch (err) {
-      console.error("서버 연결 오류:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadClothes();
-  }, [selected]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadClothes();
-    }, [selected])
-  );
 
   if (loadingUser) {
     return (
@@ -157,14 +166,13 @@ export default function ClosetMain() {
 
   return (
     <View style={styles.container}>
-      {/* ✅ 헤더 */}
+      {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerText}>{userName}의 옷장</Text>
       </View>
-
       <View style={styles.headerDivider} />
 
-      {/* ✅ 카테고리 목록 */}
+      {/* 카테고리 탭 */}
       <View style={styles.categoryContainer}>
         <ScrollView
           horizontal
@@ -187,51 +195,64 @@ export default function ClosetMain() {
             <Ionicons name="add" size={20} color="#000" />
           </TouchableOpacity>
         </ScrollView>
-
-        {/* ✅ 구분선 */}
         <View style={styles.divider} />
       </View>
 
-      {/* ✅ 옷 목록 */}
+      {/* 목록 */}
       {loading ? (
         <ActivityIndicator size="large" color="#000" style={{ marginTop: 40 }} />
       ) : items.length > 0 ? (
-        <ScrollView contentContainerStyle={styles.grid}>
-          {items.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.card}
-              onPress={() =>
-                router.push({
-                  pathname: "/(tabs)/closet/detail",
-                  params: {
-                    id: item.id,
-                    name: item.name,
-                    category: item.category,
-                    image: `${BASE_URL}/uploads/clothes/${item.image_path}`,
-                  },
-                })
-              }
-            >
-              {item.image_path ? (
-                <Image
-                  source={{ uri: `${BASE_URL}/uploads/clothes/${item.image_path}` }}
-                  style={styles.image}
-                />
-              ) : (
-                <View style={[styles.image, { justifyContent: "center", alignItems: "center" }]}>
-                  <Ionicons name="shirt-outline" size={40} color="#ccc" />
-                </View>
-              )}
-              <Text style={styles.name}>{item.name}</Text>
-            </TouchableOpacity>
-          ))}
+        <ScrollView
+          contentContainerStyle={styles.grid}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          {items.map((item) => {
+            const imgUri = item.image_path
+              ? `${BASE_URL}/uploads/clothes/${encodeURIComponent(item.image_path)}`
+              : null;
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.card}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/closet/detail",
+                    params: {
+                      id: String(item.id),
+                      name: item.name,
+                      category: item.category,
+                      image: `${BASE_URL}/uploads/clothes/${item.image_path}`,
+                      // ✅ detail로 소재/세탁법 함께 전달
+                      material: item.material ?? "",
+                      washing: item.washing_info ?? "",
+                      materialBreakdown: item.material_breakdown ?? "",
+                    },
+                  })
+                }
+              >
+                {imgUri ? (
+                  <Image source={{ uri: imgUri }} style={styles.image} />
+                ) : (
+                  <View style={[styles.image, { justifyContent: "center", alignItems: "center" }]}>
+                    <Ionicons name="shirt-outline" size={40} color="#ccc" />
+                  </View>
+                )}
+                <Text style={styles.name}>{item.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       ) : (
-        <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center" }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
+        </ScrollView>
       )}
 
-      {/* ✅ + 버튼 (고정) */}
+      {/* + 버튼 */}
       <View style={styles.fabContainer}>
         <TouchableOpacity
           activeOpacity={0.8}
@@ -253,30 +274,16 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     alignItems: "flex-start",
   },
-  headerText: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#2e7d32",
-  },
-  headerDivider: {
-    borderBottomWidth: 1,
-    borderColor: "#ddd",
-  },
-  categoryContainer: {
-    marginTop: 8,
-    marginBottom: 10,
-  },
+  headerText: { fontSize: 26, fontWeight: "800", color: "#2e7d32" },
+  headerDivider: { borderBottomWidth: 1, borderColor: "#ddd" },
+  categoryContainer: { marginTop: 8, marginBottom: 10 },
   tabRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 6,
   },
-  divider: {
-    borderBottomWidth: 1,
-    borderColor: "#ddd",
-    marginTop: 4,
-  },
+  divider: { borderBottomWidth: 1, borderColor: "#ddd", marginTop: 4 },
   tab: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -322,21 +329,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "#000",
   },
-  emptyText: {
-    textAlign: "center",
-    color: "#777",
-    marginTop: 30,
-    fontSize: 16,
-  },
-
-  // ✅ FAB 고정 스타일
-  fabContainer: {
-    position: "absolute",
-    bottom: 30,
-    right: 25,
-    zIndex: 999,
-    elevation: 10,
-  },
+  emptyText: { textAlign: "center", color: "#777", fontSize: 16 },
+  fabContainer: { position: "absolute", bottom: 30, right: 25, zIndex: 999, elevation: 10 },
   fab: {
     backgroundColor: "#2e7d32",
     width: 70,

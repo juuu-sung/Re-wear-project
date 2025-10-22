@@ -6,6 +6,7 @@ from typing import List
 from datetime import date, datetime
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
+import asyncio
 
 from app.db import Base, SessionLocal
 from app.routers import (
@@ -15,13 +16,14 @@ from app.routers import (
     infer as infer_router,
     clothes as clothes_router,
     news as news_router,
+    infer_material as infer_material_router,
     
 )
 
 from alembic import command
 from alembic.config import Config
-from app.core.scheduler import start_scheduler
-
+from app.core.scheduler import start_scheduler, stop_scheduler
+from app.services.material_infer import warmup                   # ← 모델 로드
 app = FastAPI(title="ReWear API", version="0.1.0")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
@@ -103,9 +105,25 @@ def test_db(db: Session = Depends(get_db)):
     return {"db_result": result}
 
 @app.on_event("startup")
-def startup_event():
-    start_scheduler()
+async def startup_event():
+    loop = asyncio.get_running_loop()  # ← 현재 이벤트 루프 획득
+    start_scheduler(loop)              # ← loop 전달
 
+@app.on_event("shutdown")
+async def on_shutdown():
+    stop_scheduler()
+
+@app.on_event("startup")
+async def startup_event():
+    # 1) 모델 로드
+    warmup()
+    # 2) 뉴스 스케줄러 시작
+    loop = asyncio.get_running_loop()
+    start_scheduler(loop)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    stop_scheduler()
 
 
 # ---------- Router 등록 ----------
@@ -115,3 +133,4 @@ app.include_router(event_router.router)
 app.include_router(infer_router.router, prefix="/infer", tags=["infer"])
 app.include_router(clothes_router.router)
 app.include_router(news_router.router)
+app.include_router(infer_material_router.router)

@@ -1,0 +1,17 @@
+{
+  "materials": [
+    "cellulose_fiber_others",
+    "cotton",
+    "linen",
+    "nylon",
+    "others",
+    "polyester",
+    "protein_fiber_others",
+    "rayon",
+    "regenerated_fiber_others",
+    "silk",
+    "spandex",
+    "synthetic",
+    "wool"
+  ]
+}

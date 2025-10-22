@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.db import Base
 
@@ -13,3 +13,7 @@ class Clothes(Base):
 
     user = relationship("User", back_populates="clothes")
     events = relationship("Event", back_populates="clothes", cascade="all, delete")
+
+    material = Column(String(100), nullable=True)
+    washing_info = Column(Text, nullable=True)     # JSON 문자열 보관해도 됨
+    material_breakdown = Column(Text, nullable=True)  # JSON 문자열 (top5 등)
