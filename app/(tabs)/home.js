@@ -92,17 +92,25 @@ export default function HomeScreen() {
 
   // ✅ 옷장 미리보기 로드
   const loadClosetPreview = async () => {
-    try {
-      const token = await AsyncStorage.getItem("access_token");
-      const res = await fetch(`${BASE_URL}/clothes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) setClosetItems(data.slice(0, 3));
-    } catch (err) {
-      console.error("❌ 옷장 로드 실패:", err);
-    }
-  };
+  try {
+    const token = await AsyncStorage.getItem("access_token");
+    const res = await fetch(`${BASE_URL}/clothes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "옷장 불러오기 실패");
+
+    // ✅ 최근 등록순 정렬 (id 또는 created_at 기준)
+    const sorted = data.sort((a, b) => b.id - a.id);
+
+    // ✅ 최신 5개만 보여줌
+    setClosetItems(sorted.slice(0, 5));
+  } catch (err) {
+    console.error("❌ 옷장 로드 실패:", err);
+  }
+};
+
 
   // ✅ 캘린더 점 + 이벤트 로드
   const loadCalendarPreview = async () => {

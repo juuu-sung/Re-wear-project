@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   divider: { borderBottomWidth: 1, borderColor: "#ddd", marginTop: 8 },
   eventSection: { padding: 16 },
-  eventTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12, color: "#2e7d32" },
+  eventTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12, color: "#000" },
   eventItemBox: {
     backgroundColor: "#f6f6f6",
     borderRadius: 10,
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  eventItemText: { fontSize: 17, color: "#2e7d32", flexShrink: 1 },
+  eventItemText: { fontSize: 17, color: "#000", flexShrink: 1 },
   fab: {
     position: "absolute",
     bottom: 30,
