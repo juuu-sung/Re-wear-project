@@ -43,9 +43,16 @@ app-example
 /android
 
 # Python cache
-__pycache__/
-*.pyc
+venv/
 .venv/
+env/
+**/__pycache__/
+*.py[cod]
+*.so
+*.pyd
+.mypy_cache/
+.pytest_cache/
+coverage/
 
 # ---------- Environment Variables ----------
 # (FastAPI backend)
@@ -56,4 +63,7 @@ frontend/.env
 .env
 
 # (다른 환경 변형 파일)
+.env
 .env.*
+*.pem
+*.key
