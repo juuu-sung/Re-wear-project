@@ -126,6 +126,8 @@ export default function AddClothesScreen() {
       }
 
       if (res.ok) {
+        await AsyncStorage.setItem("closet_updated", "true");
+
         Alert.alert("등록 완료 ✅", `"${name}"이(가) 등록되었습니다.`);
         router.replace("/(tabs)/closet");
       } else {
