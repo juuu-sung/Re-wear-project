@@ -49,6 +49,7 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 
+```mermaid
 flowchart LR
   %% ===================== ReWear Architecture =====================
 
@@ -111,3 +112,4 @@ flowchart LR
   API -->|"AI 추론 / 세탁 가이드"| ML
   API -->|"뉴스 캐시 제공"| NEWS
   SCH -->|"주기적 뉴스 갱신"| API
+```
