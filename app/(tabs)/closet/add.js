@@ -11,11 +11,13 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import Modal from "react-native-modal"; // ✅ 교체된 모달 import
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
@@ -27,46 +29,74 @@ export default function AddClothesScreen() {
   const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-  // ✅ 사용자 정의 옷장 불러오기
+  // ✅ 팝업 관련 상태
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [hideTipNextTime, setHideTipNextTime] = useState(false);
+  const [triggerCamera, setTriggerCamera] = useState(false);
+
+  // ✅ 사용자 ID 불러오기
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const saved = await AsyncStorage.getItem("categories");
-        if (saved) {
-          const list = JSON.parse(saved);
-          setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
-        }
-      } catch {}
-    };
-    loadCategories();
+    (async () => {
+      const id = await AsyncStorage.getItem("user_id");
+      if (id) setUserId(id);
+    })();
   }, []);
 
-  // 👉 확장자→MIME 매핑 (HEIC도 안전 처리)
+  // ✅ 카테고리 불러오기
+  useEffect(() => {
+    (async () => {
+      const saved = await AsyncStorage.getItem("categories");
+      if (saved) {
+        const list = JSON.parse(saved);
+        setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
+      }
+    })();
+  }, []);
+
+  // ✅ MIME 매핑
   const resolveMime = (extRaw) => {
     const ext = (extRaw || "").toLowerCase();
-    if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+    if (["jpg", "jpeg"].includes(ext)) return "image/jpeg";
     if (ext === "png") return "image/png";
     if (ext === "webp") return "image/webp";
-    if (ext === "heic" || ext === "heif") return "image/jpeg"; // 서버에서 jpeg로 처리
+    if (["heic", "heif"].includes(ext)) return "image/jpeg";
     return "image/jpeg";
   };
 
-  // ✅ 카메라
-  const openCamera = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("권한 필요", "카메라 접근 권한을 허용해주세요.");
-      return;
+  // ✅ 카메라 실행
+  const launchCamera = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("권한 필요", "카메라 접근 권한을 허용해주세요.");
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      });
+      if (!result.canceled && result.assets?.length > 0) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.error("❌ 카메라 실행 오류:", err);
+      Alert.alert("카메라 오류", String(err?.message || err));
     }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    });
-    if (!result.canceled && result.assets?.length > 0) {
-      setImage(result.assets[0].uri);
+  };
+
+  // ✅ 카메라 버튼 클릭
+  const openCamera = async () => {
+    if (!userId) return Alert.alert("오류", "사용자 정보를 불러오지 못했습니다.");
+    const key = `hide_camera_tip_${userId}`;
+    const skip = await AsyncStorage.getItem(key);
+    if (skip === "true") {
+      await launchCamera();
+    } else {
+      setShowTipModal(true);
     }
   };
 
@@ -88,11 +118,10 @@ export default function AddClothesScreen() {
     }
   };
 
-  // ✅ 사진 선택 액션시트
+  // ✅ 사진 선택
   const pickImage = async () => {
     const options = ["카메라로 촬영", "앨범에서 선택", "취소"];
     const cancelIndex = 2;
-
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         { options, cancelButtonIndex: cancelIndex },
@@ -110,7 +139,16 @@ export default function AddClothesScreen() {
     }
   };
 
-  // ✅ 등록
+  // ✅ 모달 “촬영하기”
+  const handleConfirmTip = async () => {
+    if (hideTipNextTime && userId) {
+      await AsyncStorage.setItem(`hide_camera_tip_${userId}`, "true");
+    }
+    setTriggerCamera(true); // onModalHide에서 실행될 트리거
+    setShowTipModal(false); // 모달 닫기
+  };
+
+  // ✅ 등록 처리
   const handleSubmit = async () => {
     if (!name.trim()) return Alert.alert("입력 오류", "옷 이름을 입력하세요.");
     if (!image) return Alert.alert("입력 오류", "사진을 선택하세요.");
@@ -132,7 +170,7 @@ export default function AddClothesScreen() {
 
       const res = await fetch(`${BASE_URL}/clothes/add`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` }, // FormData는 Content-Type 자동
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
@@ -150,7 +188,6 @@ export default function AddClothesScreen() {
 
       Alert.alert("등록 완료 ✅", `"${name}"이(가) 등록되었습니다.`);
 
-      // ✅ 상세 화면으로 이동하며 AI 결과 전달
       router.replace({
         pathname: "/(tabs)/closet/detail",
         params: {
@@ -217,13 +254,58 @@ export default function AddClothesScreen() {
           <Text style={styles.submitText}>{loading ? "전송 중..." : "등록하기"}</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* 📸 react-native-modal 팝업 */}
+      <Modal
+        isVisible={showTipModal}
+        animationIn="fadeIn"
+        animationOut="fadeOut"
+        backdropOpacity={0.4}
+        onBackdropPress={() => setShowTipModal(false)}
+        onModalHide={() => {
+          if (triggerCamera) {
+            setTriggerCamera(false);
+            setTimeout(() => launchCamera(), 200); // 모달 완전히 닫힌 뒤 실행
+          }
+        }}
+      >
+        <View style={styles.tipModal}>
+          <Text style={styles.tipTitle}>촬영 안내</Text>
+          <Text style={styles.tipText}>
+            옷을 평평한 곳에 두고 접히는 곳이 없도록 찍어주세요.
+          </Text>
+
+          <View style={styles.switchRow}>
+            <Switch
+              value={hideTipNextTime}
+              onValueChange={setHideTipNextTime}
+              thumbColor={hideTipNextTime ? "#2e7d32" : "#ccc"}
+            />
+            <Text style={styles.switchText}>다시 보지 않기</Text>
+          </View>
+
+          <View style={styles.tipBtnRow}>
+            <TouchableOpacity
+              style={[styles.tipBtn, { backgroundColor: "#ddd" }]}
+              onPress={() => setShowTipModal(false)}
+            >
+              <Text style={{ color: "#333", fontWeight: "600" }}>취소</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tipBtn, { backgroundColor: "#2e7d32" }]}
+              onPress={handleConfirmTip}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>촬영하기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  // ⬇️ 사진 박스가 상단에서 안 사라지도록 여백 조정
   content: { alignItems: "center", paddingTop: 40, paddingBottom: 60 },
   title: { fontSize: 22, fontWeight: "700", color: "#2e7d32", marginBottom: 20 },
   imageBox: {
@@ -273,5 +355,25 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 }
+  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  tipModal: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 24,
+    alignItems: "center",
+    alignSelf: "center",
+  },
+  tipTitle: { fontSize: 18, fontWeight: "700", color: "#2e7d32", marginBottom: 10 },
+  tipText: { fontSize: 15, color: "#444", textAlign: "center", marginBottom: 20 },
+  switchRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  switchText: { fontSize: 14, color: "#333", marginLeft: 8 },
+  tipBtnRow: { flexDirection: "row", justifyContent: "space-between", width: "100%" },
+  tipBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    marginHorizontal: 5,
+    borderRadius: 8,
+    alignItems: "center",
+  },
 });
