@@ -50,73 +50,64 @@ Join our community of developers creating universal apps.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 
 flowchart LR
-  %% =======================================================
-  %%                  ReWear System Architecture
-  %% =======================================================
+  %% ===================== ReWear Architecture =====================
 
-  %% ====================== APP ============================
-  subgraph APP["📱 React Native (Expo) 앱"]
+  %% ---------- App ----------
+  subgraph APP["React Native (Expo) App"]
     direction TB
-    A1["• 홈 / 옷장 / 캘린더 / 프로필 화면"]
-    A2["• 카카오 로그인, 사용자 세션 저장 (AsyncStorage)"]
-    A3["• axios로 FastAPI 서버와 통신 (JWT 인증)"]
+    A1["홈, 옷장, 캘린더, 프로필 화면"]
+    A2["Kakao Login, AsyncStorage(JWT)"]
+    A3["Axios로 FastAPI 통신"]
   end
 
-
-  %% ====================== API ============================
-  subgraph API["🔗 FastAPI 백엔드"]
+  %% ---------- API ----------
+  subgraph API["FastAPI Backend"]
     direction TB
-    ROU["📦 주요 라우터 - 인증 / 사용자 / 의류 / 이벤트 / 추론 / 뉴스"]
-    ST["⚙️ 초기화 단계 - DB 마이그레이션, AI 모델 로드, 스케줄러 시작"]
-    STC["🖼️ 정적 파일 서빙 - 업로드된 이미지 제공"]
+    R1["라우터: auth, user, clothes, event, infer, news"]
+    R2["초기화: Alembic, 모델 로드, 스케줄러 시작"]
+    R3["정적 파일 서빙 (/uploads)"]
   end
 
-
-  %% ====================== DATABASE ========================
-  subgraph DB["🗄️ 데이터베이스 (PostgreSQL)"]
+  %% ---------- DB ----------
+  subgraph DB["Database (PostgreSQL)"]
     direction TB
-    DBM["• SQLAlchemy ORM으로 관리 
-    • 테이블: 사용자, 의류, 이벤트, 활동 로그"]
+    D1["SQLAlchemy ORM 관리"]
+    D2["테이블: 사용자, 의류, 이벤트, 활동 로그"]
   end
 
-
-  %% ====================== ML SERVICE ======================
-  subgraph ML["🤖 AI Inference 서비스"]
+  %% ---------- ML ----------
+  subgraph ML["AI Inference Service"]
     direction TB
-    MLN["• EfficientNet 모델로 소재 분류.
-    • 세탁 가이드 규칙 생성 
-    • 라벨 추론 기능 포함"]
+    M1["EfficientNet 기반 소재 분류"]
+    M2["세탁 가이드 규칙 생성"]
+    M3["라벨 추론 기능 포함"]
   end
 
-
-  %% ====================== STORAGE =========================
-  subgraph FS["🖼️ 이미지 저장소"]
+  %% ---------- FS ----------
+  subgraph FS["Image Storage"]
     direction TB
-    FSD["• 사용자가 업로드한 옷 이미지 저장
-    • 앱에서 재사용 및 미리보기 제공"]
+    F1["업로드 이미지 저장 및 제공"]
+    F2["앱 미리보기 및 재사용"]
   end
 
-
-  %% ====================== SCHEDULER =======================
-  subgraph SCH["⏰ 스케줄러 (APScheduler)"]
+  %% ---------- Scheduler ----------
+  subgraph SCH["Scheduler (APScheduler)"]
     direction TB
-    SCH6["• 6시간마다 뉴스 캐시 갱신
-    • FastAPI 내부에서 비동기로 실행"]
+    S1["6시간마다 뉴스 캐시 갱신"]
+    S2["FastAPI 내부 비동기 실행"]
   end
 
-
-  %% ====================== NEWS ============================
-  subgraph NEWS["📰 뉴스 서비스"]
+  %% ---------- News ----------
+  subgraph NEWS["News Service"]
     direction TB
-    N1["• Google 뉴스 RSS 수집
-    • 최신 패션·환경 관련 기사 캐시 제공"]
+    N1["Google RSS 수집"]
+    N2["패션/환경 뉴스 캐시 제공"]
   end
 
-
-  %% ====================== FLOWS ===========================
+  %% ---------- Flows ----------
   APP -->|"REST API 요청 (JSON + JWT)"| API
-  API -. "데이터 CRUD" .-> DB
-  API -. "이미지 저장 / 제공" .-> FS
-  API -. "AI 추론 / 세탁 가이드" .-> ML
+  API -->|"데이터 CRUD"| DB
+  API -->|"이미지 저장 / 제공"| FS
+  API -->|"AI 추론 / 세탁 가이드"| ML
   API -->|"뉴스 캐시 제공"| NEWS
   SCH -->|"주기적 뉴스 갱신"| API
