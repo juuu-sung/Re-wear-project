@@ -20,6 +20,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import brandsData from "../../assets/data/slowfashion_brands.json"; // ✅ JSON 파일 불러오기
 
 // ✅ 외부 브라우저 열기 함수
 const openLink = async (url) => {
@@ -36,6 +37,8 @@ const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const scrollRef = useRef(null);
+
   const [closetItems, setClosetItems] = useState([]);
   const [calendarDots, setCalendarDots] = useState({});
   const [userId, setUserId] = useState(null);
@@ -49,6 +52,10 @@ export default function HomeScreen() {
   const [news, setNews] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingNews, setLoadingNews] = useState(false);
+
+  // ✅ 좋아요 관련
+  const [likedBrands, setLikedBrands] = useState([]);
+  const [likedPopupVisible, setLikedPopupVisible] = useState(false);
 
   // ✅ 회전 애니메이션 설정
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -92,25 +99,20 @@ export default function HomeScreen() {
 
   // ✅ 옷장 미리보기 로드
   const loadClosetPreview = async () => {
-  try {
-    const token = await AsyncStorage.getItem("access_token");
-    const res = await fetch(`${BASE_URL}/clothes`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      const res = await fetch(`${BASE_URL}/clothes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "옷장 불러오기 실패");
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "옷장 불러오기 실패");
-
-    // ✅ 최근 등록순 정렬 (id 또는 created_at 기준)
-    const sorted = data.sort((a, b) => b.id - a.id);
-
-    // ✅ 최신 5개만 보여줌
-    setClosetItems(sorted.slice(0, 5));
-  } catch (err) {
-    console.error("❌ 옷장 로드 실패:", err);
-  }
-};
-
+      const sorted = data.sort((a, b) => b.id - a.id);
+      setClosetItems(sorted.slice(0, 5));
+    } catch (err) {
+      console.error("❌ 옷장 로드 실패:", err);
+    }
+  };
 
   // ✅ 캘린더 점 + 이벤트 로드
   const loadCalendarPreview = async () => {
@@ -119,7 +121,6 @@ export default function HomeScreen() {
     const [y, m] = today.split("-");
     try {
       const token = await AsyncStorage.getItem("access_token");
-
       const res = await fetch(
         `${BASE_URL}/events/calendar?month=${y}-${m}&user_id=${userId}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -146,7 +147,6 @@ export default function HomeScreen() {
       });
       setCalendarDots(formatted);
 
-      // 🟢 이벤트도 같이 로드
       const eventRes = await fetch(`${BASE_URL}/events?user_id=${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -163,17 +163,7 @@ export default function HomeScreen() {
     }
   };
 
-  // ✅ 뉴스 비동기 로드 (홈 진입 후 약간 딜레이)
-  useEffect(() => {
-    if (userId) {
-      const t = setTimeout(() => {
-        loadNews();
-      }, 300); // 0.3초 후 실행
-      return () => clearTimeout(t);
-    }
-  }, [userId]);
-
-  // ✅ 뉴스 불러오기
+  // ✅ 뉴스 로드
   const loadNews = async () => {
     try {
       setLoadingNews(true);
@@ -187,7 +177,13 @@ export default function HomeScreen() {
     }
   };
 
-  // ✅ 뉴스 자동 셔플
+  useEffect(() => {
+    if (userId) {
+      const t = setTimeout(loadNews, 300);
+      return () => clearTimeout(t);
+    }
+  }, [userId]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setNews((prev) => [...prev].sort(() => Math.random() - 0.5));
@@ -195,33 +191,23 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // ✅ 탭 전환 시 캘린더 + 옷장만 즉시 로드
   useFocusEffect(
     useCallback(() => {
       if (userId) {
         loadClosetPreview();
-        loadCalendarPreview(); // 뉴스는 따로 useEffect에서 처리
+        loadCalendarPreview();
       }
     }, [userId])
   );
 
-  // ✅ 스와이프 새로고침
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([loadClosetPreview(), loadCalendarPreview()]);
-    // 뉴스는 독립적으로 호출
     loadNews();
     setRefreshing(false);
   };
 
-  // ✅ 이미지 경로
-  const getImageSource = (img) => {
-    if (!img) return null;
-    if (img.startsWith("http")) return { uri: img };
-    return { uri: `${BASE_URL}/uploads/clothes/${img}` };
-  };
-
-  // ✅ 날짜 클릭 시 모달 즉시 열기 (뉴스 기다리지 않음)
+  // ✅ 날짜 클릭
   const handleDatePress = (date) => {
     const events = allEvents[date] || [];
     setSelectedDate(date);
@@ -229,9 +215,55 @@ export default function HomeScreen() {
     setModalVisible(true);
   };
 
+  // ✅ 좋아요 데이터 로드
+  useEffect(() => {
+    const loadLiked = async () => {
+      try {
+        const stored = await AsyncStorage.getItem("liked_brands");
+        if (stored) setLikedBrands(JSON.parse(stored));
+      } catch (err) {
+        console.error("❌ 좋아요 불러오기 실패:", err);
+      }
+    };
+    loadLiked();
+  }, []);
+
+  const toggleLike = async (name) => {
+    const updated = likedBrands.includes(name)
+      ? likedBrands.filter((n) => n !== name)
+      : [...likedBrands, name];
+    setLikedBrands(updated);
+    await AsyncStorage.setItem("liked_brands", JSON.stringify(updated));
+  };
+
+  const likedBrandList = brandsData.brands.filter((b) =>
+    likedBrands.includes(b.name)
+  );
+
+  // ✅ 1시간마다 브랜드 3개 변경
+  const [displayBrands, setDisplayBrands] = useState([]);
+  useEffect(() => {
+    const updateBrands = () => {
+      const all = brandsData.brands;
+      const hour = new Date().getHours();
+      const startIndex = (hour * 3) % all.length;
+      const selected = all.slice(startIndex, startIndex + 3);
+      setDisplayBrands(
+        selected.length < 3
+          ? [...selected, ...all.slice(0, 3 - selected.length)]
+          : selected
+      );
+    };
+
+    updateBrands();
+    const interval = setInterval(updateBrands, 3600000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -284,16 +316,10 @@ export default function HomeScreen() {
             {closetItems.map((cloth) => (
               <Image
                 key={cloth.id}
-                source={getImageSource(cloth.image_path)}
+                source={{ uri: `${BASE_URL}/uploads/clothes/${cloth.image_path}` }}
                 style={styles.clothImg}
               />
             ))}
-            <TouchableOpacity
-              style={styles.addBox}
-              onPress={() => router.push("/(tabs)/closet/add")}
-            >
-              <Ionicons name="add" size={36} color="#999" />
-            </TouchableOpacity>
           </ScrollView>
         </View>
 
@@ -364,11 +390,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginTop: 10 }}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {news.map((a, idx) => (
               <TouchableOpacity
                 key={idx}
@@ -398,56 +420,135 @@ export default function HomeScreen() {
 
         {/* 👗 슬로우패션 브랜드 추천 */}
         <View style={styles.card}>
-          <Text style={styles.title}>추천 슬로우패션 브랜드</Text>
-          <View style={styles.brandRow}>
+          <View style={styles.calendarHeader}>
+            <View>
+              <Text style={styles.title}>슬로우패션 브랜드</Text>
+              <Text style={{ color: "#c0b4b4ff", fontSize: 13 }}>
+                1시간마다 브랜드가 바뀝니다.
+              </Text>
+            </View>
             <TouchableOpacity
-              style={styles.brandCard}
-              onPress={() => openLink("https://www.recode.co.kr")}
+              onPress={() => setLikedPopupVisible(true)}
+              style={{
+                backgroundColor: "#e8f5e9df",
+                borderRadius: 8,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+              }}
             >
-              <Image
-                source={{
-                  uri: "https://www.recode.co.kr/_next/image?url=%2Fimg%2Flogo.png&w=256&q=75",
-                }}
-                style={styles.brandImage}
-              />
-              <Text style={styles.brandName}>RE;CODE</Text>
-              <Text style={styles.brandDesc}>업사이클링 패션 선도 브랜드</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.brandCard}
-              onPress={() => openLink("https://pleatsmama.com")}
-            >
-              <Image
-                source={{
-                  uri: "https://pleatsmama.com/web/product/big/202305/f6e8db08708e38d34e98f1efb735d03c.png",
-                }}
-                style={styles.brandImage}
-              />
-              <Text style={styles.brandName}>플리츠마마</Text>
-              <Text style={styles.brandDesc}>폐페트병으로 만든 니트백</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.brandCard}
-              onPress={() => openLink("https://www.fabrikr.com")}
-            >
-              <Image
-                source={{
-                  uri: "https://www.fabrikr.com/assets/img/logo.png",
-                }}
-                style={styles.brandImage}
-              />
-              <Text style={styles.brandName}>패브리커</Text>
-              <Text style={styles.brandDesc}>
-                지속 가능한 소재 기반 브랜드
+              <Text style={{ color: "#000", fontSize: 12 }}>
+                좋아요 누른 브랜드 보기
               </Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.brandRow}>
+            {displayBrands.map((brand, idx) => {
+              const isLiked = likedBrands.includes(brand.name);
+              return (
+                <View key={idx} style={styles.brandCard}>
+                  <TouchableOpacity
+                    onPress={() => openLink(brand.url)}
+                    style={{ alignItems: "center" }}
+                  >
+                    <Image
+                      source={{ uri: brand.image }}
+                      style={styles.brandImage}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.brandName}>{brand.name}</Text>
+                    <Text style={styles.brandDesc} numberOfLines={2}>
+                      {brand.desc}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => toggleLike(brand.name)}
+                    style={{ position: "absolute", top: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name={isLiked ? "heart" : "heart-outline"}
+                      size={22}
+                      color={isLiked ? "#E91E63" : "#888"}
+                    />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
 
-      {/* 📅 슬라이드업 모달 */}
+      {/* ❤️ 좋아요 팝업 */}
+      <Modal visible={likedPopupVisible} animationType="slide" transparent>
+        <TouchableWithoutFeedback onPressOut={() => setLikedPopupVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.likedModal}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={styles.modalTitle}>내가 좋아요한 브랜드</Text>
+                  <TouchableOpacity onPress={() => setLikedPopupVisible(false)}>
+                    <Ionicons name="close" size={24} color="#23422D" />
+                  </TouchableOpacity>
+                </View>
+
+                {likedBrandList.length === 0 ? (
+                  <Text
+                    style={{
+                      color: "#666",
+                      textAlign: "center",
+                      marginTop: 20,
+                    }}
+                  >
+                    좋아요한 브랜드가 없습니다.
+                  </Text>
+                ) : (
+                  <ScrollView style={{ marginTop: 12 }}>
+                    {likedBrandList.map((brand, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => openLink(brand.url)}
+                        style={styles.likedBrandRow}
+                      >
+                        <Image
+                          source={{ uri: brand.image }}
+                          style={styles.likedBrandImage}
+                          resizeMode="contain"
+                        />
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={styles.likedBrandName}>{brand.name}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => toggleLike(brand.name)}>
+                          <Ionicons
+                            name={
+                              likedBrands.includes(brand.name)
+                                ? "heart"
+                                : "heart-outline"
+                            }
+                            size={22}
+                            color={
+                              likedBrands.includes(brand.name)
+                                ? "#E91E63"
+                                : "#888"
+                            }
+                          />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* 📅 캘린더 모달 */}
       <Modal
         transparent
         visible={modalVisible}
@@ -459,15 +560,10 @@ export default function HomeScreen() {
             <TouchableWithoutFeedback>
               <View style={styles.modalContainer}>
                 <Text style={styles.modalTitle}>
-                  {selectedDate
-                    ? `${selectedDate}의 기록`
-                    : "기록 없음"}
+                  {selectedDate ? `${selectedDate}의 기록` : "기록 없음"}
                 </Text>
-
                 {selectedEvents.length === 0 ? (
-                  <Text
-                    style={{ textAlign: "center", color: "#555" }}
-                  >
+                  <Text style={{ textAlign: "center", color: "#555" }}>
                     기록이 없습니다.
                   </Text>
                 ) : (
@@ -550,15 +646,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
     backgroundColor: "#eee",
   },
-  addBox: {
-    width: 90,
-    height: 90,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#ddd",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   calendarHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -595,7 +682,7 @@ const styles = StyleSheet.create({
   brandDesc: { fontSize: 12, color: "#555", textAlign: "center", marginTop: 2 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
   modalContainer: {
@@ -605,13 +692,30 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: "60%",
   },
+  likedModal: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "65%",
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#2e7d32",
-    marginBottom: 12,
-    textAlign: "center",
+    marginBottom: 10,
+    textAlign: "left",
   },
+  likedBrandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f9faf9",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  likedBrandImage: { width: 50, height: 50, borderRadius: 8 },
+  likedBrandName: { fontSize: 15, fontWeight: "600", color: "#23422D" },
   eventItem: {
     marginBottom: 14,
     backgroundColor: "#f8f9f8",

@@ -1,0 +1,30 @@
+{
+  "brands": [
+    { "name": "Pleatsmama", "url": "https://pleatsmama.com/", "image": "https://logo.clearbit.com/pleatsmama.com?size=256", "desc": "폐페트병으로 만든 니트백" },
+    { "name": "ul:kin", "url": "https://ulkin.co.kr/", "image": "https://logo.clearbit.com/ulkin.co.kr?size=256", "desc": "업사이클링 패션 아트 브랜드" },
+    { "name": "WNDERKAMMER", "url": "https://wnderkammer.com/", "image": "https://logo.clearbit.com/wnderkammer.com?size=256", "desc": "윤리적 여성복 브랜드" },
+    { "name": "YUUL YIE", "url": "https://yuulyie.com/", "image": "https://logo.clearbit.com/yuulyie.com?size=256", "desc": "비건 가죽 수공예 슈즈 브랜드" },
+    { "name": "LOW CLASSIC", "url": "https://lowclassic.com/", "image": "https://logo.clearbit.com/lowclassic.com?size=256", "desc": "미니멀 감성의 슬로우 패션" },
+    { "name": "The Open Product", "url": "https://theopenproduct.com/", "image": "https://logo.clearbit.com/theopenproduct.com?size=256", "desc": "젠더리스 지속가능 패션" },
+    { "name": "KYE", "url": "https://kyefashion.com/", "image": "https://logo.clearbit.com/kyefashion.com?size=256", "desc": "윤리적 소재 기반의 감각적 브랜드" },
+    { "name": "SWBD", "url": "https://swbd.co.kr/", "image": "https://logo.clearbit.com/swbd.co.kr?size=256", "desc": "젠더리스 감성의 지속가능 브랜드" },
+    { "name": "Patagonia", "url": "https://www.patagonia.com/", "image": "https://logo.clearbit.com/patagonia.com?size=256", "desc": "지속가능 패션의 상징" },
+    { "name": "Stella McCartney", "url": "https://www.stellamccartney.com/", "image": "https://logo.clearbit.com/stellamccartney.com?size=256", "desc": "비건 럭셔리의 대표주자" },
+    { "name": "Veja", "url": "https://www.veja-store.com/", "image": "https://logo.clearbit.com/veja-store.com?size=256", "desc": "공정무역 친환경 스니커즈" },
+    { "name": "Reformation", "url": "https://www.thereformation.com/", "image": "https://logo.clearbit.com/thereformation.com?size=256", "desc": "지속가능한 트렌디 패션" },
+    { "name": "Eileen Fisher", "url": "https://www.eileenfisher.com/", "image": "https://logo.clearbit.com/eileenfisher.com?size=256", "desc": "여성 슬로우패션의 원조" },
+    { "name": "Everlane", "url": "https://www.everlane.com/", "image": "https://logo.clearbit.com/everlane.com?size=256", "desc": "Radical Transparency 브랜드" },
+    { "name": "PANGAIA", "url": "https://thepangaia.com/", "image": "https://logo.clearbit.com/thepangaia.com?size=256", "desc": "혁신적인 바이오 소재 브랜드" },
+    { "name": "Girlfriend Collective", "url": "https://girlfriend.com/", "image": "https://logo.clearbit.com/girlfriend.com?size=256", "desc": "재활용 플라스틱 액티브웨어" },
+    { "name": "Outerknown", "url": "https://www.outerknown.com/", "image": "https://logo.clearbit.com/outerknown.com?size=256", "desc": "순환 패션 서핑 브랜드" },
+    { "name": "Mara Hoffman", "url": "https://marahoffman.com/", "image": "https://logo.clearbit.com/marahoffman.com?size=256", "desc": "예술적 지속가능 여성복" },
+    { "name": "Amour Vert", "url": "https://amourvert.com/", "image": "https://logo.clearbit.com/amourvert.com?size=256", "desc": "친환경·식물성 염색 브랜드" },
+    { "name": "Asket", "url": "https://www.asket.com/", "image": "https://logo.clearbit.com/asket.com?size=256", "desc": "덜 사고 오래 입는 기본복" },
+    { "name": "Nudie Jeans", "url": "https://www.nudiejeans.com/", "image": "https://logo.clearbit.com/nudiejeans.com?size=256", "desc": "평생 수선 가능한 데님" },
+    { "name": "Kotn", "url": "https://kotn.com/", "image": "https://logo.clearbit.com/kotn.com?size=256", "desc": "이집트 코튼의 공정무역 브랜드" },
+    { "name": "Tentree", "url": "https://www.tentree.com/", "image": "https://logo.clearbit.com/tentree.com?size=256", "desc": "판매마다 나무 10그루 심는 브랜드" },
+    { "name": "Allbirds", "url": "https://www.allbirds.com/", "image": "https://logo.clearbit.com/allbirds.com?size=256", "desc": "천연 재료 스니커즈 브랜드" },
+    { "name": "Sézane", "url": "https://www.sezane.com/", "image": "https://logo.clearbit.com/sezane.com?size=256", "desc": "B-Corp 인증 프렌치 슬로우패션" },
+    { "name": "Thought Clothing", "url": "https://www.wearethought.com/", "image": "https://logo.clearbit.com/wearethought.com?size=256", "desc": "천연 섬유 기반 지속가능 의류" }
+  ]
+}
