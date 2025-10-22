@@ -28,19 +28,31 @@ export default function AddClothesScreen() {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ 사용자 정의 옷장 목록 불러오기
+  // ✅ 사용자 정의 옷장 불러오기
   useEffect(() => {
     const loadCategories = async () => {
-      const saved = await AsyncStorage.getItem("categories");
-      if (saved) {
-        const list = JSON.parse(saved);
-        setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
-      }
+      try {
+        const saved = await AsyncStorage.getItem("categories");
+        if (saved) {
+          const list = JSON.parse(saved);
+          setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
+        }
+      } catch {}
     };
     loadCategories();
   }, []);
 
-  // ✅ 카메라 열기
+  // 👉 확장자→MIME 매핑 (HEIC도 안전 처리)
+  const resolveMime = (extRaw) => {
+    const ext = (extRaw || "").toLowerCase();
+    if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+    if (ext === "png") return "image/png";
+    if (ext === "webp") return "image/webp";
+    if (ext === "heic" || ext === "heif") return "image/jpeg"; // 서버에서 jpeg로 처리
+    return "image/jpeg";
+  };
+
+  // ✅ 카메라
   const openCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
@@ -53,10 +65,12 @@ export default function AddClothesScreen() {
       quality: 0.8,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
-    if (!result.canceled) setImage(result.assets[0].uri);
+    if (!result.canceled && result.assets?.length > 0) {
+      setImage(result.assets[0].uri);
+    }
   };
 
-  // ✅ 갤러리 열기
+  // ✅ 갤러리
   const openGallery = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -69,10 +83,12 @@ export default function AddClothesScreen() {
       quality: 0.8,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
-    if (!result.canceled) setImage(result.assets[0].uri);
+    if (!result.canceled && result.assets?.length > 0) {
+      setImage(result.assets[0].uri);
+    }
   };
 
-  // ✅ 이미지 선택 (ActionSheet)
+  // ✅ 사진 선택 액션시트
   const pickImage = async () => {
     const options = ["카메라로 촬영", "앨범에서 선택", "취소"];
     const cancelIndex = 2;
@@ -80,9 +96,9 @@ export default function AddClothesScreen() {
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         { options, cancelButtonIndex: cancelIndex },
-        async (buttonIndex) => {
-          if (buttonIndex === 0) await openCamera();
-          if (buttonIndex === 1) await openGallery();
+        async (i) => {
+          if (i === 0) await openCamera();
+          if (i === 1) await openGallery();
         }
       );
     } else {
@@ -94,26 +110,29 @@ export default function AddClothesScreen() {
     }
   };
 
-  // ✅ 등록 요청
+  // ✅ 등록
   const handleSubmit = async () => {
     if (!name.trim()) return Alert.alert("입력 오류", "옷 이름을 입력하세요.");
     if (!image) return Alert.alert("입력 오류", "사진을 선택하세요.");
+    if (!BASE_URL) return Alert.alert("설정 오류", "EXPO_PUBLIC_BASE_URL이 비어 있어요.");
 
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("access_token");
       if (!token) return Alert.alert("로그인 필요", "다시 로그인해주세요.");
 
+      const filename = image.split("/").pop() || `photo_${Date.now()}.jpg`;
+      const rawExt = filename.includes(".") ? filename.split(".").pop() : "jpg";
+      const mime = resolveMime(rawExt);
+
       const formData = new FormData();
       formData.append("name", name);
       formData.append("category", category);
-      const filename = image.split("/").pop();
-      const ext = filename.split(".").pop();
-      formData.append("image", { uri: image, name: filename, type: `image/${ext}` });
+      formData.append("image", { uri: image, name: filename, type: mime });
 
       const res = await fetch(`${BASE_URL}/clothes/add`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, // FormData는 Content-Type 자동
         body: formData,
       });
 
@@ -125,16 +144,28 @@ export default function AddClothesScreen() {
         data = { detail: text };
       }
 
-      if (res.ok) {
-        await AsyncStorage.setItem("closet_updated", "true");
-
-        Alert.alert("등록 완료 ✅", `"${name}"이(가) 등록되었습니다.`);
-        router.replace("/(tabs)/closet");
-      } else {
-        Alert.alert("오류", data.detail || "등록 실패");
+      if (!res.ok) {
+        return Alert.alert("오류", data.detail || "등록 실패");
       }
+
+      Alert.alert("등록 완료 ✅", `"${name}"이(가) 등록되었습니다.`);
+
+      // ✅ 상세 화면으로 이동하며 AI 결과 전달
+      router.replace({
+        pathname: "/(tabs)/closet/detail",
+        params: {
+          id: String(data.id),
+          name,
+          category,
+          image: `${BASE_URL}/uploads/clothes/${data.image_path}`,
+          material: data?.ai?.material ?? "",
+          washing: data?.ai?.washing ? JSON.stringify(data.ai.washing) : "",
+          materialBreakdown: data?.material_breakdown ?? "",
+        },
+      });
     } catch (err) {
       console.error("❌ 등록 오류:", err);
+      Alert.alert("네트워크 오류", String(err?.message || err));
     } finally {
       setLoading(false);
     }
@@ -142,11 +173,11 @@ export default function AddClothesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>새 옷 등록</Text>
 
         {/* ✅ 사진 선택 */}
-        <TouchableOpacity style={styles.imageBox} onPress={pickImage}>
+        <TouchableOpacity style={styles.imageBox} onPress={pickImage} disabled={loading}>
           {image ? (
             <Image source={{ uri: image }} style={styles.image} />
           ) : (
@@ -160,6 +191,7 @@ export default function AddClothesScreen() {
           placeholder="옷 이름을 입력하세요"
           value={name}
           onChangeText={setName}
+          editable={!loading}
         />
 
         {/* ✅ 카테고리 선택 */}
@@ -167,14 +199,11 @@ export default function AddClothesScreen() {
           {categories.map((cat) => (
             <TouchableOpacity
               key={cat}
-              style={[styles.catBtn, category === cat && styles.catBtnActive]}
-              onPress={() => setCategory(cat)}
+              style={[styles.catBtn, category === cat && styles.catBtnActive, loading && { opacity: 0.6 }]}
+              onPress={() => !loading && setCategory(cat)}
+              disabled={loading}
             >
-              <Text
-                style={[styles.catText, category === cat && styles.catTextActive]}
-              >
-                {cat}
-              </Text>
+              <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -185,9 +214,7 @@ export default function AddClothesScreen() {
           onPress={handleSubmit}
           disabled={loading}
         >
-          <Text style={styles.submitText}>
-            {loading ? "전송 중..." : "등록하기"}
-          </Text>
+          <Text style={styles.submitText}>{loading ? "전송 중..." : "등록하기"}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -196,7 +223,8 @@ export default function AddClothesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  content: { alignItems: "center", padding: 20 },
+  // ⬇️ 사진 박스가 상단에서 안 사라지도록 여백 조정
+  content: { alignItems: "center", paddingTop: 40, paddingBottom: 60 },
   title: { fontSize: 22, fontWeight: "700", color: "#2e7d32", marginBottom: 20 },
   imageBox: {
     width: 180,
@@ -209,7 +237,7 @@ const styles = StyleSheet.create({
   },
   image: { width: "100%", height: "100%", borderRadius: 12 },
   input: {
-    width: "100%",
+    width: "90%",
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
@@ -222,7 +250,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "center",
     gap: 10,
-    width: "100%",
+    width: "90%",
     marginBottom: 30,
   },
   catBtn: {
@@ -245,5 +273,5 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 }
 });
