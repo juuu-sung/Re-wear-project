@@ -8,8 +8,10 @@ from app.models.clothes import Clothes
 from app.models.user import User
 from app.routers.auth import get_current_user
 
+from app.routers.care import CareSummaryResponse
+from app.services.care_instructions import explain
 from app.services.material_infer import predict_bytes
-from app.services.wash_guide import guide_for 
+from app.services.wash_guide import guide_for
 
 router = APIRouter(prefix="/clothes", tags=["Clothes"])
 
@@ -189,3 +191,30 @@ def analyze_item(
         "washing": washing,
         "material_breakdown": item.material_breakdown,
     }
+
+# 특정 옷에 대해 생성/저장 API
+@router.post("/{cid}/care-summary", response_model=CareSummaryResponse)
+def generate_and_save_care_summary(
+    cid: int,
+    db: Session = Depends(get_db),
+):
+    item = db.query(Clothes).get(cid)
+    if not item:
+        raise HTTPException(404, "not found")
+
+    # washing_info는 item.washing(json/text), material, breakdown 등 네 데이터 구조에 맞게:
+    washing = item.washing_info or item.washing or ""
+    candidates = item.material_breakdown or []  # [{"label":"cotton","prob":0.7}, ...]
+    try:
+        text = explain(
+            material=item.material,
+            candidates_raw=candidates,
+            washing=washing,
+            locale="ko"
+        )
+        item.care_summary = text
+        db.add(item)
+        db.commit()
+        return {"summary": text}
+    except Exception as e:
+        raise HTTPException(502, f"gemini failed: {e}")

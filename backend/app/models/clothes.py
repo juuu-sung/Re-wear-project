@@ -17,3 +17,4 @@ class Clothes(Base):
     material = Column(String(100), nullable=True)
     washing_info = Column(Text, nullable=True)     # JSON 문자열 보관해도 됨
     material_breakdown = Column(Text, nullable=True)  # JSON 문자열 (top5 등)
+    care_summary = Column(Text, nullable=True)
