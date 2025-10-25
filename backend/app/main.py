@@ -6,6 +6,7 @@ from typing import List
 from datetime import date, datetime
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 import asyncio
 
 from app.db import Base, SessionLocal
@@ -17,6 +18,7 @@ from app.routers import (
     clothes as clothes_router,
     news as news_router,
     infer_material as infer_material_router,
+    care as care_router
     
 )
 
@@ -26,6 +28,8 @@ from app.core.scheduler import start_scheduler, stop_scheduler
 from app.services.material_infer import warmup                   # ← 모델 로드
 app = FastAPI(title="ReWear API", version="0.1.0")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+load_dotenv()
 
 # DB 세션 의존성
 def get_db():
@@ -134,3 +138,4 @@ app.include_router(infer_router.router, prefix="/infer", tags=["infer"])
 app.include_router(clothes_router.router)
 app.include_router(news_router.router)
 app.include_router(infer_material_router.router)
+app.include_router(care_router.router)
