@@ -1,11 +1,13 @@
 // app/(tabs)/closet/detail.js
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActionSheetIOS,
+  ActivityIndicator,
   Alert,
   Image,
   Platform,
@@ -61,6 +63,114 @@ export default function ClothesDetail() {
 
   const [sortOrder, setSortOrder] = useState("desc");
   const [showAll, setShowAll] = useState(false);
+
+  // ✅ Gemini 요약 상태
+  const [careSummary, setCareSummary] = useState(null);
+  const [careLoading, setCareLoading] = useState(false);
+  const [careError, setCareError] = useState(null);
+
+  // 요약 UI 개선 상태
+  const [expandCare, setExpandCare] = useState(false);
+
+  // 요약 텍스트를 보기 좋게 파싱 (HTML 태그 제거, 한줄요약 추출, 1)~6) 섹션 파싱)
+  const parseCareSummary = (text) => {
+    if (!text || typeof text !== "string") return { sections: [], oneLiner: "" };
+
+    // 1) HTML 태그 제거
+    const stripTags = (s) => s.replace(/<[^>]+>/g, "");
+    const cleaned = stripTags(text).replace(/\s+$/g, "");
+
+    // 2) 한줄요약 추출
+    const oneLinerMatch = cleaned.match(/한줄요약\s*:\s*(.+)$/m);
+    const oneLiner = oneLinerMatch ? oneLinerMatch[1].trim() : "";
+    const body = oneLinerMatch ? cleaned.replace(oneLinerMatch[0], "").trim() : cleaned;
+
+    // 3) 줄 기준 분할
+    const lines = body.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+
+    // 4) 1)~6) 섹션 파싱
+    const sections = [];
+    let current = null;
+    lines.forEach((line) => {
+      const m = line.match(/^(\d\))\s*([^:：]+)\s*[:：]?\s*(.*)$/); // 1) 제목: 내용
+      if (m) {
+        // 새 섹션 시작
+        if (current) sections.push(current);
+        current = { num: m[1], title: m[2].trim(), lines: [] };
+        if (m[3]) current.lines.push(m[3].trim());
+      } else if (current) {
+        // 이어지는 문장(마침표 단위로 다시 쪼갬)
+        line
+          .split(/(?<=\.)\s+/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .forEach((s) => current.lines.push(s));
+      }
+    });
+    if (current) sections.push(current);
+
+    // 5) 잡음 제거
+    const cleanedSections = sections.map((sec) => ({
+      ...sec,
+      lines: sec.lines.filter((t) => t.replace(/[.\s]/g, "").length > 0),
+    }));
+
+    return { sections: cleanedSections, oneLiner };
+  };
+
+  // 기본 세탁요약(세탁/건조/다림질/표백) 파싱
+  const toBasicCare = (info) => {
+    const def = { wash: "-", dry: "-", iron: "-", bleach: "-" };
+    if (!info) return def;
+    if (typeof info === "string") {
+      const out = { ...def };
+      info.split(/\n+/).forEach((line) => {
+        const [k, ...rest] = String(line).split(":");
+        const v = rest.join(":").trim();
+        const key = (k || "").trim();
+        if (/세탁/.test(key)) out.wash = v || out.wash;
+        else if (/건조/.test(key)) out.dry = v || out.dry;
+        else if (/다림질/.test(key)) out.iron = v || out.iron;
+        else if (/표백/.test(key)) out.bleach = v || out.bleach;
+      });
+      return out;
+    }
+    if (typeof info === "object") {
+      return {
+        wash: info.wash ?? def.wash,
+        dry: info.dry ?? def.dry,
+        iron: info.iron ?? def.iron,
+        bleach: info.bleach ?? def.bleach,
+      };
+    }
+    return def;
+  };
+
+  const copyCareSummary = async () => {
+    try {
+      await Clipboard.setStringAsync(careSummary || "");
+      Alert.alert("복사됨", "세탁 요약이 클립보드에 복사되었습니다.");
+    } catch {
+      Alert.alert("오류", "복사 중 문제가 발생했습니다.");
+    }
+  };
+
+  // 후보 형태를 백엔드 규격으로 정규화
+  const buildCandidates = () => {
+    try {
+      return (materialBreakdown || []).map((m) => ({
+        label: m?.name ?? m?.label ?? (m?.material ?? "-"),
+        prob:
+          typeof m?.prob === "number"
+            ? m.prob
+            : typeof m?.confidence === "number"
+            ? m.confidence
+            : undefined,
+      }));
+    } catch {
+      return [];
+    }
+  };
 
   // ✅ 최초 진입 시 washing 파라미터가 JSON 문자열이면 파싱
   useEffect(() => {
@@ -189,12 +299,62 @@ export default function ClothesDetail() {
           ? data.top5
           : parseBreakdown(data.material_breakdown)
       );
+      // 분석 결과가 바뀌었으니 이전 Gemini 요약은 초기화
+      setCareSummary(null);
       Alert.alert("분석 완료", "AI 세탁 가이드를 업데이트했어요.");
     } catch (e) {
       console.error(e);
       Alert.alert("네트워크 오류", String(e?.message || e));
     }
   };
+
+  // ✅ Gemini 세탁 설명 생성
+  const fetchCareSummary = async () => {
+    try {
+      setCareError(null);
+      setCareLoading(true);
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) {
+        setCareLoading(false);
+        return Alert.alert("로그인 필요", "다시 로그인해주세요.");
+      }
+      if (!BASE_URL) {
+        setCareLoading(false);
+        return Alert.alert("설정 오류", "EXPO_PUBLIC_BASE_URL이 비어 있어요.");
+      }
+
+      const body = {
+        material: material || null,
+        candidates: buildCandidates(),
+        washing: typeof washingInfo === "string" ? washingInfo : (washingInfo || {}),
+        locale: "ko",
+      };
+
+      const res = await fetch(`${BASE_URL}/care/summary`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setCareError(data?.detail || "요약 생성 실패");
+        return;
+      }
+      setCareSummary(data?.summary || "");
+    } catch (e) {
+      setCareError(String(e?.message || e));
+    } finally {
+      setCareLoading(false);
+    }
+  };
+  // 소재/세탁 정보가 변하면 이전 Gemini 요약 초기화
+  useEffect(() => {
+    setCareSummary(null);
+  }, [material, washingInfo, JSON.stringify(materialBreakdown)]);
 
   // ✅ 수정 저장
   const handleUpdate = async () => {
@@ -354,19 +514,112 @@ export default function ClothesDetail() {
               </View>
             )}
 
-            {/* 세탁법 */}
-            <View style={styles.washDisplay}>
-              <Ionicons name="water-outline" size={20} color="#2e7d32" style={{ marginRight: 6 }} />
-              <Text style={styles.washText}>
-                {washingInfo
-                  ? typeof washingInfo === "string"
-                    ? washingInfo
-                    : `세탁: ${washingInfo.wash ?? "-"}\n` +
-                      `건조: ${washingInfo.dry ?? "-"}\n` +
-                      `다림질: ${washingInfo.iron ?? "-"}\n` +
-                      `표백: ${washingInfo.bleach ?? "-"}`
-                  : "세탁법을 입력하거나 AI가 분석하면 여기에 표시됩니다."}
-              </Text>
+            {/* 세탁법 (기본 카드) */}
+            {(() => {
+              const b = toBasicCare(washingInfo);
+              return (
+                <View style={styles.careBasicCard}>
+                  <View style={styles.careBasicRow}>
+                    <View style={styles.careBasicLabelWrap}>
+                      <Ionicons name="water-outline" size={16} color="#2e7d32" />
+                      <Text style={styles.careBasicLabel}>세탁</Text>
+                    </View>
+                    <Text style={styles.careBasicValue}>{b.wash}</Text>
+                  </View>
+                  <View style={styles.careBasicRow}>
+                    <View style={styles.careBasicLabelWrap}>
+                      <Ionicons name="cloud-outline" size={16} color="#2e7d32" />
+                      <Text style={styles.careBasicLabel}>건조</Text>
+                    </View>
+                    <Text style={styles.careBasicValue}>{b.dry}</Text>
+                  </View>
+                  <View style={styles.careBasicRow}>
+                    <View style={styles.careBasicLabelWrap}>
+                      <Ionicons name="thermometer-outline" size={16} color="#2e7d32" />
+                      <Text style={styles.careBasicLabel}>다림질</Text>
+                    </View>
+                    <Text style={styles.careBasicValue}>{b.iron}</Text>
+                  </View>
+                  <View style={styles.careBasicRow}>
+                    <View style={styles.careBasicLabelWrap}>
+                      <Ionicons name="beaker-outline" size={16} color="#2e7d32" />
+                      <Text style={styles.careBasicLabel}>표백</Text>
+                    </View>
+                    <Text style={styles.careBasicValue}>{b.bleach}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Gemini 생성 설명 (개선 UI) */}
+            <View style={styles.careContainer}>
+              <View style={styles.careHeader}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="sparkles-outline" size={16} color="#2e7d32" />
+                  <Text style={styles.careTitle}>세탁 요약 (Gemini)</Text>
+                  <View style={styles.aiBadge}><Text style={styles.aiBadgeText}>AI</Text></View>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  {!!careSummary && (
+                    <TouchableOpacity onPress={copyCareSummary} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="copy-outline" size={18} color="#2e7d32" />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.careBtn} onPress={fetchCareSummary} disabled={careLoading}>
+                    <Text style={styles.careBtnText}>{careLoading ? "생성 중..." : (careSummary ? "다시 생성" : "생성하기")}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {careError ? (
+                <Text style={styles.careError}>{careError}</Text>
+              ) : careLoading ? (
+                <View style={{ paddingVertical: 10, alignItems: "center" }}>
+                  <ActivityIndicator />
+                </View>
+              ) : careSummary ? (
+                (() => {
+                  const { sections, oneLiner } = parseCareSummary(careSummary);
+                  const visible = expandCare ? sections : sections.slice(0, 3);
+                  return (
+                    <View>
+                      {!!oneLiner && (
+                        <View style={styles.oneLineBox}>
+                          <Ionicons name="alert-circle-outline" size={16} color="#1b5e20" />
+                          <Text style={styles.oneLineText}>{oneLiner}</Text>
+                        </View>
+                      )}
+                      <View style={styles.careBox}>
+                        {visible.length === 0 ? (
+                          <Text style={styles.careText}>{careSummary}</Text>
+                        ) : (
+                          visible.map((sec, idx) => (
+                            <View key={`care-sec-${idx}`} style={styles.sectionBox}>
+                              <View style={styles.sectionHeader}>
+                                <Text style={styles.stepNum}>{sec.num}</Text>
+                                <Text style={styles.sectionTitle}>{sec.title}</Text>
+                              </View>
+                              {sec.lines.map((t, j) => (
+                                <View key={`care-line-${idx}-${j}`} style={styles.bulletRow}>
+                                  <Ionicons name="ellipse" size={6} color="#2e7d32" style={{ marginTop: 8 }} />
+                                  <Text style={styles.bulletText}>{t}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          ))
+                        )}
+                      </View>
+                      {sections.length > 3 && (
+                        <TouchableOpacity onPress={() => setExpandCare((v) => !v)} style={styles.moreBtn}>
+                          <Text style={styles.moreBtnText}>{expandCare ? "접기 ▲" : `더보기 (${sections.length - 3}개) ▼`}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })()
+              ) : (
+                <Text style={styles.careHint}>소재/세탁 정보를 바탕으로 간단한 요약을 생성합니다.</Text>
+              )}
             </View>
 
             {/* 기록 */}
@@ -555,4 +808,93 @@ const styles = StyleSheet.create({
   },
   textButton: { flexDirection: "row", alignItems: "center", gap: 6 },
   textBtnLabel: { fontSize: 16, color: "#000", fontWeight: "600" },
+  careContainer: {
+    width: "90%",
+    alignSelf: "center",
+    backgroundColor: "#F5FAF7",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+  },
+  careHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  careTitle: { fontSize: 16, fontWeight: "700", color: "#000" },
+  careBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  careBtnText: { color: "#2e7d32", fontWeight: "700" },
+  careBox: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#e4efe7",
+  },
+  careText: { color: "#333", fontSize: 15, lineHeight: 22 },
+  careHint: { color: "#666", fontSize: 13 },
+  careError: { color: "#c62828", fontSize: 14, fontWeight: "600" },
+  aiBadge: {
+    borderWidth: 1,
+    borderColor: "#cbe6d3",
+    backgroundColor: "#e8f5ee",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  aiBadgeText: { fontSize: 11, color: "#2e7d32", fontWeight: "700" },
+  oneLineBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#eaf7ef",
+    borderColor: "#d7efe1",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  oneLineText: { color: "#1b5e20", fontSize: 14, fontWeight: "700", flexShrink: 1 },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 6,
+  },
+  bulletText: { color: "#333", fontSize: 15, lineHeight: 22, flex: 1 },
+  stepNum: { color: "#1565C0", fontWeight: "700", marginTop: 2, marginRight: 6 },
+  sectionBox: { borderTopWidth: 1, borderTopColor: "#e9efe9", paddingTop: 8, marginTop: 8 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  sectionTitle: { fontSize: 15, fontWeight: "700", color: "#0f5132" },
+  careBasicCard: {
+    width: "90%",
+    alignSelf: "center",
+    backgroundColor: "#F5FAF7",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e4efe7",
+  },
+  careBasicRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#e9efe9",
+  },
+  careBasicLabelWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
+  careBasicLabel: { fontSize: 14, fontWeight: "700", color: "#0f5132" },
+  careBasicValue: { flex: 1, textAlign: "right", color: "#333", fontSize: 15, lineHeight: 22, marginLeft: 12 },
 });
