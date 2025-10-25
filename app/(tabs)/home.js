@@ -74,19 +74,29 @@ export default function HomeScreen() {
   });
 
   // ✅ 이번 주 날짜 계산
-  useEffect(() => {
-    const today = new Date();
-    const day = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((day + 6) % 7));
-    const week = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      week.push(d.toISOString().split("T")[0]);
-    }
-    setWeekDates(week);
-  }, []);
+ useEffect(() => {
+  const today = new Date();
+  const day = today.getDay(); // 일=0, 월=1, ... 토=6
+
+  // ✅ 이번 주 일요일(주 시작일)
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - day);
+
+  const week = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
+
+    // ✅ 한국 시간대 맞게 변환
+    const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .split("T")[0];
+
+    week.push(localDate);
+  }
+
+  setWeekDates(week);
+}, []);
 
   // ✅ 사용자 ID 로드
   useEffect(() => {
