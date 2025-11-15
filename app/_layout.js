@@ -18,7 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="signup" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="profile" />
-        <Stack.Screen name="upcycling" />
+        
         <Stack.Screen name="reform" />
         <Stack.Screen name="favorites" options={{ headerBackTitleVisible: false }} />
       </Stack>
