@@ -187,19 +187,28 @@ export default function HomeScreen() {
     }
   };
 
+  // ✅ 12시간마다 뉴스 새로 불러오기 (크롤링)
   useEffect(() => {
-    if (userId) {
-      const t = setTimeout(loadNews, 300);
-      return () => clearTimeout(t);
-    }
+    if (!userId) return;
+
+    // 즉시 한 번 실행
+    loadNews();
+
+    // 12시간마다(43200000ms) 반복 실행
+    const crawlInterval = setInterval(loadNews, 12 * 60 * 60 * 1000);
+
+    return () => clearInterval(crawlInterval);
   }, [userId]);
 
+// ✅ 15초마다 뉴스 순서만 랜덤하게 섞기
   useEffect(() => {
-    const interval = setInterval(() => {
+    const shuffleInterval = setInterval(() => {
       setNews((prev) => [...prev].sort(() => Math.random() - 0.5));
     }, 15000);
-    return () => clearInterval(interval);
+
+    return () => clearInterval(shuffleInterval);
   }, []);
+
 
   useFocusEffect(
     useCallback(() => {

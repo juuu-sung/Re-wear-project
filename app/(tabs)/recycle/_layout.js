@@ -9,6 +9,7 @@ export default function RecycleLayout() {
       }}
     >
       <Stack.Screen name="index" />
+      
     </Stack>
   );
 }
