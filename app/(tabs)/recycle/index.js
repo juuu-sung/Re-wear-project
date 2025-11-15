@@ -172,10 +172,10 @@ export default function RecycleScreen() {
       <View style={styles.bottomButtons}>
         <TouchableOpacity
           style={styles.subButton}
-          onPress={() => router.push("/upcycling")}
+          onPress={() => router.push("community")}
         >
           <MaterialCommunityIcons name="recycle" size={18} color="#fff" />
-          <Text style={styles.subText}>업사이클링</Text>
+          <Text style={styles.subText}>커뮤니티</Text>
         </TouchableOpacity>
 
         <View style={styles.mainButton}>
