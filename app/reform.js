@@ -1,72 +1,302 @@
-// app/reform.js
+import axios from "axios";
+import * as Linking from "expo-linking";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, TouchableOpacity } from 'react-native';
-
-import StarIcon from '../assets/icons/star.svg';
-import ContentList from './components/ui/ContentList';
-
-// 임시 리폼 데이터
-const MOCK_REFORM_DATA = [
-  { id: 'r1', title: '늘어난 목 되돌리기', author: 'Re:wear', thumbnail_url: 'https://placehold.co/60x60/2e7d32/white?text=Neck' },
-  { id: 'r2', title: '청바지 워싱 직접 하기', author: '리폼장인', thumbnail_url: 'https://placehold.co/60x60/2e7d32/white?text=Washing' },
-];
-// (즐겨찾기 저장용 고유 키)
-const FAVORITES_KEY = '@reform_favorites';
+const BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
 
 export default function ReformScreen() {
-  const router = useRouter();
-  const [favorites, setFavorites] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [query, setQuery] = useState("");
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const [history, setHistory] = useState([]); // 🔥 최근 검색어 5개
 
   useEffect(() => {
-    const loadFavorites = async () => {
-      const saved = await AsyncStorage.getItem(FAVORITES_KEY);
-      if (saved) {
-        setFavorites(JSON.parse(saved));
-      }
-    };
-    loadFavorites();
+    loadDefault();
   }, []);
 
-  const toggleFavorite = async (id) => {
-    let newFavorites;
-    if (favorites.includes(id)) {
-      newFavorites = favorites.filter((favId) => favId !== id);
-    } else {
-      newFavorites = [...favorites, id];
-    }
-    setFavorites(newFavorites);
-    await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(newFavorites));
+  // ----------------------------------------------------------
+  // ⭐ 기본 목록 가져오기
+  // ----------------------------------------------------------
+  const loadDefault = async () => {
+    setLoading(true);
+    const rand = Math.random(); // 매번 다른 요청 만들기
+
+    const res = await axios.get(`${BASE_URL}/v1/reform/`, {
+      params: { r: rand },
+    });
+
+    setVideos(res.data.results || []);
+    setNextPageToken(res.data.nextPageToken || null);
+    setLoading(false);
   };
 
+  // ----------------------------------------------------------
+  // ⭐ 검색 실행
+  // ----------------------------------------------------------
+  const search = async () => {
+    const q = query.trim();
+    if (!q) return;
+
+    saveSearchHistory(q);
+
+    setLoading(true);
+    const rand = Math.random(); // 검색도 매번 랜덤
+
+    const res = await axios.get(`${BASE_URL}/v1/reform/search`, {
+      params: { query: q, r: rand },
+    });
+
+    setVideos(res.data.results || []);
+    setNextPageToken(res.data.nextPageToken || null);
+    setLoading(false);
+  };
+
+  // ----------------------------------------------------------
+  // ⭐ 최근 검색어 5개 저장
+  // ----------------------------------------------------------
+  const saveSearchHistory = (term) => {
+    setHistory((prev) => {
+      const filtered = prev.filter((v) => v !== term);
+      return [term, ...filtered].slice(0, 5);
+    });
+  };
+
+  // ----------------------------------------------------------
+  // ⭐ 새로고침: 항상 새로운 영상 로드
+  // ----------------------------------------------------------
+  const onRefresh = async () => {
+    setRefreshing(true);
+
+    if (query.trim()) {
+      await search(); // 검색 상태 → 검색 새로고침
+    } else {
+      await loadDefault(); // 기본 상태 → 기본 목록 다시
+    }
+
+    setRefreshing(false);
+  };
+
+  // ----------------------------------------------------------
+  // ⭐ 더보기
+  // ----------------------------------------------------------
+  const loadMore = async () => {
+    if (!nextPageToken) return;
+
+    setLoadingMore(true);
+
+    const endpoint = query.trim() ? "search" : "";
+    const rand = Math.random();
+
+    const res = await axios.get(`${BASE_URL}/v1/reform/${endpoint}`, {
+      params: { query, pageToken: nextPageToken, r: rand },
+    });
+
+    setVideos((prev) => [...prev, ...res.data.results]);
+    setNextPageToken(res.data.nextPageToken);
+    setLoadingMore(false);
+  };
+
+  const openLink = (url) => Linking.openURL(url);
+
+  // ----------------------------------------------------------
+  // ⭐ Skeleton (로딩 시)
+  // ----------------------------------------------------------
+  const SkeletonCard = () => (
+    <View style={styles.skeletonCard}>
+      <View style={styles.skeletonThumb} />
+      <View style={styles.skeletonLine} />
+    </View>
+  );
+
+  // ----------------------------------------------------------
+  // ⭐ UI
+  // ----------------------------------------------------------
   return (
-    <SafeAreaView style={styles.container}>
-      {/* --- 헤더 설정 (즐겨찾기 버튼 추가) --- */}
-      <Stack.Screen
-        options={{
-          title: '리폼',
-          headerRight: () => (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <ScrollView
+        style={{ padding: 20 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <Text style={styles.header}>리폼/업사이클링</Text>
+        <Text style={styles.sub}>검색하실 때 예시에 맞게 입력해주세요!</Text>
+
+        {/* 🔍 검색 UI */}
+        <View style={styles.searchWrap}>
+          <TextInput
+            placeholder="EX)셔츠로 치마를 만들고 싶다면 셔츠 치마"
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={search} // 🔥 엔터로 검색
+            style={styles.input}
+          />
+          <TouchableOpacity style={styles.searchBtn} onPress={search}>
+            <Text style={{ color: "#fff" }}>검색</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 🔥 최근 검색어 */}
+        {history.length > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={styles.historyTitle}>최근 검색어</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+              {history.map((item, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.historyChip}
+                  onPress={() => {
+                    setQuery(item);
+                    setTimeout(search, 50);
+                  }}
+                >
+                  <Text style={styles.historyText}>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* 🔥 로딩 스켈레톤 */}
+        {loading &&
+          [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
+
+        {/* 🔥 영상 목록 */}
+        {!loading &&
+          videos.map((item, idx) => (
             <TouchableOpacity
-              sytle={{ marginRight: 15 }}
-              onPress={() => router.push({ pathname: '/favorites', params: { type: 'reform' } })}>
-              <StarIcon width={24} height={24} fill="#FFD700" />
+              key={idx}
+              style={styles.card}
+              onPress={() => openLink(item.url)}
+            >
+              <Image source={{ uri: item.thumbnail }} style={styles.thumb} />
+              <Text style={styles.title}>{item.title}</Text>
             </TouchableOpacity>
-          ),
-        }}
-      />
-      
-      {/* --- 콘텐츠 리스트 --- */}
-      <ContentList
-        items={MOCK_REFORM_DATA}
-        favorites={favorites}
-        onToggleFavorite={toggleFavorite}
-      />
+          ))}
+
+        {/* 🔥 더보기 */}
+        {nextPageToken && !loading && (
+          <TouchableOpacity style={styles.moreBtn} onPress={loadMore}>
+            {loadingMore ? (
+              <ActivityIndicator color="#23422D" />
+            ) : (
+              <Text style={styles.moreText}>+ 더보기</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f8f8' },
+  header: { fontSize: 26, fontWeight: "800", color: "#23422D" },
+  sub: { fontSize: 13, color: "#777", marginBottom: 16 },
+
+  searchWrap: { flexDirection: "row", marginBottom: 20 },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    padding: 10,
+  },
+  searchBtn: {
+    paddingHorizontal: 16,
+    marginLeft: 10,
+    backgroundColor: "#23422D",
+    borderRadius: 10,
+    justifyContent: "center",
+  },
+
+  // 카드
+  card: {
+    marginBottom: 20,
+    backgroundColor: "#fafafa",
+    padding: 10,
+    borderRadius: 12,
+  },
+  thumb: {
+    width: "100%",
+    height: 180,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#23422D",
+  },
+
+  // 더보기
+  moreBtn: {
+    marginVertical: 20,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#23422D",
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  moreText: {
+    color: "#23422D",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  // Skeleton
+  skeletonCard: {
+    marginBottom: 20,
+    backgroundColor: "#eee",
+    padding: 10,
+    borderRadius: 12,
+  },
+  skeletonThumb: {
+    width: "100%",
+    height: 180,
+    backgroundColor: "#ddd",
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  skeletonLine: {
+    width: "70%",
+    height: 14,
+    backgroundColor: "#ddd",
+    borderRadius: 6,
+  },
+
+  // 최근 검색어
+  historyTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: "#444",
+  },
+  historyChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#EFEFEF",
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  historyText: {
+    fontSize: 12,
+    color: "#333",
+  },
 });

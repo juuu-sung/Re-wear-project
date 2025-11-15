@@ -186,7 +186,7 @@ export default function AddClothesScreen() {
         return Alert.alert("오류", data.detail || "등록 실패");
       }
 
-      Alert.alert("등록 완료 ✅", `"${name}"이(가) 등록되었습니다.`);
+      Alert.alert("등록 완료", `"${name}"이(가) 등록되었습니다.`);
 
       router.replace({
         pathname: "/(tabs)/closet/detail",
@@ -201,7 +201,7 @@ export default function AddClothesScreen() {
         },
       });
     } catch (err) {
-      console.error("❌ 등록 오류:", err);
+      console.error("등록 오류:", err);
       Alert.alert("네트워크 오류", String(err?.message || err));
     } finally {
       setLoading(false);
