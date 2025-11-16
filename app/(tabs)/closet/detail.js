@@ -494,7 +494,7 @@ export default function ClothesDetail() {
             {/* ✅ 소재 표기 */}
             <View style={styles.materialHeaderRow}>
               <Text style={styles.material}>
-                {material ? `주요 소재: ${material}` : "주요 소재 정보 없음"}
+                {material ? `민감 소재: ${material}` : "민감 소재 정보 없음"}
               </Text>
               <TouchableOpacity style={styles.reanalyzeBtn} onPress={analyzeAgain}>
                 <Ionicons name="sparkles-outline" size={18} color="#2e7d32" />
