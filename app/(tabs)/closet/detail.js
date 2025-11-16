@@ -54,6 +54,8 @@ export default function ClothesDetail() {
   };
 
   const [material, setMaterial] = useState(() => (initMaterial ? String(initMaterial) : ""));
+  // UI에 보여줄 '주요 소재' (서버 요약/후보 기반으로 갱신)
+  const [displayMajor, setDisplayMajor] = useState(() => (initMaterial ? String(initMaterial) : ""));
   const [washingInfo, setWashingInfo] = useState(""); // string 또는 object
   const [materialBreakdown, setMaterialBreakdown] = useState(() => parseBreakdown(initMaterialBreakdown));
 
@@ -165,11 +167,42 @@ export default function ClothesDetail() {
             ? m.prob
             : typeof m?.confidence === "number"
             ? m.confidence
+            : typeof m?.score === "number"
+            ? m.score
             : undefined,
       }));
     } catch {
       return [];
     }
+  };
+
+  // 후보들로부터 주요 소재 선택 (민감도 우선 + 비율 보정)
+  const pickMajorFromCandidates = (cands = []) => {
+    if (!Array.isArray(cands) || cands.length === 0) return material || "";
+    // 확률 정규화
+    const list = cands
+      .map((c) => ({
+        label: (c.label || c.name || c.material || "").toLowerCase(),
+        prob: typeof c.prob === "number" ? c.prob : (typeof c.confidence === "number" ? c.confidence : (typeof c.score === "number" ? c.score : 0)),
+      }))
+      .filter((x) => x.label && x.prob > 0);
+    if (list.length === 0) return material || "";
+    // 상위 확률
+    const top = [...list].sort((a, b) => b.prob - a.prob)[0];
+    // 민감도 테이블
+    const sens = { wool: 5, silk: 5, cashmere: 5, linen: 3, rayon: 3, tencel: 3, modal: 3, nylon: 2, spandex: 2, polyester: 1, cotton: 1, synthetic: 1, acrylic: 3 };
+    // 민감 후보(임계치)
+    const SENS_THR = 0.20;        // 20% 이상이면 후보
+    const BOOST_MARGIN = 0.10;    // 상위와 10%p 이내면 가산
+    const sensitive = list
+      .filter((x) => (sens[x.label] || 0) >= 3 && x.prob >= SENS_THR)
+      .sort((a, b) => (sens[b.label] - sens[a.label]) || (b.prob - a.prob));
+    if (sensitive.length) {
+      const bestSens = sensitive[0];
+      // 상위 확률과 크게 차이 나지 않으면 민감도 우선
+      if (bestSens.prob + BOOST_MARGIN >= top.prob) return bestSens.label;
+    }
+    return top.label;
   };
 
   // ✅ 최초 진입 시 washing 파라미터가 JSON 문자열이면 파싱
@@ -299,6 +332,11 @@ export default function ClothesDetail() {
           ? data.top5
           : parseBreakdown(data.material_breakdown)
       );
+      // 후보 변경되었으니 표시용 주요소재 재계산
+      try {
+        const cand = Array.isArray(data.top5) && data.top5.length ? data.top5 : parseBreakdown(data.material_breakdown);
+        setDisplayMajor(pickMajorFromCandidates(cand));
+      } catch {}
       // 분석 결과가 바뀌었으니 이전 Gemini 요약은 초기화
       setCareSummary(null);
       Alert.alert("분석 완료", "AI 세탁 가이드를 업데이트했어요.");
@@ -328,6 +366,7 @@ export default function ClothesDetail() {
         candidates: buildCandidates(),
         washing: typeof washingInfo === "string" ? washingInfo : (washingInfo || {}),
         locale: "ko",
+        force_auto: true,
       };
 
       const res = await fetch(`${BASE_URL}/care/summary`, {
@@ -340,6 +379,19 @@ export default function ClothesDetail() {
       });
 
       const data = await res.json();
+      // 서버가 주요 소재를 함께 주면 우선 반영 (백엔드 키 다양성 대응)
+      const serverMajor =
+        data?.major_material ||
+        data?.primary_material ||
+        data?.primary?.label ||
+        data?.major ||
+        data?.selected_major;
+      if (serverMajor) {
+        setDisplayMajor(String(serverMajor));
+      } else {
+        // 그렇지 않으면 로컬 규칙으로 산출
+        setDisplayMajor(pickMajorFromCandidates(body.candidates));
+      }
       if (!res.ok) {
         setCareError(data?.detail || "요약 생성 실패");
         return;
@@ -354,6 +406,10 @@ export default function ClothesDetail() {
   // 소재/세탁 정보가 변하면 이전 Gemini 요약 초기화
   useEffect(() => {
     setCareSummary(null);
+    // 표시용 주요소재도 후보 기반으로 갱신 시도
+    try {
+      setDisplayMajor(pickMajorFromCandidates(buildCandidates()));
+    } catch {}
   }, [material, washingInfo, JSON.stringify(materialBreakdown)]);
 
   // ✅ 수정 저장
@@ -494,7 +550,7 @@ export default function ClothesDetail() {
             {/* ✅ 소재 표기 */}
             <View style={styles.materialHeaderRow}>
               <Text style={styles.material}>
-                {material ? `주요 소재: ${material}` : "주요 소재 정보 없음"}
+                {displayMajor ? `주요 소재: ${displayMajor}` : "주요 소재 정보 없음"}
               </Text>
               <TouchableOpacity style={styles.reanalyzeBtn} onPress={analyzeAgain}>
                 <Ionicons name="sparkles-outline" size={18} color="#2e7d32" />
