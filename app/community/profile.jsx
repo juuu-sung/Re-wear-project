@@ -9,12 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 export default function MyProfile() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();   // ← 🔥 추가
 
   const [posts, setPosts] = useState(null);
   const [user, setUser] = useState(null);
@@ -64,7 +65,13 @@ export default function MyProfile() {
   const finalName = localName || user.real_name || user.name || "사용자";
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#fff",
+        paddingTop: insets.top - 240,   // ← 🔥 여기서 50px 위로 올림
+      }}
+    >
       <View style={{ height: 20 }} />
 
       {/* 프로필 영역 */}
@@ -118,7 +125,7 @@ export default function MyProfile() {
         contentContainerStyle={{
           paddingHorizontal: 22,
           paddingBottom: 30,
-          flexGrow: 1,                       // 🔥 빈 화면에서도 세로 가운데 정렬 가능
+          flexGrow: 1,
         }}
         columnWrapperStyle={{
           justifyContent: "space-between",
@@ -134,9 +141,7 @@ export default function MyProfile() {
               paddingTop: 60,
             }}
           >
-            <Text style={{ fontSize: 16, color: "#777" }}>
-              게시물 없음.
-            </Text>
+            <Text style={{ fontSize: 16, color: "#777" }}>게시물 없음.</Text>
           </View>
         }
         renderItem={({ item }) => (

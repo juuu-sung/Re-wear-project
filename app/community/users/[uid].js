@@ -1,95 +1,64 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image as ExpoImage } from "expo-image"; // 🔥 변경
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 export default function UserPosts() {
   const router = useRouter();
-  const { uid } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
+  const { uid, user_name, profile_image } = useLocalSearchParams();
   const [posts, setPosts] = useState(null);
-  const [user, setUser] = useState(null);
-  const [localName, setLocalName] = useState("");
 
-  // 로그인된 사용자 이름
-  useEffect(() => {
-    const loadLocalName = async () => {
-      const rawName =
-        (await AsyncStorage.getItem("name")) ||
-        (await AsyncStorage.getItem("username"));
-      setLocalName(rawName ? rawName : "사용자");
-    };
-    loadLocalName();
-  }, []);
-
-  // 유저 정보 + 게시글 불러오기
   const load = async () => {
-    const res1 = await fetch(`${BASE_URL}/v1/users/${uid}`);
-    const userJson = await res1.json();
-    setUser(userJson);
-
-    const res2 = await fetch(`${BASE_URL}/v1/community/users/${uid}/posts`);
-    const postsJson = await res2.json();
-    setPosts(postsJson);
+    const res = await fetch(`${BASE_URL}/v1/community/users/${uid}/posts`);
+    const data = await res.json();
+    setPosts(data);
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    if (uid) load();
+  }, [uid]);
 
-  if (!posts || !user)
+  if (!posts)
     return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
 
-  // 최종 이름 결정
-  const finalName =
-    user.real_name ??
-    user.name ??
-    posts[0]?.author?.real_name ??
-    posts[0]?.author?.name ??
-    localName;
+  const finalName = user_name ?? "사용자";
+  const profileImg = profile_image ?? "https://via.placeholder.com/150";
 
-  // 메시지 보내기 핸들러
   const handleSendMessage = async () => {
     const myId = await AsyncStorage.getItem("user_id");
+    if (!myId) return;
 
-    if (!myId) {
-      console.log("user_id 없음 - 로그인 필요");
-      return;
-    }
+    const res = await fetch(
+      `${BASE_URL}/v1/chat/room?user1=${myId}&user2=${uid}`
+    );
+    const data = await res.json();
 
-    // 나 자신한테는 DM 안 열도록 막고 싶으면 이 조건 추가하면 됨
-    // if (String(myId) === String(uid)) return;
-
-    try {
-      // 방 조회 또는 생성
-      const res = await fetch(
-        `${BASE_URL}/v1/chat/room?user1=${myId}&user2=${uid}`
-      );
-      const data = await res.json();
-      const roomId = data.room_id;
-
-      // DM 채팅방으로 이동
-      router.push(`/community/chat/${roomId}?myId=${myId}`);
-    } catch (e) {
-      console.log("DM 방 생성 실패:", e);
-    }
+    router.push(`/chat/${data.room_id}?myId=${myId}`);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#fff",
+        paddingTop: insets.top - 250,
+      }}
+    >
       <View style={{ height: 20 }} />
 
-      {/* ------------------ 프로필 영역 ------------------ */}
+      {/* 프로필 */}
       <View
         style={{
           paddingHorizontal: 22,
@@ -99,13 +68,8 @@ export default function UserPosts() {
           alignItems: "center",
         }}
       >
-        {/* 프로필 사진 */}
-        <Image
-          source={{
-            uri: user.profile_image
-              ? user.profile_image
-              : "https://via.placeholder.com/150",
-          }}
+        <ExpoImage
+          source={{ uri: profileImg }}
           style={{
             width: 90,
             height: 90,
@@ -113,9 +77,10 @@ export default function UserPosts() {
             marginRight: 22,
             backgroundColor: "#eee",
           }}
+          contentFit="cover"
+          cachePolicy="immutable"
         />
 
-        {/* 이름 + 메시지 보내기 버튼 */}
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 8 }}>
             {finalName}
@@ -124,7 +89,7 @@ export default function UserPosts() {
           <TouchableOpacity
             onPress={handleSendMessage}
             style={{
-              backgroundColor: "#2e7d32",
+              backgroundColor: "#2E7D32",
               paddingVertical: 8,
               borderRadius: 6,
               alignItems: "center",
@@ -136,7 +101,7 @@ export default function UserPosts() {
         </View>
       </View>
 
-      {/* ------------------ 게시물 제목 ------------------ */}
+      {/* 제목 */}
       <Text
         style={{
           fontSize: 18,
@@ -148,7 +113,7 @@ export default function UserPosts() {
         올린 게시물
       </Text>
 
-      {/* ------------------ 게시물 그리드 ------------------ */}
+      {/* 게시물 목록 */}
       <FlatList
         numColumns={2}
         data={posts}
@@ -162,10 +127,10 @@ export default function UserPosts() {
           <TouchableOpacity
             style={{ width: "48%" }}
             activeOpacity={0.8}
-            onPress={() => router.push(`/community/${item.id}`)} // 🔥 상세페이지 이동
+            onPress={() => router.push(`/community/${item.id}`)}
           >
             {Array.isArray(item.images) && item.images.length > 0 ? (
-              <Image
+              <ExpoImage
                 source={{ uri: item.images[0] }}
                 style={{
                   width: "100%",
@@ -173,6 +138,8 @@ export default function UserPosts() {
                   borderRadius: 10,
                   backgroundColor: "#eee",
                 }}
+                contentFit="cover"
+                cachePolicy="immutable"
               />
             ) : (
               <View
