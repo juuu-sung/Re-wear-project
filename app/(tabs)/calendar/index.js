@@ -127,31 +127,64 @@ export default function CalendarScreen() {
     }
   };
 
-  // ✅ 이벤트 추가
-  const saveEvent = async (date, newEvent) => {
-    try {
-      const payload = {
-        date,
-        type: newEvent.type,
-        garment_id: newEvent.cloth_id,
-      };
-      const token = await AsyncStorage.getItem("access_token");
-      const res = await fetch(`${BASE_URL}/events`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("이벤트 저장 실패");
-      fetchCalendar(date, userId);
-      fetchEvents(userId);
-    } catch (err) {
-      console.error("이벤트 저장 실패:", err);
-      Alert.alert("저장 실패", "서버와 통신 중 문제가 발생했습니다.");
+  // ✅ 이벤트 추가 (포인트 적립 추가됨)
+  // ✅ 이벤트 추가 (일일미션 완료 알림으로 변경)
+// ✅ 이벤트 추가 (일일미션 자동 완료 반영)
+// ✅ 이벤트 추가 (RP 및 알림 제거됨 — 미션 상태만 갱신)
+const saveEvent = async (date, newEvent) => {
+  try {
+    const payload = {
+      date,
+      type: newEvent.type,
+      garment_id: newEvent.cloth_id,
+    };
+    const token = await AsyncStorage.getItem("access_token");
+    const res = await fetch(`${BASE_URL}/events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("이벤트 저장 실패");
+
+    // ✅ 미션 완료 여부만 기록 (알림, RP 없음)
+    const missionKey = newEvent.type === "wear" ? "add_wear" :
+                       newEvent.type === "wash" ? "add_wash" : null;
+
+    if (missionKey) {
+      const today = new Date().toISOString().split("T")[0];
+      const storedDate = await AsyncStorage.getItem("daily_mission_date");
+      const missionsRaw = await AsyncStorage.getItem("daily_missions");
+
+      if (storedDate === today && missionsRaw) {
+        const missions = JSON.parse(missionsRaw);
+
+        // 이미 완료된 미션이면 건너뜀
+        const target = missions.find((m) => m.key === missionKey);
+        if (!target?.done) {
+          const updated = missions.map((m) =>
+            m.key === missionKey ? { ...m, done: true } : m
+          );
+          await AsyncStorage.setItem("daily_missions", JSON.stringify(updated));
+          console.log(`🎯 '${missionKey}' 미션 완료 기록됨 (알림/포인트 없음)`);
+        }
+      }
     }
-  };
+
+    // ✅ 캘린더 갱신
+    fetchCalendar(date, userId);
+    fetchEvents(userId);
+
+  } catch (err) {
+    console.error("이벤트 저장 실패:", err);
+    Alert.alert("저장 실패", "서버와 통신 중 문제가 발생했습니다.");
+  }
+};
+
+
+
 
   // ✅ 이벤트 삭제
   const deleteEvent = async (eventId, date) => {
@@ -227,7 +260,6 @@ export default function CalendarScreen() {
   return (
     <View style={styles.container}>
       <ScrollView>
-        {/* 👇 header와 headerDivider 순서는 이전에 완벽하게 고치셨습니다! */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>캘린더</Text>
         </View>
@@ -300,7 +332,6 @@ export default function CalendarScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* + 버튼 */}
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
         <Ionicons name="add" size={34} color="#fff" />
       </TouchableOpacity>
@@ -344,7 +375,6 @@ export default function CalendarScreen() {
         }}
       />
 
-      {/* ✅ 사진 미리보기 팝업 */}
       <Modal visible={imageModalVisible} transparent animationType="fade">
         <TouchableWithoutFeedback onPress={() => setImageModalVisible(false)}>
           <View style={styles.imageModalOverlay}>
@@ -416,7 +446,6 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // ✅ 팝업 스타일
   imageModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.8)",

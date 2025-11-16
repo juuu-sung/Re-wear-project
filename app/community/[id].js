@@ -1,0 +1,173 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image as ExpoImage } from "expo-image";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
+const SCREEN_WIDTH = Dimensions.get("window").width;
+
+export default function PostDetail() {
+  const { id } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
+
+  const [post, setPost] = useState(null);
+  const [comment, setComment] = useState("");
+  const [myName, setMyName] = useState("");
+
+  useEffect(() => {
+    const loadMyName = async () => {
+      const name =
+        (await AsyncStorage.getItem("name")) ||
+        (await AsyncStorage.getItem("username"));
+      setMyName(name ?? "사용자");
+    };
+    loadMyName();
+  }, []);
+
+  const loadPost = async () => {
+    const res = await fetch(`${BASE_URL}/v1/community/posts/${id}`);
+    const data = await res.json();
+    data.comments = data.comments ?? [];
+    setPost(data);
+  };
+
+  useEffect(() => {
+    loadPost();
+  }, []);
+
+  const writeComment = async () => {
+    if (!comment.trim()) return;
+
+    const myId = await AsyncStorage.getItem("user_id");
+
+    await fetch(
+      `${BASE_URL}/v1/community/posts/${id}/comments?user_id=${myId}&comment=${comment}`,
+      { method: "POST" }
+    );
+
+    setComment("");
+    loadPost();
+  };
+
+  if (!post) return null;
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#fff" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={insets.top + 60}
+    >
+      <View style={{ paddingTop: insets.top - 30 }} />
+
+      <ScrollView style={{ flex: 1 }}>
+
+        {/* 이미지 */}
+        <FlatList
+          data={post.images}
+          keyExtractor={(item, idx) => idx.toString()}
+          horizontal
+          pagingEnabled
+          renderItem={({ item }) => (
+            <ExpoImage
+              source={{ uri: item.url }}
+              style={{
+                width: SCREEN_WIDTH,
+                height: SCREEN_WIDTH,
+                backgroundColor: "#ddd",
+              }}
+              contentFit="cover"
+              cachePolicy="immutable"
+            />
+          )}
+          showsHorizontalScrollIndicator={false}
+        />
+
+        {/* 좋아요/댓글 아이콘 */}
+        <View style={{ paddingHorizontal: 15, paddingTop: 15 }}>
+          <Text style={{ fontSize: 22 }}>♡  💬</Text>
+        </View>
+
+        {/* 좋아요 수 */}
+        <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+          <Text style={{ fontWeight: "700" }}>
+            좋아요 {post.likes}개
+          </Text>
+        </View>
+
+        {/* 설명 */}
+        <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+          <Text>
+            <Text style={{ fontWeight: "700" }}>{post.user_name} </Text>
+            {post.description}
+          </Text>
+        </View>
+
+        {/* 🔥 본문과 댓글 사이 Divider */}
+        <View
+          style={{
+            height: 1,
+            backgroundColor: "#ddd",
+            marginTop: 20,
+            marginBottom: 10,
+            marginHorizontal: 15,
+          }}
+        />
+
+        {/* 댓글 */}
+        <View style={{ paddingHorizontal: 15, paddingBottom: 80 }}>
+          {(post.comments ?? []).map((c, i) => (
+            <View key={i} style={{ marginBottom: 12 }}>
+              <Text>
+                <Text style={{ fontWeight: "700" }}>{c.user_name} </Text>
+                {c.comment}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+      </ScrollView>
+
+      {/* 댓글 입력창 */}
+      <View
+        style={{
+          flexDirection: "row",
+          padding: 15,
+          borderTopWidth: 1,
+          borderColor: "#eee",
+          backgroundColor: "#fff",
+        }}
+      >
+        <TextInput
+          value={comment}
+          onChangeText={setComment}
+          placeholder={`${myName}로 댓글 달기...`}
+          style={{
+            flex: 1,
+            padding: 10,
+            backgroundColor: "#f0f0f0",
+            borderRadius: 10,
+          }}
+        />
+
+        <TouchableOpacity
+          onPress={writeComment}
+          style={{ marginLeft: 10, justifyContent: "center" }}
+        >
+          <Text style={{ color: "#23422D", fontWeight: "700" }}>게시</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
