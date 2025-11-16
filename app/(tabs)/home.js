@@ -6,7 +6,6 @@ import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Easing,
   Image,
@@ -18,7 +17,7 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 import brandsData from "../../assets/data/slowfashion_brands.json"; // ✅ JSON 파일 불러오기
 
@@ -307,7 +306,7 @@ export default function HomeScreen() {
           <View style={[styles.row, { marginTop: 4 }]}>
             <TouchableOpacity
               style={styles.iconBox}
-              onPress={() => Alert.alert("라벨 촬영", "카메라 기능은 준비 중입니다.")}
+              onPress={() => router.push('/scan')}
             >
               <Ionicons name="camera-outline" size={32} color="#000" />
               <Text style={styles.iconText}>라벨 촬영하기</Text>
