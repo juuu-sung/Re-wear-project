@@ -117,6 +117,33 @@ def _extract_candidate_text(candidate: Any) -> str:
     return _coerce_to_text(candidate).strip()
 
 
+import re
+_LBL_PROB_RE = re.compile(r"^\s*([A-Za-z_]+)\s*(?:[:\(]\s*([0-9]+(?:\.[0-9]+)?)\s*%?\s*\)?)?\s*$")
+
+def _parse_label_prob_from_text(s: str) -> tuple[str, float | None]:
+    """
+    Accepts text like:
+      - "wool"
+      - "wool:0.8"
+      - "wool (80%)"
+      - "wool 80"
+    Returns (label, prob|None). prob is 0~1 float if present.
+    """
+    s = (s or "").strip()
+    if not s:
+        return ("", None)
+    m = _LBL_PROB_RE.match(s)
+    if not m:
+        # fallback: try "label prob" split
+        parts = s.split()
+        if len(parts) == 2:
+            lbl, pr = parts[0], parts[1]
+            return (lbl.strip(), _coerce_prob(pr))
+        return (s, None)
+    lbl = m.group(1).strip()
+    pr  = m.group(2)
+    return (lbl, (_coerce_prob(pr) if pr is not None else None))
+
 def _normalize_candidates(cands: Any) -> List[Dict[str, Any]]:
     """
     후보가 문자열, dict, list 섞여 들어와도 일관화: [{label, prob}]
@@ -124,42 +151,135 @@ def _normalize_candidates(cands: Any) -> List[Dict[str, Any]]:
     if not cands:
         return []
     if isinstance(cands, str):
-        # "cotton:0.7, polyester:0.3" 같은 경우 파싱 시도
         parts = [p.strip() for p in cands.split(",")]
-        out = []
+        out: List[Dict[str, Any]] = []
         for p in parts:
             if ":" in p:
-                k,v = p.split(":",1)
-                try:
-                    out.append({"label": k.strip(), "prob": float(v.strip())})
-                except:
-                    out.append({"label": k.strip(), "prob": None})
+                k, v = p.split(":", 1)
+                out.append({"label": k.strip(), "prob": _coerce_prob(v.strip())})
             else:
-                out.append({"label": p, "prob": None})
+                lbl, pr = _parse_label_prob_from_text(p)
+                out.append({"label": lbl, "prob": ( _coerce_prob(pr) if pr is not None else None )})
         return out
     if isinstance(cands, dict):
-        # {"cotton":0.7,"polyester":0.3}
-        return [{"label": k, "prob": v} for k, v in cands.items()]
+        return [{"label": k, "prob": _coerce_prob(v)} for k, v in cands.items()]
     if isinstance(cands, list):
-        # 이미 [{"label":"cotton","prob":0.7}, ...] 형태라면 그대로
-        norm = []
+        norm: List[Dict[str, Any]] = []
         for it in cands:
             if isinstance(it, dict) and "label" in it:
-                norm.append({"label": it.get("label"), "prob": it.get("prob")})
+                norm.append({"label": str(it.get("label")).strip(), "prob": _coerce_prob(it.get("prob"))})
             elif isinstance(it, (list, tuple)) and len(it) >= 1:
-                lbl = it[0]; pr = (it[1] if len(it)>1 else None)
-                norm.append({"label": lbl, "prob": pr})
+                lbl = it[0]
+                pr  = it[1] if len(it) > 1 else None
+                norm.append({"label": str(lbl).strip(), "prob": _coerce_prob(pr)})
             else:
-                norm.append({"label": str(it), "prob": None})
+                # plain text like "wool (80%)"
+                lbl, pr = _parse_label_prob_from_text(str(it))
+                norm.append({"label": lbl, "prob": ( _coerce_prob(pr) if pr is not None else None )})
         return norm
-    # 그 외는 문자열화
-    return [{"label": str(cands), "prob": None}]
+    return [{"label": str(cands).strip(), "prob": None}]
+
+# --- Hybrid selection: sensitivity-first with probability threshold ---
+# Sensitivity score: higher = more delicate (stricter care)
+_SENSITIVITY_SCORE = {
+    # very delicate
+    "silk": 5,
+    "wool": 5,
+    # cellulosic regenerated (shape/strength sensitive when wet)
+    "rayon": 4,   # incl. viscose
+    # elastic/thermoplastic: heat-sensitive
+    "nylon": 3,
+    "spandex": 3,
+    # common naturals
+    "cotton": 2,
+    "linen": 2,   # kept for completeness (may not appear in v7)
+    # robust synthetics
+    "polyester": 1,
+    "synthetic": 1,
+    "acrylic": 1,
+}
+
+def _coerce_prob(p: Any) -> float:
+    """
+    Accepts 0~1 float, percentage string '63%', or None.
+    Returns a clamped float in [0,1].
+    """
+    try:
+        if p is None:
+            return 0.0
+        if isinstance(p, (int, float)):
+            return float(max(0.0, min(1.0, p)))
+        s = str(p).strip()
+        if s.endswith("%"):
+            return float(s[:-1]) / 100.0
+        return float(s)
+    except Exception:
+        return 0.0
+
+def choose_material_hybrid(
+    candidates: List[Dict[str, Any]],
+    prob_threshold: float = 0.25,
+    topk: int = 3
+) -> tuple[str, str]:
+    """
+    Hybrid rule:
+      1) Among candidates with prob >= threshold, pick the one with the HIGHEST sensitivity score.
+         Ties are broken by higher probability.
+      2) If none meet the threshold, fall back to the highest-probability label.
+    Returns:
+      (selected_label, rationale_text)
+    """
+    # Normalize (label, prob)
+    norm = []
+    for c in candidates:
+        lbl = str(c.get("label", "")).strip().lower()
+        pr  = _coerce_prob(c.get("prob", 0))
+        if not lbl:
+            continue
+        norm.append({"label": lbl, "prob": pr})
+
+    if not norm:
+        return ("", "후보가 없어 기준 소재를 결정하지 못했습니다.")
+
+    # Sort by prob desc to get a simple fallback and reporting
+    norm.sort(key=lambda x: x["prob"], reverse=True)
+    top_prob_label = norm[0]["label"]
+
+    # Filter by threshold and score by sensitivity
+    eligible = []
+    for c in norm:
+        if c["prob"] >= prob_threshold:
+            score = _SENSITIVITY_SCORE.get(c["label"], 0)
+            eligible.append((score, c["prob"], c["label"]))
+
+    if eligible:
+        eligible.sort(key=lambda t: (t[0], t[1]), reverse=True)
+        sel_score, sel_prob, sel_label = eligible[0]
+        # Human-readable rationale
+        head = ", ".join(f"{c['label']}({c['prob']:.2f})" for c in norm[:max(1, topk)])
+        reason = (
+            f"민감도 우선 규칙 적용: 확률≥{prob_threshold:.2f} 후보 중 "
+            f"민감도가 가장 높은 '{sel_label}'을 선택했습니다 "
+            f"(민감도={sel_score}, 확률={sel_prob:.2f}). "
+            f"상위 후보: {head}"
+        )
+        return (sel_label, reason)
+
+    # Fallback to highest-probability if no one passed threshold
+    head = ", ".join(f"{c['label']}({c['prob']:.2f})" for c in norm[:max(1, topk)])
+    reason = (
+        f"확률≥{prob_threshold:.2f} 기준을 만족하는 민감 후보가 없어 "
+        f"최대 확률 '{top_prob_label}'을 기준 소재로 사용합니다. "
+        f"상위 후보: {head}"
+    )
+    return (top_prob_label, reason)
 
 def _build_prompt(
     material: Optional[str],
     candidates: List[Dict[str, Any]],
     washing: Any,
-    locale: str = "ko"
+    locale: str = "ko",
+    rationale: Optional[str] = None
 ) -> str:
     """
     프롬프트 템플릿: 한국어 단계별(번호 매겨진) 세탁 가이드 출력 (자세한 설명 포함).
@@ -217,17 +337,20 @@ def _build_prompt(
 - 각 단계는 약 1~3문장씩으로 총 10~15문장 내외가 되도록 하세요.
 - 항목마다 구분해서 보기 편하게 하세요.
 """
+    if rationale:
+        user += f"\n[선정 근거] {rationale}\n"
     return sys + "\n\n" + user
 
-def _key_for_cache(material: Optional[str], candidates: List[Dict[str, Any]], washing: Any) -> str:
+def _key_for_cache(material: Optional[str], candidates: List[Dict[str, Any]], washing: Any, force_auto: bool = False) -> str:
     try:
         return json.dumps({
             "m": material,
             "c": candidates,
-            "w": washing if isinstance(washing, (str, int, float)) else str(washing)
+            "w": washing if isinstance(washing, (str, int, float)) else str(washing),
+            "fa": bool(force_auto),
         }, sort_keys=True, ensure_ascii=False)
     except Exception:
-        return f"{material}|{candidates}|{washing}"
+        return f"{material}|{candidates}|{washing}|fa={bool(force_auto)}"
 
 @retry(
     reraise=True,
@@ -364,17 +487,25 @@ def explain(
     material: Optional[str],
     candidates_raw: Any,
     washing: Any,
-    locale: str = "ko"
+    locale: str = "ko",
+    force_auto: bool = False
 ) -> str:
     """
     외부에 노출되는 진입점.
     """
     candidates = _normalize_candidates(candidates_raw)
-    cache_key = _key_for_cache(material, candidates, washing)
+    rationale = None
+    # Force re-selection when force_auto=True or material is empty/'auto'
+    if force_auto or (not material) or (str(material).strip().lower() == "auto"):
+        chosen_label, rationale = choose_material_hybrid(candidates, prob_threshold=0.25, topk=3)
+        chosen_label = chosen_label or None
+    else:
+        chosen_label = material
+    cache_key = _key_for_cache(material, candidates, washing, force_auto=force_auto)
     if cache_key in _cache:
         return _cache[cache_key]
 
-    prompt = _build_prompt(material, candidates, washing, locale=locale)
+    prompt = _build_prompt(chosen_label or material, candidates, washing, locale=locale, rationale=rationale)
     t0 = time.time()
     text = _call_gemini(prompt)
     dt = time.time() - t0

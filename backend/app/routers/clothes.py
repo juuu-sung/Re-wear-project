@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, Form, File, Body
 from sqlalchemy.orm import Session
 from typing import List
 import os, shutil, json
@@ -196,6 +196,7 @@ def analyze_item(
 @router.post("/{cid}/care-summary", response_model=CareSummaryResponse)
 def generate_and_save_care_summary(
     cid: int,
+    force_auto: bool = Body(False),
     db: Session = Depends(get_db),
 ):
     item = db.query(Clothes).get(cid)
@@ -210,7 +211,8 @@ def generate_and_save_care_summary(
             material=item.material,
             candidates_raw=candidates,
             washing=washing,
-            locale="ko"
+            locale="ko",
+            force_auto=force_auto,
         )
         item.care_summary = text
         db.add(item)
