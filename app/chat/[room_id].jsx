@@ -29,7 +29,7 @@ export default function ChatRoom() {
     const res = await fetch(`${BASE_URL}/v1/chat/rooms/${room_id}/messages`);
     const data = await res.json();
     messagesRef.current = data;
-    setMessages([...messagesRef.current]);
+    setMessages([...data]);
   };
 
   const handleIncoming = (event) => {
@@ -40,7 +40,7 @@ export default function ChatRoom() {
       updateTimerRef.current = setTimeout(() => {
         setMessages([...messagesRef.current]);
         updateTimerRef.current = null;
-      }, 100);
+      }, 80);
     }
   };
 
@@ -52,39 +52,17 @@ export default function ChatRoom() {
     const socket = new WebSocket(`${wsUrl}/v1/chat/ws/${room_id}`);
     wsRef.current = socket;
 
-    socket.onopen = () => console.log("WS CONNECTED");
     socket.onmessage = handleIncoming;
-    socket.onerror = (e) => console.log("WS ERROR:", e.message);
-    socket.onclose = () => console.log("WS CLOSED");
   };
 
   useEffect(() => {
-    console.log("CHATROOM MOUNTED");
-
     loadMessages();
     connectSocket();
 
     return () => {
-      console.log("CHATROOM UNMOUNTED");
-
       try {
-        if (wsRef.current) {
-          wsRef.current.onmessage = null;
-          wsRef.current.onerror = null;
-          wsRef.current.onopen = null;
-          wsRef.current.onclose = null;
-
-          wsRef.current.close(1000, "CHAT_CLOSED");
-          wsRef.current = null;
-        }
-
-        if (updateTimerRef.current) {
-          clearTimeout(updateTimerRef.current);
-          updateTimerRef.current = null;
-        }
-      } catch (e) {
-        console.log("cleanup err:", e);
-      }
+        wsRef.current?.close(1000, "CHAT_CLOSED");
+      } catch {}
     };
   }, []);
 
@@ -135,9 +113,29 @@ export default function ChatRoom() {
         data={messages}
         keyExtractor={(item, index) => (item.id ?? index).toString()}
         renderItem={renderItem}
-        contentContainerStyle={{ padding: 15 }}
+        contentContainerStyle={{
+          padding: 15,
+        }}
+        ListHeaderComponent={
+          messages.length === 0 ? (
+            <View style={{ marginBottom: 20 }}>
+              <Text
+                style={{
+                  color: "#999",
+                  fontSize: 12,
+                  lineHeight: 18,
+                  textAlign: "center",
+                }}
+              >
+                상대방과 처음 주고받는 대화입니다{"\n"}
+                친절하고 예의를 지켜 대화해주세요.
+              </Text>
+            </View>
+          ) : null
+        }
       />
 
+      {/* 메시지 입력창 */}
       <View
         style={{
           flexDirection: "row",

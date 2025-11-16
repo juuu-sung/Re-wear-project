@@ -13,22 +13,18 @@ from app.models.user import User
 
 router = APIRouter(prefix="/v1/community", tags=["community"])
 
-# 🔥 로컬 저장 경로
 UPLOAD_DIR = "uploads/community"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# 🔥 반드시 절대 URL
 BASE_URL = "https://lyrately-prefavorable-candyce.ngrok-free.dev"
-    
 
 
 # -----------------------
-# 게시글 생성
+# 게시글 생성 (title 제거 버전)
 # -----------------------
 @router.post("/posts")
 def create_post(
     user_id: int = Form(...),
-    title: str = Form(...),
     description: str = Form(...),
     category: str = Form(None),
     db: Session = Depends(get_db),
@@ -39,7 +35,6 @@ def create_post(
 
     post = ReformPost(
         user_id=user_id,
-        title=title,
         description=description,
         category=category
     )
@@ -64,11 +59,9 @@ async def upload_post_images(
     filename = f"{post_id}_{uuid.uuid4()}.{ext}"
     save_path = os.path.join(UPLOAD_DIR, filename)
 
-    # 파일 저장
     with open(save_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # DB에는 파일명만 저장
     img = ReformImage(
         post_id=post_id,
         image_url=filename,
@@ -77,7 +70,6 @@ async def upload_post_images(
     db.add(img)
     db.commit()
 
-    # RN 확인용 절대 URL 반환
     return {
         "url": f"{BASE_URL}/uploads/community/{filename}"
     }
@@ -104,15 +96,12 @@ def list_posts(db: Session = Depends(get_db), sort: str = "latest"):
             "id": p.id,
             "user_id": p.user_id,
             "user_name": p.user.name,
-            "title": p.title,
+            # title 제거됨
             "description": p.description,
-
-            # 🔥 절대 URL로 변환해서 RN에서도 바로 사용 가능
             "images": [
                 f"{BASE_URL}/uploads/community/{img.image_url}"
                 for img in p.images
             ],
-
             "like_count": len(p.likes),
             "comment_count": len(p.comments),
             "created_at": p.created_at
@@ -122,7 +111,7 @@ def list_posts(db: Session = Depends(get_db), sort: str = "latest"):
 
 
 # -----------------------
-# 상세조회
+# 상세 조회
 # -----------------------
 @router.get("/posts/{post_id}")
 def post_detail(post_id: int, db: Session = Depends(get_db)):
@@ -134,9 +123,7 @@ def post_detail(post_id: int, db: Session = Depends(get_db)):
         "id": post.id,
         "user_id": post.user_id,
         "user_name": post.user.name,
-        "title": post.title,
         "description": post.description,
-
         "images": [
             {
                 "url": f"{BASE_URL}/uploads/community/{i.image_url}",
@@ -144,7 +131,6 @@ def post_detail(post_id: int, db: Session = Depends(get_db)):
             }
             for i in post.images
         ],
-
         "likes": len(post.likes),
         "comments": [
             {
@@ -186,7 +172,7 @@ def write_comment(
 
 
 # -----------------------
-# 특정 사용자의 게시글 (프로필)
+# 특정 사용자의 게시글
 # -----------------------
 @router.get("/users/{user_id}/posts")
 def posts_by_user(user_id: int, db: Session = Depends(get_db)):
