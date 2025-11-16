@@ -14,6 +14,7 @@ class CareSummaryRequest(BaseModel):
     candidates: Optional[List[MaterialCandidate]] = None
     washing: Any  # dict or string OK
     locale: Optional[str] = "ko"
+    force_auto: bool = False
 
 class CareSummaryResponse(BaseModel):
     summary: str
@@ -26,6 +27,7 @@ def care_summary(req: CareSummaryRequest):
             candidates_raw=[c.dict() for c in (req.candidates or [])],
             washing=req.washing,
             locale=req.locale or "ko",
+            force_auto=req.force_auto,
         )
         return CareSummaryResponse(summary=text)
     except GeminiError as e:
