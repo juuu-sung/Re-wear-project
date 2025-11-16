@@ -1,122 +1,136 @@
-# Welcome to your Expo app 👋
+<div align="center">
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# 👕 ReWear  
+### AI 기반 의류 관리 & 세탁 가이드 앱
 
-## Get started
+> “당신의 옷장을 더 똑똑하게, 더 오래 지속 가능하게.”
 
-1. Install dependencies
+![Expo](https://img.shields.io/badge/Expo-1C1E24?style=for-the-badge&logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-000000?style=for-the-badge&logo=yolo&logoColor=white)
+![LLaMA](https://img.shields.io/badge/LLaMA_Model-6C63FF?style=for-the-badge&logo=meta&logoColor=white)
 
-   ```bash
-   npm install
-   ```
+</div>
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🧩 프로젝트 개요
 
-In the output, you'll find options to open the app in a
+**ReWear**는 옷 사진 한 장으로  
+AI가 **소재를 자동 판별(EfficientNet-B0)** 하고  
+**세탁 라벨을 인식(YOLOv8)** 하여  
+사용자에게 **맞춤형 세탁 가이드, 리사이클 뉴스, 브랜드 추천**을 제공합니다.  
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+또한, 캘린더로 착용/세탁 이력을 관리하고,  
+의류의 수명 주기를 시각화하여 **지속 가능한 패션 소비**를 돕습니다.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 🚀 주요 기능
 
-When you're ready, run:
+| 카테고리 | 기능 | 설명 |
+|-----------|------|------|
+| 👕 **의류 AI 분석** | EfficientNet-B0 기반 **소재 분류** 및 YOLOv8 기반 **세탁 라벨 인식** |
+| 🧺 **세탁 가이드 추천** | AI가 감지한 소재·라벨에 따라 **적정 세탁 온도 / 세제 / 다림질 방법 자동 안내** |
+| 📅 **옷장 & 캘린더 관리** | 착용, 세탁, 기부, 리사이클 등 이벤트 기록 및 주기 관리 |
+| ♻️ **Recycle 탭 (지도)** | Expo Location + Google Maps 기반 **의류 수거함 위치 표시 (CSV 연동)** |
+| 📰 **리사이클 뉴스 피드** | AI가 큐레이션한 **지속가능 패션 / 친환경 브랜드 뉴스 제공** |
+| 🏷️ **리사이클 브랜드 추천** | 사용자의 옷장 패턴에 맞춰 **리사이클/업사이클 브랜드 추천** |
+| 🔐 **Kakao 로그인 & JWT 인증** | 간편 로그인 및 사용자별 옷장 데이터 관리 |
 
-```bash
-npm run reset-project
-```
+---
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🧠 AI 모델 구조
 
-## Learn more
+| 모델 | 역할 | 프레임워크 |
+|------|------|-------------|
+| **YOLOv8** | 세탁 라벨 감지 | Ultralytics YOLO |
+| **EfficientNet-B0** | 의류 소재 분류 | PyTorch |
+| **LLaMA 기반 TTS** | 친절한 세탁 가이드 음성 안내 | Meta LLaMA + TTS pipeline |
 
-To learn more about developing your project with Expo, look at the following resources:
+**데이터셋:** AI-Hub 의류 이미지 + 세탁라벨 데이터  
+**클래스 수:** 13종 (`cotton`, `polyester`, `wool`, `silk`, `nylon`, `linen`, `spandex`, `rayon`, …)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+## 🧰 기술 스택
 
-Join our community of developers creating universal apps.
+| 구분 | 사용 기술 |
+|------|------------|
+| **Frontend** | React Native (Expo), TypeScript, Axios, AsyncStorage, Kakao SDK |
+| **Backend** | FastAPI, PostgreSQL, SQLAlchemy, Alembic, APScheduler |
+| **AI/ML** | PyTorch, YOLOv8, EfficientNet-B0, LLaMA |
+| **Infra** | Vultr VPS, Docker, Nginx, Uvicorn |
+| **Etc** | REST API, .env 환경변수, GitHub Actions |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
 
+
+```mermaid
 flowchart LR
-  %% =======================================================
-  %%                  ReWear System Architecture
-  %% =======================================================
+  %% ===================== ReWear Architecture =====================
 
-  %% ====================== APP ============================
-  subgraph APP["📱 React Native (Expo) 앱"]
+  %% ---------- App ----------
+  subgraph APP["React Native (Expo) App"]
     direction TB
-    A1["• 홈 / 옷장 / 캘린더 / 프로필 화면"]
-    A2["• 카카오 로그인, 사용자 세션 저장 (AsyncStorage)"]
-    A3["• axios로 FastAPI 서버와 통신 (JWT 인증)"]
+    A1["홈, 옷장, 캘린더, 프로필 화면"]
+    A2["Kakao Login, AsyncStorage(JWT)"]
+    A3["Axios로 FastAPI 통신"]
   end
 
-
-  %% ====================== API ============================
-  subgraph API["🔗 FastAPI 백엔드"]
+  %% ---------- API ----------
+  subgraph API["FastAPI Backend"]
     direction TB
-    ROU["📦 주요 라우터 - 인증 / 사용자 / 의류 / 이벤트 / 추론 / 뉴스"]
-    ST["⚙️ 초기화 단계 - DB 마이그레이션, AI 모델 로드, 스케줄러 시작"]
-    STC["🖼️ 정적 파일 서빙 - 업로드된 이미지 제공"]
+    R1["라우터: auth, user, clothes, event, infer, news"]
+    R2["초기화: Alembic, 모델 로드, 스케줄러 시작"]
+    R3["정적 파일 서빙 (/uploads)"]
   end
 
-
-  %% ====================== DATABASE ========================
-  subgraph DB["🗄️ 데이터베이스 (PostgreSQL)"]
+  %% ---------- DB ----------
+  subgraph DB["Database (PostgreSQL)"]
     direction TB
-    DBM["• SQLAlchemy ORM으로 관리 
-    • 테이블: 사용자, 의류, 이벤트, 활동 로그"]
+    D1["SQLAlchemy ORM 관리"]
+    D2["테이블: 사용자, 의류, 이벤트, 활동 로그"]
   end
 
-
-  %% ====================== ML SERVICE ======================
-  subgraph ML["🤖 AI Inference 서비스"]
+  %% ---------- ML ----------
+  subgraph ML["AI Inference Service"]
     direction TB
-    MLN["• EfficientNet 모델로 소재 분류.
-    • 세탁 가이드 규칙 생성 
-    • 라벨 추론 기능 포함"]
+    M1["EfficientNet 기반 소재 분류"]
+    M2["세탁 가이드 규칙 생성"]
+    M3["라벨 추론 기능 포함"]
   end
 
-
-  %% ====================== STORAGE =========================
-  subgraph FS["🖼️ 이미지 저장소"]
+  %% ---------- FS ----------
+  subgraph FS["Image Storage"]
     direction TB
-    FSD["• 사용자가 업로드한 옷 이미지 저장
-    • 앱에서 재사용 및 미리보기 제공"]
+    F1["업로드 이미지 저장 및 제공"]
+    F2["앱 미리보기 및 재사용"]
   end
 
-
-  %% ====================== SCHEDULER =======================
-  subgraph SCH["⏰ 스케줄러 (APScheduler)"]
+  %% ---------- Scheduler ----------
+  subgraph SCH["Scheduler (APScheduler)"]
     direction TB
-    SCH6["• 6시간마다 뉴스 캐시 갱신
-    • FastAPI 내부에서 비동기로 실행"]
+    S1["6시간마다 뉴스 캐시 갱신"]
+    S2["FastAPI 내부 비동기 실행"]
   end
 
-
-  %% ====================== NEWS ============================
-  subgraph NEWS["📰 뉴스 서비스"]
+  %% ---------- News ----------
+  subgraph NEWS["News Service"]
     direction TB
-    N1["• Google 뉴스 RSS 수집
-    • 최신 패션·환경 관련 기사 캐시 제공"]
+    N1["Google RSS 수집"]
+    N2["패션/환경 뉴스 캐시 제공"]
   end
 
-
-  %% ====================== FLOWS ===========================
+  %% ---------- Flows ----------
   APP -->|"REST API 요청 (JSON + JWT)"| API
-  API -. "데이터 CRUD" .-> DB
-  API -. "이미지 저장 / 제공" .-> FS
-  API -. "AI 추론 / 세탁 가이드" .-> ML
+  API -->|"데이터 CRUD"| DB
+  API -->|"이미지 저장 / 제공"| FS
+  API -->|"AI 추론 / 세탁 가이드"| ML
   API -->|"뉴스 캐시 제공"| NEWS
   SCH -->|"주기적 뉴스 갱신"| API
+```
+
