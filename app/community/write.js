@@ -1,18 +1,18 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image as ExpoImage } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
   FlatList,
-  Image,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from "react-native";
-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const screenWidth = Dimensions.get("window").width;
@@ -22,11 +22,17 @@ export default function WritePost() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const user_id = 1;
-  const [title, setTitle] = useState("");
+  const [userId, setUserId] = useState(null);
   const [description, setDescription] = useState("");
-
   const [images, setImages] = useState([]);
+
+  useEffect(() => {
+    const loadUid = async () => {
+      const uid = await AsyncStorage.getItem("user_id");
+      setUserId(uid);
+    };
+    loadUid();
+  }, []);
 
   const pickImages = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -37,31 +43,39 @@ export default function WritePost() {
     });
 
     if (!res.canceled) {
-      const selected = res.assets.map(a => a.uri);
+      const selected = res.assets.map((a) => a.uri);
       setImages(selected);
     }
   };
 
   const submitPost = async () => {
-    if (!title.trim()) return Alert.alert("제목을 입력해주세요!");
+    if (!userId) return Alert.alert("사용자 정보를 불러오는 중입니다.");
+    if (!description.trim()) return Alert.alert("설명을 입력해주세요!");
     if (images.length === 0) return Alert.alert("사진을 선택해주세요!");
 
     const form = new FormData();
-    form.append("user_id", user_id);
-    form.append("title", title);
-    form.append("description", description);
+
+    form.append("user_id", userId);
+
+    // 🔥 줄바꿈(\n) 보존되도록 명시적 문자열 변환
+    form.append("description", String(description).replace(/\r\n/g, "\n"));
 
     const res = await fetch(`${BASE_URL}/v1/community/posts`, {
       method: "POST",
       body: form,
     });
+
     const data = await res.json();
     const postId = data.post_id;
 
+    // 이미지 업로드
     for (const uri of images) {
       const filename = uri.split("/").pop();
-
-      const file = { uri, name: filename, type: "image/jpeg" };
+      const file = {
+        uri,
+        name: filename,
+        type: "image/jpeg"
+      };
 
       const formImg = new FormData();
       formImg.append("file", file);
@@ -81,15 +95,12 @@ export default function WritePost() {
     <View
       style={{
         flex: 1,
-        paddingTop: insets.top + 30,
+        paddingTop: insets.top - 50,
         backgroundColor: "#fff",
       }}
     >
       <ScrollView style={{ padding: 20 }}>
-        
-        {/* ----------------------------------------- */}
-        {/* 🔥 사진 추가 영역 */}
-        {/* ----------------------------------------- */}
+        {/* 이미지 영역 */}
         <View
           style={{
             width: "100%",
@@ -121,49 +132,42 @@ export default function WritePost() {
               showsHorizontalScrollIndicator={false}
               keyExtractor={(uri, idx) => uri + idx}
               renderItem={({ item }) => (
-                <Image
+                <ExpoImage
                   source={{ uri: item }}
                   style={{
                     width: screenWidth - 40,
                     height: 300,
-                    resizeMode: "cover",
                   }}
+                  contentFit="cover"
+                  cachePolicy="immutable"
                 />
               )}
             />
           )}
         </View>
 
-        {/* ----------------------------------------- */}
-        {/* 🔥 게시글 작성 + 설명 문구 */}
-        {/* ----------------------------------------- */}
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+        {/* 제목 */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 20,
+          }}
+        >
           <Text style={{ fontSize: 22, fontWeight: "700" }}>게시글 작성</Text>
-
           <Text
             style={{
               marginLeft: 8,
               fontSize: 12,
-              color: "#2E8B57",  // 초록색
+              color: "#2E8B57",
               flexShrink: 1,
             }}
           >
-            사용자들의 중고 옷 판매를 지원하고 직접 리폼한 옷들을 공유하는 공간입니다.
+            사용자들의 중고 옷 판매를 지원하고 직접 리폼한 옷을 공유하는 공간입니다.
           </Text>
         </View>
 
-        <TextInput
-          placeholder="제목 입력"
-          value={title}
-          onChangeText={setTitle}
-          style={{
-            padding: 12,
-            borderWidth: 1,
-            borderRadius: 10,
-            marginBottom: 15,
-          }}
-        />
-
+        {/* 🔥 본문 input (줄바꿈 보존) */}
         <TextInput
           placeholder="설명 입력"
           value={description}
@@ -175,6 +179,8 @@ export default function WritePost() {
             borderWidth: 1,
             borderRadius: 10,
             marginBottom: 20,
+            textAlignVertical: "top",    // 🔥 줄바꿈 정상화
+            lineHeight: 20               // 🔥 3줄 이상 확실하게 렌더됨
           }}
         />
 

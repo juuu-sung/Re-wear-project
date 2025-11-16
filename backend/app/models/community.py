@@ -6,9 +6,7 @@ class ReformPost(Base):
     __tablename__ = "reform_posts"
 
     id = Column(Integer, primary_key=True)
-    # 🔥 user → users 로 변경
-    user_id = Column(Integer, ForeignKey("users.id"))    
-    title = Column(String)
+    user_id = Column(Integer, ForeignKey("users.id"))
     description = Column(String)
     category = Column(String)
     created_at = Column(DateTime, server_default=func.now())
@@ -24,7 +22,7 @@ class ReformImage(Base):
 
     id = Column(Integer, primary_key=True)
     post_id = Column(Integer, ForeignKey("reform_posts.id"))
-    image_url = Column(String) 
+    image_url = Column(String)
     is_before = Column(Boolean, default=False)
 
 
@@ -33,7 +31,6 @@ class ReformLike(Base):
 
     id = Column(Integer, primary_key=True)
     post_id = Column(Integer, ForeignKey("reform_posts.id"))
-    # 🔥 user → users 로 변경
     user_id = Column(Integer, ForeignKey("users.id"))
 
 
@@ -42,7 +39,6 @@ class ReformComment(Base):
 
     id = Column(Integer, primary_key=True)
     post_id = Column(Integer, ForeignKey("reform_posts.id"))
-    # 🔥 user → users 로 변경
     user_id = Column(Integer, ForeignKey("users.id"))
     comment = Column(String)
     created_at = Column(DateTime, server_default=func.now())
