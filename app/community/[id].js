@@ -1,9 +1,10 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Dimensions,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,10 +24,22 @@ export default function PostDetail() {
 
   const [post, setPost] = useState(null);
   const [comment, setComment] = useState("");
+  const [myName, setMyName] = useState("");
+
+  useEffect(() => {
+    const loadMyName = async () => {
+      const name =
+        (await AsyncStorage.getItem("name")) ||
+        (await AsyncStorage.getItem("username"));
+      setMyName(name ?? "사용자");
+    };
+    loadMyName();
+  }, []);
 
   const loadPost = async () => {
     const res = await fetch(`${BASE_URL}/v1/community/posts/${id}`);
     const data = await res.json();
+    data.comments = data.comments ?? [];
     setPost(data);
   };
 
@@ -37,8 +50,10 @@ export default function PostDetail() {
   const writeComment = async () => {
     if (!comment.trim()) return;
 
+    const myId = await AsyncStorage.getItem("user_id");
+
     await fetch(
-      `${BASE_URL}/v1/community/posts/${id}/comments?user_id=1&comment=${comment}`,
+      `${BASE_URL}/v1/community/posts/${id}/comments?user_id=${myId}&comment=${comment}`,
       { method: "POST" }
     );
 
@@ -52,27 +67,28 @@ export default function PostDetail() {
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#fff" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={insets.top + 60}  
-      // 🔥 댓글 입력창이 키보드에 가려지지 않도록
+      keyboardVerticalOffset={insets.top + 60}
     >
-      {/* 🔥 헤더 아래 여백 */}
-      <View style={{ paddingTop: insets.top + 30 }} />
+      <View style={{ paddingTop: insets.top - 30 }} />
 
       <ScrollView style={{ flex: 1 }}>
-        {/* 사진 */}
+
+        {/* 이미지 */}
         <FlatList
           data={post.images}
           keyExtractor={(item, idx) => idx.toString()}
           horizontal
           pagingEnabled
           renderItem={({ item }) => (
-            <Image
+            <ExpoImage
               source={{ uri: item.url }}
               style={{
                 width: SCREEN_WIDTH,
                 height: SCREEN_WIDTH,
                 backgroundColor: "#ddd",
               }}
+              contentFit="cover"
+              cachePolicy="immutable"
             />
           )}
           showsHorizontalScrollIndicator={false}
@@ -83,9 +99,11 @@ export default function PostDetail() {
           <Text style={{ fontSize: 22 }}>♡  💬</Text>
         </View>
 
-        {/* 좋아요 개수 */}
+        {/* 좋아요 수 */}
         <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
-          <Text style={{ fontWeight: "700" }}>좋아요 {post.likes}개</Text>
+          <Text style={{ fontWeight: "700" }}>
+            좋아요 {post.likes}개
+          </Text>
         </View>
 
         {/* 설명 */}
@@ -96,10 +114,21 @@ export default function PostDetail() {
           </Text>
         </View>
 
+        {/* 🔥 본문과 댓글 사이 Divider */}
+        <View
+          style={{
+            height: 1,
+            backgroundColor: "#ddd",
+            marginTop: 20,
+            marginBottom: 10,
+            marginHorizontal: 15,
+          }}
+        />
+
         {/* 댓글 */}
-        <View style={{ paddingHorizontal: 15, marginTop: 20, paddingBottom: 80 }}>
-          {post.comments.map((c, i) => (
-            <View key={i} style={{ marginBottom: 10 }}>
+        <View style={{ paddingHorizontal: 15, paddingBottom: 80 }}>
+          {(post.comments ?? []).map((c, i) => (
+            <View key={i} style={{ marginBottom: 12 }}>
               <Text>
                 <Text style={{ fontWeight: "700" }}>{c.user_name} </Text>
                 {c.comment}
@@ -107,9 +136,10 @@ export default function PostDetail() {
             </View>
           ))}
         </View>
+
       </ScrollView>
 
-      {/* 🔥 댓글 입력창 (항상 화면 안에 고정) */}
+      {/* 댓글 입력창 */}
       <View
         style={{
           flexDirection: "row",
@@ -122,7 +152,7 @@ export default function PostDetail() {
         <TextInput
           value={comment}
           onChangeText={setComment}
-          placeholder="댓글 달기..."
+          placeholder={`${myName}로 댓글 달기...`}
           style={{
             flex: 1,
             padding: 10,
@@ -135,9 +165,7 @@ export default function PostDetail() {
           onPress={writeComment}
           style={{ marginLeft: 10, justifyContent: "center" }}
         >
-          <Text style={{ color: "#23422D", fontWeight: "700" }}>
-            게시
-          </Text>
+          <Text style={{ color: "#23422D", fontWeight: "700" }}>게시</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

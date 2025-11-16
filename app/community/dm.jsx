@@ -49,7 +49,7 @@ export default function MessageList() {
       style={{
         flex: 1,
         backgroundColor: "#fff",
-        paddingTop: insets.top + 50,
+        paddingTop: insets.top - 60,
         paddingHorizontal: 12,
       }}
     >

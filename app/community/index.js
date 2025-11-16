@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
-  Image,
   Text,
   TouchableOpacity,
   View
@@ -25,8 +25,6 @@ export default function CommunityFeed() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  // 🔥 로그인된 사용자 UID
   const [myUid, setMyUid] = useState(null);
 
   useEffect(() => {
@@ -58,11 +56,14 @@ export default function CommunityFeed() {
     setRefreshing(false);
   };
 
-  // ----------------------------------------------------------
-  // 🔥 게시물 아이템 (슬라이드 포함)
-  // ----------------------------------------------------------
   const PostItem = ({ item }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [expanded, setExpanded] = useState(false);
+
+    // 🔥 엔터 줄바꿈 인식
+    const lines = item.description.split("\n");
+    const MAX = 3;
+    const visibleLines = expanded ? lines : lines.slice(0, MAX);
 
     const handleScroll = (event) => {
       const x = event.nativeEvent.contentOffset.x;
@@ -74,15 +75,22 @@ export default function CommunityFeed() {
       if (!myUid) return;
 
       if (String(item.user_id) === String(myUid)) {
-        router.push("/community/profile"); // 내 프로필
+        router.push("/community/profile");
       } else {
-        router.push(`/community/users/${item.user_id}`); // 남 프로필
+        router.push({
+          pathname: `/community/users/${item.user_id}`,
+          params: {
+            user_name: item.user_name,
+            profile_image: item.profile_image,
+          }
+        });
       }
     };
 
     return (
       <View style={{ backgroundColor: "#fff", marginBottom: 30 }}>
-        {/* 유저 정보 */}
+
+        {/* 유저 프로필 */}
         <TouchableOpacity
           onPress={goToProfile}
           style={{
@@ -120,18 +128,19 @@ export default function CommunityFeed() {
                   onPress={() => router.push(`/community/${item.id}`)}
                   activeOpacity={1}
                 >
-                  <Image
+                  <ExpoImage
                     source={{ uri }}
                     style={{
                       width: screenWidth,
                       height: 400,
                     }}
+                    contentFit="cover"
+                    cachePolicy="immutable"
                   />
                 </TouchableOpacity>
               )}
             />
 
-            {/* 인디케이터 */}
             {item.images.length > 1 && (
               <View
                 style={{
@@ -161,26 +170,55 @@ export default function CommunityFeed() {
           </View>
         )}
 
-        {/* 액션 버튼 */}
-        <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingTop: 12 }}>
+        {/* 좋아요 + 댓글 아이콘 (심플버전) */}
+        <View
+          style={{
+            flexDirection: "row",
+            paddingHorizontal: 12,
+            paddingTop: 12,
+          }}
+        >
           <Text style={{ fontSize: 22, marginRight: 12 }}>♡</Text>
           <Text style={{ fontSize: 22 }}>💬</Text>
         </View>
 
-        {/* 좋아요 */}
         <Text style={{ paddingHorizontal: 12, marginTop: 6, fontWeight: "600" }}>
           좋아요 {item.like_count}개
         </Text>
 
-        {/* 내용 */}
+        {/* 본문 */}
         <View style={{ paddingHorizontal: 12, marginTop: 6 }}>
-          <Text>
-            <Text style={{ fontWeight: "700" }}>{item.user_name} </Text>
-            {item.description}
-          </Text>
+          <Text style={{ fontWeight: "700" }}>{item.user_name}</Text>
+
+          <View style={{ marginTop: 4 }}>
+            {visibleLines.map((line, index) => (
+              <Text key={index} style={{ lineHeight: 20 }}>
+                {line}
+              </Text>
+            ))}
+
+            {/* 더보기 버튼 (겹침 제거) */}
+            {!expanded && lines.length > MAX && (
+              <TouchableOpacity
+                onPress={() => setExpanded(true)}
+                style={{ marginTop: 4 }}
+              >
+                <Text style={{ color: "#666" }}>더보기</Text>
+              </TouchableOpacity>
+            )}
+
+            {expanded && lines.length > MAX && (
+              <TouchableOpacity
+                onPress={() => setExpanded(false)}
+                style={{ marginTop: 6 }}
+              >
+                <Text style={{ color: "#666" }}>접기</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-        {/* 댓글 보기 */}
+        {/* 댓글 모두보기 */}
         <TouchableOpacity
           onPress={() => router.push(`/community/${item.id}`)}
           style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 10 }}
@@ -200,7 +238,7 @@ export default function CommunityFeed() {
       style={{
         flex: 1,
         backgroundColor: "#fff",
-        paddingTop: insets.top + 30,
+        paddingTop: insets.top - 50,
       }}
     >
       <FlatList
@@ -211,9 +249,7 @@ export default function CommunityFeed() {
         onRefresh={onRefresh}
       />
 
-      {/* ---------------------------------------------------------- */}
-      {/* 🔥 왼쪽 아래 메시지 버튼 */}
-      {/* ---------------------------------------------------------- */}
+      {/* DM 버튼 */}
       <TouchableOpacity
         onPress={() => router.push("/community/dm")}
         style={{
@@ -228,17 +264,12 @@ export default function CommunityFeed() {
           alignItems: "center",
           borderWidth: 1,
           borderColor: "#ddd",
-          shadowColor: "#000",
-          shadowOpacity: 0.15,
-          shadowOffset: { width: 0, height: 2 },
         }}
       >
         <Ionicons name="chatbubble-ellipses-outline" size={28} color="#333" />
       </TouchableOpacity>
 
-      {/* ---------------------------------------------------------- */}
-      {/* 🔥 중앙 아래 프로필 아이콘 버튼 (항상 내 프로필) */}
-      {/* ---------------------------------------------------------- */}
+      {/* 내 프로필 */}
       <TouchableOpacity
         onPress={() => router.push("/community/profile")}
         style={{
@@ -254,17 +285,12 @@ export default function CommunityFeed() {
           alignItems: "center",
           borderWidth: 1,
           borderColor: "#ddd",
-          shadowColor: "#000",
-          shadowOpacity: 0.15,
-          shadowOffset: { width: 0, height: 2 },
         }}
       >
         <Ionicons name="person-circle-outline" size={34} color="#333" />
       </TouchableOpacity>
 
-      {/* ---------------------------------------------------------- */}
-      {/* 🔥 오른쪽 아래 글쓰기 버튼 */}
-      {/* ---------------------------------------------------------- */}
+      {/* 글쓰기 */}
       <TouchableOpacity
         onPress={() => router.push("/community/write")}
         style={{
@@ -279,9 +305,6 @@ export default function CommunityFeed() {
           alignItems: "center",
           borderWidth: 1,
           borderColor: "#ddd",
-          shadowColor: "#000",
-          shadowOpacity: 0.15,
-          shadowOffset: { width: 0, height: 2 },
         }}
       >
         <Ionicons name="add-circle-outline" size={30} color="#333" />
