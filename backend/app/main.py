@@ -25,7 +25,8 @@ from app.routers import (
     care as care_router,
     reform as reform_router,
     community as community_router,
-    chat as chat_router
+    chat as chat_router,
+    laundry as laundry_router
 )
 
 # Services
@@ -137,3 +138,4 @@ app.include_router(care_router.router)
 app.include_router(reform_router.router)
 app.include_router(community_router.router)   # ← 커뮤니티 통합
 app.include_router(chat_router.router)
+app.include_router(laundry_router.router, prefix="/laundry", tags=["laundry"])
