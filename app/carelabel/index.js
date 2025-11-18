@@ -14,6 +14,9 @@ import {
 } from "react-native";
 import { bleachLabels } from "./bleachLabels";
 import CareLabelModal from "./CareLabelModal";
+import { dryLabels } from "./dryLabels";
+import { ironLabels } from "./ironLabels";
+import { tumbleLabels } from "./tumbleLabels";
 import { washLabels } from "./washLabels";
 
 export default function CareLabelScreen() {
@@ -21,11 +24,11 @@ export default function CareLabelScreen() {
   const [selectedLabel, setSelectedLabel] = useState(null);
 
   const labelCategories = [
-    { key: "wash", name: "물세탁", color: "#2A72DE", labels: washLabels },
-    { key: "bleach", name: "표백", color: "#5A8DEE", labels: bleachLabels },
-    { key: "iron", name: "다림질", color: "#82B1FF", labels: [] },
-    { key: "dry", name: "건조", color: "#90CAF9", labels: [] },
-    { key: "tumble", name: "드라이", color: "#A5D6FF", labels: [] },
+    { key: "wash", name: "물세탁", color: "#2E7D32", labels: washLabels },
+    { key: "bleach", name: "표백", color: "#419D68", labels: bleachLabels },
+    { key: "iron", name: "다림질", color: "#5CBF8B", labels: ironLabels },
+    { key: "dry", name: "건조", color: "#8AD0AF", labels: dryLabels },
+    { key: "tumble", name: "드라이", color: "#B4E4D1", labels: tumbleLabels },
   ];
 
   const toggleExpand = (key) => {
@@ -46,9 +49,9 @@ export default function CareLabelScreen() {
       <Stack.Screen
         options={{
           title: "케어라벨 선택",
-          headerTintColor: "#2A72DE",
+          headerTintColor: "#2E7D32",
           headerTitleAlign: "center",
-          headerStyle: { backgroundColor: "#EAF3FF" },
+          headerStyle: { backgroundColor: "#f0f2f5" },
         }}
       />
 
@@ -158,7 +161,7 @@ export default function CareLabelScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#EAF3FF",
+    backgroundColor: "#f0f2f5",
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   container: { flex: 1, paddingHorizontal: 16 },
@@ -166,7 +169,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#1B3C88",
+    color: "#2E7D32",
     marginBottom: 20,
   },
   card: {
@@ -178,6 +181,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 3,
+    borderColor: "#E0E8E1",
   },
   headerRow: {
     flexDirection: "row",
@@ -199,7 +203,9 @@ const styles = StyleSheet.create({
   thumbBox: {
     width: 70,
     height: 70,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8faf7",
+    borderWidth: 1,
+    borderColor: "#E0E8E1",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -216,7 +222,9 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 12,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8faf7",
+    borderWidth: 1,
+    borderColor: "#E0E8E1",
     justifyContent: "center",
     alignItems: "center",
   },
