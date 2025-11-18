@@ -31,6 +31,7 @@ export default function ProfileScreen() {
   const [userInfo, setUserInfo] = useState({ name: "", email: "" });
   const [isMounted, setIsMounted] = useState(true);
   const [profileImage, setProfileImage] = useState(null); // ✅ 프로필 사진 state 추가
+  const [userId, setUserId] = useState(null);
 
   // ✅ 프로필 불러오기
   useEffect(() => {
@@ -38,6 +39,8 @@ export default function ProfileScreen() {
       try {
         const token = await AsyncStorage.getItem("access_token");
         const savedImage = await AsyncStorage.getItem("profile_image");
+        const storedUid = await AsyncStorage.getItem("user_id");
+        if (storedUid) setUserId(storedUid);
         if (savedImage) setProfileImage(savedImage); // ✅ 저장된 이미지 로드
 
         if (!token) {
@@ -54,6 +57,10 @@ export default function ProfileScreen() {
         const data = await res.json();
         if (res.ok && isMounted) {
           setUserInfo({ name: data.name, email: data.email });
+          if (data.profile_image) {
+            setProfileImage(data.profile_image);
+            await AsyncStorage.setItem("profile_image", data.profile_image);
+          }
         } else {
           console.warn("❌ 사용자 정보 불러오기 실패:", data);
         }
@@ -66,6 +73,40 @@ export default function ProfileScreen() {
     return () => setIsMounted(false);
   }, [isMounted]);
 
+  const uploadProfileImage = async (uri) => {
+    try {
+      const uid = userId ?? (await AsyncStorage.getItem("user_id"));
+      if (!uid) return null;
+
+      const filename = uri.split("/").pop() ?? `profile_${Date.now()}.jpg`;
+      const extMatch = /\.(\w+)$/.exec(filename);
+      const ext = extMatch ? extMatch[1].toLowerCase() : "jpg";
+      const formData = new FormData();
+      formData.append("file", {
+        uri,
+        name: filename,
+        type: ext === "png" ? "image/png" : "image/jpeg",
+      });
+
+      const res = await fetch(`${BASE_URL}/v1/users/${uid}/profile-image`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const body = await res.text();
+        console.warn("❌ 프로필 업로드 실패:", body);
+        return null;
+      }
+
+      const body = await res.json();
+      return body.url;
+    } catch (err) {
+      console.error("❌ 프로필 업로드 오류:", err);
+      return null;
+    }
+  };
+
   // ✅ 프로필 사진 선택 함수
   const pickProfileImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -75,7 +116,7 @@ export default function ProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeImages,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1], // 정사각형 자르기
       quality: 0.8,
@@ -83,9 +124,11 @@ export default function ProfileScreen() {
 
     if (!result.canceled) {
       const uri = result.assets[0].uri;
-      setProfileImage(uri);
-      await AsyncStorage.setItem("profile_image", uri); // ✅ 로컬 저장
-      console.log("🖼️ 프로필 이미지 저장됨:", uri);
+      const uploadedUrl = await uploadProfileImage(uri);
+      const finalUri = uploadedUrl ?? uri;
+      setProfileImage(finalUri);
+      await AsyncStorage.setItem("profile_image", finalUri); // ✅ 로컬 저장
+      console.log("🖼️ 프로필 이미지 저장됨:", finalUri);
     }
   };
 

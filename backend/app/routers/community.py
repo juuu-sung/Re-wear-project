@@ -16,7 +16,7 @@ router = APIRouter(prefix="/v1/community", tags=["community"])
 UPLOAD_DIR = "uploads/community"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-BASE_URL = "https://lyrately-prefavorable-candyce.ngrok-free.dev"
+BASE_URL = os.getenv("EXTERNAL_BASE_URL")
 
 
 # -----------------------
@@ -96,6 +96,7 @@ def list_posts(db: Session = Depends(get_db), sort: str = "latest"):
             "id": p.id,
             "user_id": p.user_id,
             "user_name": p.user.name,
+            "profile_image": p.user.profile_image,
             # title 제거됨
             "description": p.description,
             "images": [
@@ -123,6 +124,7 @@ def post_detail(post_id: int, db: Session = Depends(get_db)):
         "id": post.id,
         "user_id": post.user_id,
         "user_name": post.user.name,
+        "profile_image": post.user.profile_image,
         "description": post.description,
         "images": [
             {

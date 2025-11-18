@@ -17,6 +17,7 @@ class UserOut(BaseModel):
     id: int
     email: EmailStr
     name: str | None = None
+    profile_image: Optional[str] = None
     class Config:
         from_attributes = True  # SQLAlchemy 객체 직렬화 허용
 
