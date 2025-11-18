@@ -9,7 +9,9 @@ import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 // -----------------------------------------------------------
 // (필수) 본인 컴퓨터 IP 주소 (이전과 동일)
 // -----------------------------------------------------------
-const BACKEND_API_URL = 'http://192.168.45.175:8000/laundry/scan';
+const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
+export const BASE_URL = RAW_BASE_URL.replace(/\/+$/, "");
+export const BACKEND_API_URL = `${BASE_URL}/laundry/scan`;
 // -----------------------------------------------------------
 
 export default function ScanScreen() {
