@@ -4,6 +4,8 @@ from datetime import datetime
 from app.db import get_db
 from app import models, schemas
 from app.routers.auth import get_current_user
+from app.services.alert_service import check_and_notify_immediately  
+
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -19,6 +21,10 @@ def create_event(
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
+
+    # 🔥 wear/wash 기록이 추가된 즉시 n회 체크 + 필요시 즉시 푸시 알림
+    check_and_notify_immediately(db, current_user.id)
+
     return db_event
 
 
