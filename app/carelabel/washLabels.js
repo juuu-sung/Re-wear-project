@@ -1,16 +1,81 @@
 // app/carelabel/washLabels.js
-export const washLabels = [
-  { id: 1, img: require("../../assets/careLabels/wash/wash_1.jpg"), desc: "약 30℃ 이하의 물에서 세탁 가능. 중성세제 사용, 세탁기 보통 코스 가능." },
-  { id: 2, img: require("../../assets/careLabels/wash/wash_2.jpg"), desc: "약 40℃ 이하의 물에서 세탁 가능. 보통 세기로 세탁기 사용 가능." },
-  { id: 3, img: require("../../assets/careLabels/wash/wash_3.jpg"), desc: "40℃ 이하의 물에서 세탁 가능. 보통 세기로 기계 세탁 가능." },
-  { id: 4, img: require("../../assets/careLabels/wash/wash_4.jpg"), desc: "60℃ 이하의 물에서 세탁 가능. 일반 의류용 보통 세탁 가능." },
-  { id: 5, img: require("../../assets/careLabels/wash/wash_5.jpg"), desc: "95℃ 고온 세탁 가능. 흰색 면류, 리넨류 등 삶기 가능한 섬유에 적합." },
-  { id: 6, img: require("../../assets/careLabels/wash/wash_6.jpg"), desc: "약 30℃ 이하의 물에서 손세탁 가능. 중성세제 사용, 기계세탁 금지." },
-  { id: 7, img: require("../../assets/careLabels/wash/wash_7.jpg"), desc: "물세탁 금지. 드라이클리닝만 가능." },
-  { id: 8, img: require("../../assets/careLabels/wash/wash_8.jpg"), desc: "30℃ 이하의 물에서 부드럽게 손세탁. 비틀거나 문지르지 않음." },
-  { id: 9, img: require("../../assets/careLabels/wash/wash_9.jpg"), desc: "30℃ 이하의 약한 세기로 세탁 가능. 섬세한 의류용 코스 권장." },
-  { id: 10, img: require("../../assets/careLabels/wash/wash_10.jpg"), desc: "30℃ 이하의 물에서 약한 세기로 세탁 가능. 표백제 사용 금지." },
-  { id: 11, img: require("../../assets/careLabels/wash/wash_11.jpg"), desc: "30℃ 이하에서 손세탁 가능. 세탁기 금지 (일본어 ‘手洗イ’ 표기)." },
-  { id: 12, img: require("../../assets/careLabels/wash/wash_12.jpg"), desc: "탈수 금지. 손으로 눌러서 물기를 제거해야 함." },
-  { id: 13, img: require("../../assets/careLabels/wash/wash_13.jpg"), desc: "가볍게 눌러 짜기 가능. 강한 비틀기 금지 (약하게 짬 가능)." },
+const careLabelData = [
+  { id: 1, img: require("../../assets/careLabels/wash/water_wash_30.png"), desc: "물의 온도 최대 30°C에서 세탁기로 약하게 세탁할 수 있다." },
+  { id: 2, img: require("../../assets/careLabels/wash/water_wash_30_weak.png"), desc: "물의 온도 최대 30°C에서 세탁기로 약하게 세탁 할 수 있다." },
+  { id: 3, img: require("../../assets/careLabels/wash/water_wash_30_very_weak.png"), desc: "물의 온도 최대 30°C에서 세탁기로 매우 약하게 세탁 할 수 있다." },
+  { id: 4, img: require("../../assets/careLabels/wash/water_wash_40.png"), desc: "물의 온도 최대 40°C에서 세탁기로 일반 세탁 할 수 있다." },
+  { id: 5, img: require("../../assets/careLabels/wash/water_wash_40_weak.png"), desc: "물의 온도 최대 40°C에서 세탁기로 약하게 세탁 할 수 있다." },
+  { id: 6, img: require("../../assets/careLabels/wash/water_wash_40_very_weak.png"), desc: "물의 온도 최대 40°C에서 세탁기로 매우 약하게 세탁 할 수 있다." },
+  { id: 7, img: require("../../assets/careLabels/wash/water_wash_50.png"), desc: "물의 온도 최대 50°C에서 세탁기로 일반 세탁 할 수 있다." },
+  { id: 8, img: require("../../assets/careLabels/wash/water_wash_50_weak.png"), desc: "물의 온도 최대 50°C에서 세탁기로 약하게 세탁 할 수 있다." },
+  { id: 9, img: require("../../assets/careLabels/wash/water_wash_60.png"), desc: "물의 온도 최대 60°C에서 세탁기로 일반 세탁 할 수 있다." },
+  { id: 10, img: require("../../assets/careLabels/wash/water_wash_60_weak.png"), desc: "물의 온도 최대 60°C에서 세탁기로 약하게 세탁 할 수 있다." },
+  { id: 11, img: require("../../assets/careLabels/wash/water_wash_70.png"), desc: "물의 온도 최대 70°C에서 세탁기로 일반 세탁 할 수 있다." },
+  { id: 12, img: require("../../assets/careLabels/wash/water_wash_95.png"), desc: "물의 온도 최대 95°C에서 세탁기로 일반 세탁 할 수 있다." },
+  { id: 13, img: require("../../assets/careLabels/wash/water_wash_30_neutral.png"), desc: "물의 온도 최대 30°C에서 세탁기로 약하게 세탁 할 수 있다.\n세제 종류는 중성 세제를 사용한다." },
+  { id: 14, img: require("../../assets/careLabels/wash/water_wash_no.png"), desc: "물세탁을 하면 안 된다." },
+  { id: 15, img: require("../../assets/careLabels/wash/hand_wash_30.png"), desc: "물의 온도 최대 30°C에서 손으로 약하게 손세탁 할 수 있다.\n(세탁기 사용 불가)" },
+  { id: 16, img: require("../../assets/careLabels/wash/hand_wash_30_very_weak.png"), desc: "물의 온도 최대 30°C에서 손으로 매우 약하게 손세탁 할 수 있다.\n(세탁기 사용 불가)\n세제 종류는 중성 세제를 사용한다." },
+  { id: 17, img: require("../../assets/careLabels/wash/hand_wash_40.png"), desc: "물의 온도 최대 40°C에서 손으로 약하게 손세탁 할 수 있다.\n(세탁기 사용 불가)" },
+  { id: 18, img: require("../../assets/careLabels/wash/hand_wash_40_very_weak.png"), desc: "물의 온도 최대 40°C에서 손으로 매우 약하게 손세탁 할 수 있다.\n(세탁기 사용 불가)\n세제 종류는 중성 세제를 사용한다." },
+  { id: 19, img: require("../../assets/careLabels/wash/wet_clean_w.png"), desc: "웨트클리닝 전문점에서 일반 웨트클리닝 할 수 있다." },
+  { id: 20, img: require("../../assets/careLabels/wash/wet_clean_w_weak.png"), desc: "웨트클리닝 전문점에서 약하게 웨트클리닝 할 수 있다." },
+  { id: 21, img: require("../../assets/careLabels/wash/wet_clean_w_very_weak.png"), desc: "웨트클리닝 전문점에서 매우 약하게 웨트클리닝 할 수 있다." },
+  { id: 22, img: require("../../assets/careLabels/wash/wet_clean_no.png"), desc: "웨트클리닝을 하면 안 된다." },
+  { id: 23, img: require("../../assets/careLabels/wash/bleach_any.png"), desc: "염소계 또는 산소계 표백제로 표백 할 수 있다." },
+  { id: 24, img: require("../../assets/careLabels/wash/bleach_oxygen_only.png"), desc: "산소계 표백제로만 표백 할 수 있다." },
+  { id: 25, img: require("../../assets/careLabels/wash/bleach_chlorine_only.png"), desc: "염소계 표백제로만 표백 할 수 있다." },
+  { id: 26, img: require("../../assets/careLabels/wash/bleach_no_chlorine_allowed.png"), desc: "염소계 표백제로 표백하면 안 된다." },
+  { id: 27, img: require("../../assets/careLabels/wash/bleach_no_oxygen_allowed.png"), desc: "산소계 표백제로 표백하면 안 된다." },
+  { id: 28, img: require("../../assets/careLabels/wash/bleach_no.png"), desc: "염소계 또는 산소계 표백제로 표백하면 안 된다." },
+  { id: 29, img: require("../../assets/careLabels/wash/dry_clean_p.png"), desc: "테트라클로로에텐(퍼클로로에틸렌), 석유계 및 실리콘 계 용제 등\n적합한 용제로 일반 드라이클리닝 할 수 있다." },
+  { id: 30, img: require("../../assets/careLabels/wash/dry_clean_p_weak.png"), desc: "테트라클로로에텐(퍼클로로에틸렌), 석유계 및 실리콘 계 용제 등\n적합한 용제로 약하게 드라이클리닝 할 수 있다." },
+  { id: 31, img: require("../../assets/careLabels/wash/dry_clean_f.png"), desc: "탄화수소(석유계) 용제로 일반 드라이클리닝 할 수 있다." },
+  { id: 32, img: require("../../assets/careLabels/wash/dry_clean_f_weak.png"), desc: "탄화수소(석유계) 용제로 약하게 드라이클리닝 할 수 있다." },
+  { id: 33, img: require("../../assets/careLabels/wash/dry_clean_methane.png"), desc: "다이부톡시메테인(메테인계) 용제로 일반 드라이클리닝 할 수 있다." },
+  { id: 34, img: require("../../assets/careLabels/wash/dry_clean_methane_weak.png"), desc: "다이부톡시메테인(메테인계) 용제로 약하게 드라이클리닝 할 수 있다." },
+  { id: 35, img: require("../../assets/careLabels/wash/dry_clean_silicon.png"), desc: "데카메틸사이클로펜타실록세인(실리콘계) 용제로\n일반 드라이클리닝 할 수 있다." },
+  { id: 36, img: require("../../assets/careLabels/wash/dry_clean_silicon_weak.png"), desc: "데카메틸사이클로펜타실록세인(실리콘계) 용제로\n약하게 드라이클리닝 할 수 있다." },
+  { id: 37, img: require("../../assets/careLabels/wash/dry_clean_specialist.png"), desc: "드라이클리닝을 특수 전문점에서만 할 수 있다.\n특수 전문점이란 취급하기 어려운 가죽, 모피, 헤어 등의 제품을\n전문적으로 취급하는 업소를 말한다." },
+  { id: 38, img: require("../../assets/careLabels/wash/dry_clean_no.png"), desc: "드라이클리닝 금지." },
+  { id: 39, img: require("../../assets/careLabels/wash/dry_flat_sun.png"), desc: "탈수하지 않고, 뉘어서 햇빛에서 자연 건조한다." },
+  { id: 40, img: require("../../assets/careLabels/wash/dry_flat_shade.png"), desc: "탈수하지 않고, 뉘어서 그늘에서 자연 건조한다." },
+  { id: 41, img: require("../../assets/careLabels/wash/dry_line_sun.png"), desc: "옷걸이에 걸어 햇빛에서 자연 건조한다" },
+  { id: 42, img: require("../../assets/careLabels/wash/dry_line_shade.png"), desc: "옷걸이에 걸어 그늘에서 자연 건조한다" },
+  { id: 43, img: require("../../assets/careLabels/wash/dry_drip_line_sun.png"), desc: "탈수하지 않고, 옷걸이에 걸어 햇빛에서 자연 건조한다." },
+  { id: 44, img: require("../../assets/careLabels/wash/dry_drip_line_shade.png"), desc: "탈수하지 않고, 옷걸이에 걸어 그늘에서 자연 건조한다." },
+  { id: 45, img: require("../../assets/careLabels/wash/dry_drip_flat_sun.png"), desc: "뉘어서 햇빛에서 자연 건조한다." },
+  { id: 46, img: require("../../assets/careLabels/wash/dry_drip_flat_shade.png"), desc: "뉘어서 그늘에서 자연 건조한다." },
+  { id: 47, img: require("../../assets/careLabels/wash/tumble_dry_low_60.png"), desc: "60°C를 초과하지 않는 온도에서 기계건조 할 수 있다." },
+  { id: 48, img: require("../../assets/careLabels/wash/tumble_dry_high_80.png"), desc: "80°C를 초과하지 않는 온도에서 기계건조 할 수 있다." },
+  { id: 49, img: require("../../assets/careLabels/wash/tumble_dry_no.png"), desc: "건조기 사용 금지. 자연 건조만 허용." },
+  { id: 50, img: require("../../assets/careLabels/wash/wring_weak.png"), desc: "손으로 짜는 경우에는 약하게 짜고,\n원심 탈수기인 경우는 짧은 시간 안에 탈수한다." },
+  { id: 51, img: require("../../assets/careLabels/wash/wring_no.png"), desc: "짜면 안 된다." },
+  { id: 52, img: require("../../assets/careLabels/wash/iron_low_120.png"), desc: "다리미 온도 최대 120°C로 다림질 할 수 있다." },
+  { id: 53, img: require("../../assets/careLabels/wash/iron_low_120_cloth.png"), desc: "다리미 온도 최대 120°C로 헝겊을 덮고 다림질 할 수 있다." },
+  { id: 54, img: require("../../assets/careLabels/wash/iron_medium_160.png"), desc: "다리미 온도 최대 160°C로 다림질 할 수 있다." },
+  { id: 55, img: require("../../assets/careLabels/wash/iron_medium_160_cloth.png"), desc: "다리미 온도 최대 160°C로 헝겊을 덮고 다림질 할 수 있다." },
+  { id: 56, img: require("../../assets/careLabels/wash/iron_high_210.png"), desc: "다리미 온도 최대 210°C로 다림질 할 수 있다." },
+  { id: 57, img: require("../../assets/careLabels/wash/iron_high_210_cloth.png"), desc: "다리미 온도 최대 210°C로 헝겊을 덮고 다림질 할 수 있다." },
+  { id: 58, img: require("../../assets/careLabels/wash/iron_no.png"), desc: "다림질을 하면 안 된다." },
+  { id: 59, img: require("../../assets/careLabels/wash/iron_no_steam.png"), desc: "다리미 온도 최대 120°C로 스팀을 가하지 않고 다림질 할 수 있다.\n스팀 다림질은 되돌릴 수 없는 손상을 일으킬 수 있다." },
+  { id: 60, img: require("../../assets/careLabels/wash/fire_warning.png"), desc: "불꽃 주의." },
 ];
+
+const createGroup = (ids) => {
+  const idSet = new Set(ids);
+  return careLabelData.filter((label) => idSet.has(label.id));
+};
+
+const WASH_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+const BLEACH_IDS = [23, 24, 25, 26, 27, 28];
+const IRON_IDS = [52, 53, 54, 55, 56, 57, 58, 59];
+const DRY_IDS = [39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 60];
+const TUMBLE_IDS = [19, 20, 21, 22, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38];
+
+export const washLabels = createGroup(WASH_IDS);
+export const bleachLabels = createGroup(BLEACH_IDS);
+export const ironLabels = createGroup(IRON_IDS);
+export const dryLabels = createGroup(DRY_IDS);
+export const tumbleLabels = createGroup(TUMBLE_IDS);
+export const allCareLabels = careLabelData;

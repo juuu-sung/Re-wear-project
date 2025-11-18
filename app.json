@@ -33,7 +33,7 @@
       [
         "@react-native-seoul/kakao-login",
         {
-          "kakaoAppKey": "076a5cfb9cfe5f1341f96cdf7a259b8f"
+          "kakaoAppKey": "aaf137091c747bd3b71a75debd72d2a5"
         }
       ],
       "expo-web-browser"
