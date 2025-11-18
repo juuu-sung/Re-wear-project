@@ -221,7 +221,12 @@ def login_form(
 @router.get("/me")
 def read_me(current: User = Depends(get_current_user)):
     """내 정보 확인"""
-    return {"id": current.id, "name": current.name or "", "email": current.email}
+    return {
+        "id": current.id,
+        "name": current.name or "",
+        "email": current.email,
+        "profile_image": current.profile_image,
+    }
 
 # --- 카카오 관련 추가 내용
 

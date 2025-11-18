@@ -128,7 +128,7 @@ async def shutdown_event():
 
 
 # ---------- Router 등록 ----------
-app.include_router(user_router.router)
+app.include_router(user_router.router, prefix="/v1")
 app.include_router(auth_router.router)
 app.include_router(event_router.router)
 app.include_router(infer_router.router, prefix="/infer", tags=["infer"])

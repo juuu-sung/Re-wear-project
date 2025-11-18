@@ -1,5 +1,8 @@
 # backend/app/routers/user.py
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import shutil
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -9,6 +12,10 @@ from app.crud import user as crud_user
 
 # 기존 users 라우터
 router = APIRouter(prefix="/users", tags=["users"])
+
+PROFILE_UPLOAD_DIR = "uploads/profile"
+os.makedirs(PROFILE_UPLOAD_DIR, exist_ok=True)
+BASE_URL = os.getenv("EXTERNAL_BASE_URL", "http://localhost:8000")
 
 def get_db():
     db = SessionLocal()
@@ -89,3 +96,28 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 @auth_router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_user_auth(payload: RegisterIn, db: Session = Depends(get_db)):
     return _register_impl(payload, db)
+
+
+@router.post("/{user_id}/profile-image")
+async def upload_profile_image(
+    user_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    user = crud_user.get_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    ext = "jpg"
+    if file.filename and "." in file.filename:
+        ext = file.filename.rsplit(".", 1)[-1]
+    filename = f"{user_id}_{uuid.uuid4().hex}.{ext}"
+    save_path = os.path.join(PROFILE_UPLOAD_DIR, filename)
+
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    image_url = f"{BASE_URL}/uploads/profile/{filename}"
+    crud_user.update_profile_image(db, user_id, image_url)
+
+    return {"url": image_url}

@@ -94,6 +94,43 @@ export default function PostDetail() {
           showsHorizontalScrollIndicator={false}
         />
 
+        {/* 프로필 */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 15,
+            paddingTop: 15,
+            marginBottom: 4,
+          }}
+        >
+          {post.profile_image ? (
+            <ExpoImage
+              source={{ uri: post.profile_image }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                marginRight: 10,
+                backgroundColor: "#eee",
+              }}
+              contentFit="cover"
+              cachePolicy="immutable"
+            />
+          ) : (
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "#ddd",
+                marginRight: 10,
+              }}
+            />
+          )}
+          <Text style={{ fontWeight: "700", fontSize: 15 }}>{post.user_name}</Text>
+        </View>
+
         {/* 좋아요/댓글 아이콘 */}
         <View style={{ paddingHorizontal: 15, paddingTop: 15 }}>
           <Text style={{ fontSize: 22 }}>♡  💬</Text>

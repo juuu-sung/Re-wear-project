@@ -99,15 +99,30 @@ export default function CommunityFeed() {
             padding: 12,
           }}
         >
-          <View
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: "#ddd",
-              marginRight: 10,
-            }}
-          />
+          {item.profile_image ? (
+            <ExpoImage
+              source={{ uri: item.profile_image }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                marginRight: 10,
+                backgroundColor: "#eee",
+              }}
+              contentFit="cover"
+              cachePolicy="immutable"
+            />
+          ) : (
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "#ddd",
+                marginRight: 10,
+              }}
+            />
+          )}
           <Text style={{ fontWeight: "700", fontSize: 15 }}>
             {item.user_name}
           </Text>
