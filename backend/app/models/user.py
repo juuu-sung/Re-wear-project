@@ -14,4 +14,6 @@ class User(Base):
     kakao_id = Column(BigInteger, unique=True, index=True, nullable=True)
     clothes = relationship("Clothes", back_populates="user", cascade="all, delete")
     events = relationship("Event", back_populates="user", cascade="all, delete")
+    liked_brands = relationship("LikedBrand", back_populates="user", cascade="all, delete-orphan")
+
     
