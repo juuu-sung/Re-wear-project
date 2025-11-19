@@ -1,3 +1,6 @@
+// =========================
+// IMPORTS
+// =========================
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -19,11 +22,13 @@ import {
   TouchableWithoutFeedback,
   View
 } from "react-native";
+
 import brandsData from "../../assets/data/slowfashion_brands.json";
 
-// ==================================================
-// 외부 링크 열기
-// ==================================================
+
+// =========================
+// EXTERNAL LINK
+// =========================
 const openLink = async (url) => {
   try {
     await WebBrowser.openBrowserAsync(url);
@@ -32,22 +37,22 @@ const openLink = async (url) => {
   }
 };
 
-// ==================================================
-// 백엔드 BASE URL
-// ==================================================
+
+// =========================
+// BASE URL
+// =========================
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
-// ==================================================
-// HomeScreen
-// ==================================================
+
+// =========================
+// HOME SCREEN
+// =========================
 export default function HomeScreen() {
   const router = useRouter();
   const scrollRef = useRef(null);
 
-  // ------------------------------------------
-  // 화면에 쓰는 상태들
-  // ------------------------------------------
+  // 상태 관리
   const [userId, setUserId] = useState(null);
   const [closetItems, setClosetItems] = useState([]);
   const [calendarDots, setCalendarDots] = useState({});
@@ -57,20 +62,20 @@ export default function HomeScreen() {
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // ⭐ 오늘의 알림(세탁 필요 옷)
   const [todayAlerts, setTodayAlerts] = useState([]);
 
-  // 슬로우패션 뉴스/브랜드
   const [news, setNews] = useState([]);
   const [loadingNews, setLoadingNews] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // 🎯 likedBrands → 절대 undefined 방지 위해 초기값은 빈 배열
   const [likedBrands, setLikedBrands] = useState([]);
   const [likedPopupVisible, setLikedPopupVisible] = useState(false);
 
-  // ------------------------------------------
-  // 스피너 애니메이션
-  // ------------------------------------------
+  // 브랜드 1시간 로테이션
+  const [displayBrands, setDisplayBrands] = useState([]);
+
+  // 로딩 애니메이션
   const spinValue = useRef(new Animated.Value(0)).current;
   const spin = () => {
     spinValue.setValue(0);
@@ -86,9 +91,10 @@ export default function HomeScreen() {
     outputRange: ["0deg", "360deg"],
   });
 
-  // ==================================================
-  // 사용자 ID 로드
-  // ==================================================
+
+  // =========================
+  // USER ID LOAD
+  // =========================
   useEffect(() => {
     const loadUser = async () => {
       const id = await AsyncStorage.getItem("user_id");
@@ -97,9 +103,95 @@ export default function HomeScreen() {
     loadUser();
   }, []);
 
-  // ==================================================
-  // 오늘의 알림 API
-  // ==================================================
+
+  // =========================
+  // SERVER → 좋아요 브랜드 로드 (🔥 핵심 수정됨)
+  // =========================
+  useEffect(() => {
+    const loadLikedFromServer = async () => {
+      const myId = await AsyncStorage.getItem("user_id");
+      const token = await AsyncStorage.getItem("access_token");
+
+      if (!myId || !token) {
+        setLikedBrands([]);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${BASE_URL}/v1/brands/liked?user_id=${myId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        const data = await res.json();
+
+        // 🔥 서버 응답 모양에 상관없이 배열로 강제 변환
+        const list =
+          Array.isArray(data)
+            ? data
+            : Array.isArray(data.items)
+            ? data.items
+            : [];
+
+        setLikedBrands(list);
+      } catch (err) {
+        console.log("좋아요 브랜드 로드 실패:", err);
+        setLikedBrands([]); // fallback
+      }
+    };
+
+    loadLikedFromServer();
+  }, []);
+
+
+
+  // =========================
+  // 토글 좋아요 (프론트 저장)
+  // =========================
+  const toggleLike = async (name) => {
+  const myId = await AsyncStorage.getItem("user_id");
+  const token = await AsyncStorage.getItem("access_token");
+
+  const already = likedBrands.includes(name);
+
+  if (already) {
+    await fetch(`${BASE_URL}/v1/brands/like`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ user_id: myId, brand_name: name }),
+    });
+
+    setLikedBrands(likedBrands.filter((n) => n !== name));
+  } else {
+    await fetch(`${BASE_URL}/v1/brands/like`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ user_id: myId, brand_name: name }),
+    });
+
+    setLikedBrands([...likedBrands, name]);
+  }
+};
+
+
+  // =========================
+  // 좋아요한 브랜드 리스트 필터
+  // =========================
+  const likedBrandList = brandsData.brands.filter((b) =>
+    likedBrands.includes(b.name)
+  );
+
+
+
+  // =========================
+  // 오늘의 알림
+  // =========================
   const loadTodayAlerts = async () => {
     if (!userId) return;
 
@@ -114,9 +206,11 @@ export default function HomeScreen() {
       console.log("오늘의 알림 로드 실패:", err);
     }
   };
-  // ==================================================
+
+
+  // =========================
   // 옷장 미리보기
-  // ==================================================
+  // =========================
   const loadClosetPreview = async () => {
     try {
       const token = await AsyncStorage.getItem("access_token");
@@ -124,7 +218,6 @@ export default function HomeScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-
       const sorted = data.sort((a, b) => b.id - a.id);
       setClosetItems(sorted.slice(0, 5));
     } catch (err) {
@@ -132,9 +225,10 @@ export default function HomeScreen() {
     }
   };
 
-  // ==================================================
+
+  // =========================
   // 이번 주 날짜 계산
-  // ==================================================
+  // =========================
   useEffect(() => {
     const today = new Date();
     const day = today.getDay();
@@ -155,9 +249,10 @@ export default function HomeScreen() {
     setWeekDates(week);
   }, []);
 
-  // ==================================================
-  // 캘린더 + 전체 이벤트
-  // ==================================================
+
+  // =========================
+  // 캘린더 & 전체 이벤트
+  // =========================
   const loadCalendarPreview = async () => {
     if (!userId) return;
 
@@ -171,7 +266,9 @@ export default function HomeScreen() {
         `${BASE_URL}/events/calendar?month=${y}-${m}&user_id=${userId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       const data = await res.json();
+
 
       const formatted = {};
       const wearDates = Array.isArray(data.wear) ? data.wear : [];
@@ -190,10 +287,10 @@ export default function HomeScreen() {
 
       setCalendarDots(formatted);
 
-      // 전체 이벤트도 가져오기
       const res2 = await fetch(`${BASE_URL}/events?user_id=${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const eventData = await res2.json();
 
       const grouped = {};
@@ -209,14 +306,25 @@ export default function HomeScreen() {
     }
   };
 
-  // ==================================================
+
+  // =========================
+  // 날짜 클릭 → 상세 모달
+  // =========================
+  const handleDatePress = (date) => {
+    const events = allEvents[date] || [];
+    setSelectedDate(date);
+    setSelectedEvents(events);
+    setModalVisible(true);
+  };
+
+
+  // =========================
   // 뉴스
-  // ==================================================
+  // =========================
   const loadNews = async () => {
     try {
       setLoadingNews(true);
       spin();
-
       const res = await axios.get(`${BASE_URL}/v1/news?refresh=${Date.now()}`);
       setNews(res.data);
     } catch (err) {
@@ -226,17 +334,19 @@ export default function HomeScreen() {
     }
   };
 
-  // 12시간마다 뉴스 자동 새로고침
+
+  // 뉴스 자동 새로고침 (12h)
   useEffect(() => {
     if (!userId) return;
 
     loadNews();
-
     const interval = setInterval(loadNews, 12 * 60 * 60 * 1000);
+
     return () => clearInterval(interval);
   }, [userId]);
 
-  // 15초마다 뉴스 랜덤 셔플
+
+  // 랜덤 셔플
   useEffect(() => {
     const interval = setInterval(() => {
       setNews((current) => [...current].sort(() => Math.random() - 0.5));
@@ -244,45 +354,10 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-    // ==================================================
-  // 날짜 클릭 → 상세 모달 열기
-  // ==================================================
-  const handleDatePress = (date) => {
-    const events = allEvents[date] || [];
-    setSelectedDate(date);
-    setSelectedEvents(events);
-    setModalVisible(true);
-  };
 
-  // ==================================================
-  // 좋아요 브랜드 로드
-  // ==================================================
-  useEffect(() => {
-    const loadLiked = async () => {
-      const stored = await AsyncStorage.getItem("liked_brands");
-      if (stored) setLikedBrands(JSON.parse(stored));
-    };
-    loadLiked();
-  }, []);
-
-  const toggleLike = async (name) => {
-    const updated = likedBrands.includes(name)
-      ? likedBrands.filter((n) => n !== name)
-      : [...likedBrands, name];
-
-    setLikedBrands(updated);
-    await AsyncStorage.setItem("liked_brands", JSON.stringify(updated));
-  };
-
-  const likedBrandList = brandsData.brands.filter((b) =>
-    likedBrands.includes(b.name)
-  );
-
-  // ==================================================
-  // 1시간마다 브랜드 3개 변경
-  // ==================================================
-  const [displayBrands, setDisplayBrands] = useState([]);
-
+  // =========================
+  // 브랜드 1시간마다 3개 변경
+  // =========================
   useEffect(() => {
     const updateBrands = () => {
       const all = brandsData.brands;
@@ -302,22 +377,24 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // ==================================================
+
+  // =========================
   // Focus 시 최신 데이터 로드
-  // ==================================================
+  // =========================
   useFocusEffect(
     useCallback(() => {
       if (!userId) return;
 
       loadClosetPreview();
       loadCalendarPreview();
-      loadTodayAlerts(); // ⭐ 되살림
+      loadTodayAlerts();
     }, [userId])
   );
 
-  // ==================================================
-  // 새로고침 동작
-  // ==================================================
+
+  // =========================
+  // 화면 당겨서 새로고침
+  // =========================
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
@@ -329,9 +406,10 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  // ==================================================
-  // 화면 렌더링 시작
-  // ==================================================
+
+  // =========================
+  // RENDER
+  // =========================
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -341,9 +419,8 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* -------------------------------------------------- */}
+
         {/* 헤더 */}
-        {/* -------------------------------------------------- */}
         <View style={styles.header}>
           <Text style={styles.logo}>Re:wear</Text>
           <TouchableOpacity onPress={() => router.push("/profile")}>
@@ -351,9 +428,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* -------------------------------------------------- */}
-        {/* ⭐⭐⭐ 오늘의 알림 ⭐⭐⭐ */}
-        {/* -------------------------------------------------- */}
+
+        {/* 오늘의 알림 */}
         <View style={styles.card}>
           <Text style={styles.title}>오늘의 알림</Text>
 
@@ -397,17 +473,14 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* -------------------------------------------------- */}
-        {/* 케어라벨 검색 (라벨 촬영하기 포함) */}
-        {/* -------------------------------------------------- */}
+
+        {/* 케어라벨 */}
         <View style={[styles.card, { paddingVertical: 22 }]}>
           <Text style={[styles.title, { marginBottom: 14 }]}>케어라벨 검색</Text>
           <View style={[styles.row, { marginTop: 4 }]}>
             <TouchableOpacity
               style={styles.iconBox}
-              onPress={() =>
-                router.push("/scan") // ⭐ 라벨 촬영 기능 되살림
-              }
+              onPress={() => router.push("/scan")}
             >
               <Ionicons name="camera-outline" size={32} color="#000" />
               <Text style={styles.iconText}>라벨 촬영하기</Text>
@@ -423,9 +496,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* -------------------------------------------------- */}
-        {/* 옷장 미리보기 */}
-        {/* -------------------------------------------------- */}
+
+        {/* 옷장 */}
         <View style={styles.card}>
           <View style={styles.calendarHeader}>
             <Text style={styles.title}>옷을 추가해 보세요!</Text>
@@ -445,9 +517,8 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* -------------------------------------------------- */}
+
         {/* 이번 주 캘린더 */}
-        {/* -------------------------------------------------- */}
         <View style={styles.card}>
           <View style={styles.calendarHeader}>
             <Text style={styles.title}>이번 주 캘린더</Text>
@@ -478,6 +549,7 @@ export default function HomeScreen() {
                   >
                     {dayName}
                   </Text>
+
                   <Text style={styles.weekDate}>{date.split("-")[2]}</Text>
 
                   <View style={styles.dotContainer}>
@@ -500,12 +572,12 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* -------------------------------------------------- */}
-        {/* 오늘의 환경 뉴스 */}
-        {/* -------------------------------------------------- */}
+
+        {/* 뉴스 */}
         <View style={styles.card}>
           <View style={styles.calendarHeader}>
             <Text style={styles.title}>오늘의 환경 뉴스</Text>
+
             <TouchableOpacity onPress={loadNews} disabled={loadingNews}>
               <Animated.View style={{ transform: [{ rotate: spinAnimation }] }}>
                 <Ionicons
@@ -545,9 +617,8 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* -------------------------------------------------- */}
-        {/* 슬로우패션 브랜드 1시간마다 3개 */}
-        {/* -------------------------------------------------- */}
+
+        {/* 브랜드 */}
         <View style={styles.card}>
           <View style={styles.calendarHeader}>
             <View>
@@ -575,6 +646,7 @@ export default function HomeScreen() {
           <View style={styles.brandRow}>
             {displayBrands.map((brand, idx) => {
               const isLiked = likedBrands.includes(brand.name);
+
               return (
                 <View key={idx} style={styles.brandCard}>
                   <TouchableOpacity onPress={() => openLink(brand.url)}>
@@ -604,11 +676,13 @@ export default function HomeScreen() {
             })}
           </View>
         </View>
+
+
       </ScrollView>
 
-      {/* -------------------------------------------------- */}
+
+
       {/* 좋아요 브랜드 팝업 */}
-      {/* -------------------------------------------------- */}
       <Modal visible={likedPopupVisible} transparent animationType="slide">
         <TouchableWithoutFeedback onPressOut={() => setLikedPopupVisible(false)}>
           <View style={styles.modalOverlay}>
@@ -639,16 +713,29 @@ export default function HomeScreen() {
                         onPress={() => openLink(brand.url)}
                         style={styles.likedBrandRow}
                       >
-                        <Image source={{ uri: brand.image }} style={styles.likedBrandImage} />
+
+                        <Image
+                          source={{ uri: brand.image }}
+                          style={styles.likedBrandImage}
+                        />
+
                         <View style={{ flex: 1, marginLeft: 10 }}>
                           <Text style={styles.likedBrandName}>{brand.name}</Text>
                         </View>
 
                         <TouchableOpacity onPress={() => toggleLike(brand.name)}>
                           <Ionicons
-                            name={likedBrands.includes(brand.name) ? "heart" : "heart-outline"}
+                            name={
+                              likedBrands.includes(brand.name)
+                                ? "heart"
+                                : "heart-outline"
+                            }
                             size={22}
-                            color={likedBrands.includes(brand.name) ? "#E91E63" : "#888"}
+                            color={
+                              likedBrands.includes(brand.name)
+                                ? "#E91E63"
+                                : "#888"
+                            }
                           />
                         </TouchableOpacity>
                       </TouchableOpacity>
@@ -661,9 +748,9 @@ export default function HomeScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* -------------------------------------------------- */}
+
+
       {/* 캘린더 상세 모달 */}
-      {/* -------------------------------------------------- */}
       <Modal
         transparent
         visible={modalVisible}
@@ -716,13 +803,18 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+
+
     </SafeAreaView>
   );
 }
 
-// ------------------------------------------------------
-// 스타일
-// ------------------------------------------------------
+
+
+// ==========================================
+// STYLE
+// ==========================================
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f0f2f5" },
   container: { flex: 1, padding: 16 },
@@ -758,7 +850,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
     backgroundColor: "#eee",
   },
-  calendarHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8
+  },
   weekRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
   weekCell: { alignItems: "center", flex: 1 },
   weekDay: { fontSize: 14, color: "#555" },
@@ -782,10 +880,13 @@ const styles = StyleSheet.create({
   brandDesc: { fontSize: 12, color: "#555", textAlign: "center", marginTop: 2 },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  modalContainer: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "60%" },
 
   likedModal: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "65%" },
+
+  modalContainer: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "60%" },
+
   modalTitle: { fontSize: 18, fontWeight: "700", color: "#2e7d32", marginBottom: 10 },
+
   likedBrandRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -804,4 +905,3 @@ const styles = StyleSheet.create({
   eventImage: { width: 50, height: 50, borderRadius: 8, marginRight: 10 },
   clothName: { fontSize: 14, color: "#222", fontWeight: "500" },
 });
-
