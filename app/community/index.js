@@ -9,7 +9,7 @@ import {
   FlatList,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -36,19 +36,22 @@ export default function CommunityFeed() {
   }, []);
 
   const loadPosts = async () => {
+    if (!myUid) return;
     try {
-      const res = await fetch(`${BASE_URL}/v1/community/posts`);
+      const res = await fetch(`${BASE_URL}/v1/community/posts?user_id=${myUid}`);
       const data = await res.json();
       setPosts(data);
     } catch (err) {
-      console.log(err);
+      console.log("게시물 로딩 오류:", err);
     }
     setLoading(false);
   };
 
   useEffect(() => {
+  if (myUid) {
     loadPosts();
-  }, []);
+  }
+}, [myUid]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -56,12 +59,13 @@ export default function CommunityFeed() {
     setRefreshing(false);
   };
 
+  // 🔥 PostItem
   const PostItem = ({ item }) => {
+    const [post, setPost] = useState(item); // 🔥 로컬 상태
     const [currentIndex, setCurrentIndex] = useState(0);
     const [expanded, setExpanded] = useState(false);
 
-    // 🔥 엔터 줄바꿈 인식
-    const lines = item.description.split("\n");
+    const lines = post.description.split("\n");
     const MAX = 3;
     const visibleLines = expanded ? lines : lines.slice(0, MAX);
 
@@ -74,23 +78,53 @@ export default function CommunityFeed() {
     const goToProfile = () => {
       if (!myUid) return;
 
-      if (String(item.user_id) === String(myUid)) {
+      if (String(post.user_id) === String(myUid)) {
         router.push("/community/profile");
       } else {
         router.push({
-          pathname: `/community/users/${item.user_id}`,
+          pathname: `/community/users/${post.user_id}`,
           params: {
-            user_name: item.user_name,
-            profile_image: item.profile_image,
-          }
+            user_name: post.user_name,
+            profile_image: post.profile_image,
+          },
         });
       }
     };
 
+    // 🔥 좋아요 토글 — 로컬 UI + 상위 posts 모두 적용
+    const toggleLike = async () => {
+  if (!myUid) return;
+
+  // 1) 로컬 UI 즉시 반영
+  setPost((prev) => ({
+    ...prev,
+    liked: !prev.liked,
+    like_count: prev.liked ? prev.like_count - 1 : prev.like_count + 1,
+  }));
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}/v1/community/posts/${post.id}/like?user_id=${myUid}`,
+      { method: "POST" }
+    );
+    const data = await res.json();
+
+    // 2) 서버 값으로 동기화
+    setPost((prev) => ({
+      ...prev,
+      liked: data.liked,
+      like_count: data.like_count,
+    }));
+
+  } catch (err) {
+    console.log("좋아요 오류:", err);
+  }
+};
+
+
     return (
       <View style={{ backgroundColor: "#fff", marginBottom: 30 }}>
-
-        {/* 유저 프로필 */}
+        {/* 프로필 */}
         <TouchableOpacity
           onPress={goToProfile}
           style={{
@@ -99,9 +133,9 @@ export default function CommunityFeed() {
             padding: 12,
           }}
         >
-          {item.profile_image ? (
+          {post.profile_image ? (
             <ExpoImage
-              source={{ uri: item.profile_image }}
+              source={{ uri: post.profile_image }}
               style={{
                 width: 36,
                 height: 36,
@@ -113,26 +147,24 @@ export default function CommunityFeed() {
               cachePolicy="immutable"
             />
           ) : (
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: "#ddd",
-                marginRight: 10,
-              }}
+            <Ionicons
+              name="person-circle-outline"
+              size={36}
+              color="#bbb"
+              style={{ marginRight: 10 }}
             />
           )}
+
           <Text style={{ fontWeight: "700", fontSize: 15 }}>
-            {item.user_name}
+            {post.user_name}
           </Text>
         </TouchableOpacity>
 
-        {/* 이미지 슬라이드 */}
-        {item.images.length > 0 && (
+        {/* 이미지 */}
+        {post.images.length > 0 && (
           <View>
             <FlatList
-              data={item.images}
+              data={post.images}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
@@ -140,7 +172,7 @@ export default function CommunityFeed() {
               keyExtractor={(uri, idx) => uri + idx}
               renderItem={({ item: uri }) => (
                 <TouchableOpacity
-                  onPress={() => router.push(`/community/${item.id}`)}
+                  onPress={() => router.push(`/community/${post.id}`)}
                   activeOpacity={1}
                 >
                   <ExpoImage
@@ -156,7 +188,7 @@ export default function CommunityFeed() {
               )}
             />
 
-            {item.images.length > 1 && (
+            {post.images.length > 1 && (
               <View
                 style={{
                   position: "absolute",
@@ -167,7 +199,7 @@ export default function CommunityFeed() {
                   justifyContent: "center",
                 }}
               >
-                {item.images.map((_, i) => (
+                {post.images.map((_, i) => (
                   <View
                     key={i}
                     style={{
@@ -176,7 +208,9 @@ export default function CommunityFeed() {
                       borderRadius: 4,
                       marginHorizontal: 3,
                       backgroundColor:
-                        currentIndex === i ? "white" : "rgba(255,255,255,0.4)",
+                        currentIndex === i
+                          ? "white"
+                          : "rgba(255,255,255,0.4)",
                     }}
                   />
                 ))}
@@ -185,7 +219,7 @@ export default function CommunityFeed() {
           </View>
         )}
 
-        {/* 좋아요 + 댓글 아이콘 (심플버전) */}
+        {/* 좋아요/댓글 */}
         <View
           style={{
             flexDirection: "row",
@@ -193,17 +227,42 @@ export default function CommunityFeed() {
             paddingTop: 12,
           }}
         >
-          <Text style={{ fontSize: 22, marginRight: 12 }}>♡</Text>
-          <Text style={{ fontSize: 22 }}>💬</Text>
+          {/* ❤️ 좋아요 */}
+          <TouchableOpacity onPress={toggleLike}>
+            <Ionicons
+              name={post.liked ? "heart" : "heart-outline"}
+              size={28}
+              color={post.liked ? "red" : "#333"}
+              style={{ marginRight: 14 }}
+            />
+          </TouchableOpacity>
+
+          {/* ... 댓글 */}
+          <TouchableOpacity
+            onPress={() => router.push(`/community/${post.id}`)}
+          >
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={26}
+              color="#333"
+            />
+          </TouchableOpacity>
         </View>
 
-        <Text style={{ paddingHorizontal: 12, marginTop: 6, fontWeight: "600" }}>
-          좋아요 {item.like_count}개
+        {/* 좋아요 수 */}
+        <Text
+          style={{
+            paddingHorizontal: 12,
+            marginTop: 6,
+            fontWeight: "600",
+          }}
+        >
+          좋아요 {post.like_count}개
         </Text>
 
         {/* 본문 */}
         <View style={{ paddingHorizontal: 12, marginTop: 6 }}>
-          <Text style={{ fontWeight: "700" }}>{item.user_name}</Text>
+          <Text style={{ fontWeight: "700" }}>{post.user_name}</Text>
 
           <View style={{ marginTop: 4 }}>
             {visibleLines.map((line, index) => (
@@ -212,7 +271,6 @@ export default function CommunityFeed() {
               </Text>
             ))}
 
-            {/* 더보기 버튼 (겹침 제거) */}
             {!expanded && lines.length > MAX && (
               <TouchableOpacity
                 onPress={() => setExpanded(true)}
@@ -233,13 +291,13 @@ export default function CommunityFeed() {
           </View>
         </View>
 
-        {/* 댓글 모두보기 */}
+        {/* 댓글 보기 */}
         <TouchableOpacity
-          onPress={() => router.push(`/community/${item.id}`)}
+          onPress={() => router.push(`/community/${post.id}`)}
           style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 10 }}
         >
           <Text style={{ color: "#888" }}>
-            댓글 {item.comment_count}개 모두 보기
+            댓글 {post.comment_count}개 모두 보기
           </Text>
         </TouchableOpacity>
       </View>
@@ -258,13 +316,14 @@ export default function CommunityFeed() {
     >
       <FlatList
         data={posts}
+        extraData={posts} // 🔥 중요: 상태 변경 시 목록 자동 갱신
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <PostItem item={item} />}
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
 
-      {/* DM 버튼 */}
+      {/* DM */}
       <TouchableOpacity
         onPress={() => router.push("/community/dm")}
         style={{
@@ -284,7 +343,7 @@ export default function CommunityFeed() {
         <Ionicons name="chatbubble-ellipses-outline" size={28} color="#333" />
       </TouchableOpacity>
 
-      {/* 내 프로필 */}
+      {/* 프로필 */}
       <TouchableOpacity
         onPress={() => router.push("/community/profile")}
         style={{
