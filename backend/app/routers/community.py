@@ -19,9 +19,9 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 BASE_URL = os.getenv("EXTERNAL_BASE_URL")
 
 
-# -----------------------
-# 게시글 생성 (title 제거 버전)
-# -----------------------
+# -------------------------------------------------------------
+# 게시글 생성
+# -------------------------------------------------------------
 @router.post("/posts")
 def create_post(
     user_id: int = Form(...),
@@ -45,9 +45,9 @@ def create_post(
     return {"post_id": post.id}
 
 
-# -----------------------
+# -------------------------------------------------------------
 # 이미지 업로드
-# -----------------------
+# -------------------------------------------------------------
 @router.post("/posts/{post_id}/images")
 async def upload_post_images(
     post_id: int,
@@ -75,11 +75,15 @@ async def upload_post_images(
     }
 
 
-# -----------------------
-# 전체 피드
-# -----------------------
+# -------------------------------------------------------------
+# 전체 피드 조회 — liked 포함, user_id=None 허용
+# -------------------------------------------------------------
 @router.get("/posts")
-def list_posts(db: Session = Depends(get_db), sort: str = "latest"):
+def list_posts(
+    db: Session = Depends(get_db),
+    sort: str = "latest",
+    user_id: int | None = None   # ← user_id null 허용
+):
     q = db.query(ReformPost)
 
     if sort == "popular":
@@ -90,35 +94,59 @@ def list_posts(db: Session = Depends(get_db), sort: str = "latest"):
         q = q.order_by(ReformPost.created_at.desc())
 
     posts = q.all()
+    results = []
 
-    return [
-        {
+    for p in posts:
+        # 좋아요 여부
+        if user_id:
+            liked = (
+                db.query(ReformLike)
+                .filter(
+                    ReformLike.post_id == p.id,
+                    ReformLike.user_id == user_id
+                )
+                .first()
+                is not None
+            )
+        else:
+            liked = False
+
+        results.append({
             "id": p.id,
             "user_id": p.user_id,
             "user_name": p.user.name,
             "profile_image": p.user.profile_image,
-            # title 제거됨
             "description": p.description,
+            "category": p.category,
             "images": [
                 f"{BASE_URL}/uploads/community/{img.image_url}"
                 for img in p.images
             ],
             "like_count": len(p.likes),
+            "liked": liked,
             "comment_count": len(p.comments),
-            "created_at": p.created_at
-        }
-        for p in posts
-    ]
+            "created_at": p.created_at,
+        })
+
+    return results
 
 
-# -----------------------
-# 상세 조회
-# -----------------------
+# -------------------------------------------------------------
+# 게시글 상세
+# -------------------------------------------------------------
 @router.get("/posts/{post_id}")
-def post_detail(post_id: int, db: Session = Depends(get_db)):
+def post_detail(post_id: int, user_id: int | None = None, db: Session = Depends(get_db)):
     post = db.query(ReformPost).filter(ReformPost.id == post_id).first()
     if not post:
         raise HTTPException(404, "Post not found")
+
+    if user_id:
+        liked = db.query(ReformLike).filter(
+            ReformLike.post_id == post_id,
+            ReformLike.user_id == user_id
+        ).first() is not None
+    else:
+        liked = False
 
     return {
         "id": post.id,
@@ -129,43 +157,58 @@ def post_detail(post_id: int, db: Session = Depends(get_db)):
         "images": [
             {
                 "url": f"{BASE_URL}/uploads/community/{i.image_url}",
-                "is_before": i.is_before
+                "is_before": i.is_before,
             }
             for i in post.images
         ],
-        "likes": len(post.likes),
+        "like_count": len(post.likes),
+        "liked": liked,   # 중요
         "comments": [
             {
                 "user_id": c.user_id,
                 "user_name": c.user.name,
                 "comment": c.comment,
-                "created_at": c.created_at
+                "created_at": c.created_at,
             }
             for c in post.comments
-        ]
+        ],
     }
 
 
-# -----------------------
-# 좋아요
-# -----------------------
+# -------------------------------------------------------------
+# 좋아요 토글 — like_count 반환
+# -------------------------------------------------------------
 @router.post("/posts/{post_id}/like")
-def like_post(post_id: int, user_id: int, db: Session = Depends(get_db)):
-    like = ReformLike(post_id=post_id, user_id=user_id)
-    db.add(like)
+def toggle_like(post_id: int, user_id: int, db: Session = Depends(get_db)):
+    existing = (
+        db.query(ReformLike)
+        .filter(ReformLike.post_id == post_id, ReformLike.user_id == user_id)
+        .first()
+    )
+
+    if existing:
+        db.delete(existing)
+        db.commit()
+        like_count = db.query(ReformLike).filter(ReformLike.post_id == post_id).count()
+        return {"liked": False, "like_count": like_count}
+
+    new_like = ReformLike(post_id=post_id, user_id=user_id)
+    db.add(new_like)
     db.commit()
-    return {"status": "liked"}
+    like_count = db.query(ReformLike).filter(ReformLike.post_id == post_id).count()
+
+    return {"liked": True, "like_count": like_count}
 
 
-# -----------------------
+# -------------------------------------------------------------
 # 댓글
-# -----------------------
+# -------------------------------------------------------------
 @router.post("/posts/{post_id}/comments")
 def write_comment(
     post_id: int,
     user_id: int,
     comment: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     c = ReformComment(post_id=post_id, user_id=user_id, comment=comment)
     db.add(c)
@@ -173,20 +216,19 @@ def write_comment(
     return {"status": "ok"}
 
 
-# -----------------------
-# 특정 사용자의 게시글
-# -----------------------
+# -------------------------------------------------------------
+# 유저별 게시물
+# -------------------------------------------------------------
 @router.get("/users/{user_id}/posts")
 def posts_by_user(user_id: int, db: Session = Depends(get_db)):
     posts = db.query(ReformPost).filter(ReformPost.user_id == user_id).all()
-
     return [
         {
             "id": p.id,
             "images": [
                 f"{BASE_URL}/uploads/community/{img.image_url}"
                 for img in p.images
-            ]
+            ],
         }
         for p in posts
     ]

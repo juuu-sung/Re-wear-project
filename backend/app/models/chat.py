@@ -34,3 +34,4 @@ class ChatMessage(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     room = relationship("ChatRoom", back_populates="messages")
+
