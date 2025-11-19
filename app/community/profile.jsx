@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons"; // 🔥 기본 아이콘
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -15,7 +16,7 @@ const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 export default function MyProfile() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();   // ← 🔥 추가
+  const insets = useSafeAreaInsets();
 
   const [posts, setPosts] = useState(null);
   const [user, setUser] = useState(null);
@@ -62,19 +63,26 @@ export default function MyProfile() {
   if (!posts || !user)
     return <ActivityIndicator style={{ marginTop: 40 }} size="large" />;
 
-  const finalName = localName || user.real_name || user.name || "사용자";
+  const finalName =
+    localName || user.real_name || user.name || "사용자";
+
+  // 🔥 프로필 이미지 여부 체크 (null, undefined, 빈 문자열 모두 처리)
+  const profileImg =
+    user.profile_image && user.profile_image !== "" ? user.profile_image : null;
 
   return (
     <SafeAreaView
       style={{
         flex: 1,
         backgroundColor: "#fff",
-        paddingTop: insets.top - 240,   // ← 🔥 여기서 50px 위로 올림
+        paddingTop: insets.top - 240,
       }}
     >
       <View style={{ height: 20 }} />
 
-      {/* 프로필 영역 */}
+      {/* ================================
+          프로필 영역
+      ================================= */}
       <View
         style={{
           paddingHorizontal: 22,
@@ -84,20 +92,26 @@ export default function MyProfile() {
           alignItems: "center",
         }}
       >
-        <Image
-          source={{
-            uri: user.profile_image
-              ? user.profile_image
-              : "https://via.placeholder.com/150",
-          }}
-          style={{
-            width: 90,
-            height: 90,
-            borderRadius: 50,
-            marginRight: 22,
-            backgroundColor: "#eee",
-          }}
-        />
+        {profileImg ? (
+          <Image
+            source={{ uri: profileImg }}
+            style={{
+              width: 90,
+              height: 90,
+              borderRadius: 50,
+              marginRight: 22,
+              backgroundColor: "#eee",
+            }}
+          />
+        ) : (
+          // 🔥 기본 아이콘
+          <Ionicons
+            name="person-circle-outline"
+            size={90}
+            color="#bbb"
+            style={{ marginRight: 22 }}
+          />
+        )}
 
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 8 }}>
@@ -118,7 +132,9 @@ export default function MyProfile() {
         내가 올린 게시물
       </Text>
 
-      {/* 게시물 그리드 */}
+      {/* ================================
+          게시물 그리드
+      ================================= */}
       <FlatList
         numColumns={2}
         data={posts}

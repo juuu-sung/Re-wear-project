@@ -1,5 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Image as ExpoImage } from "expo-image"; // 🔥 변경
+import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -34,7 +35,9 @@ export default function UserPosts() {
     return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
 
   const finalName = user_name ?? "사용자";
-  const profileImg = profile_image ?? "https://via.placeholder.com/150";
+
+  const profileImg =
+    profile_image && profile_image !== "" ? profile_image : null;
 
   const handleSendMessage = async () => {
     const myId = await AsyncStorage.getItem("user_id");
@@ -45,7 +48,16 @@ export default function UserPosts() {
     );
     const data = await res.json();
 
-    router.push(`/chat/${data.room_id}?myId=${myId}`);
+    router.push({
+      pathname: `/chat/${data.room_id}`,
+      params: {
+        room_id: data.room_id,
+        myId,
+        opponentId: uid,
+        opponentName: user_name,
+        opponentProfile: profileImg,
+      },
+    });
   };
 
   return (
@@ -68,18 +80,27 @@ export default function UserPosts() {
           alignItems: "center",
         }}
       >
-        <ExpoImage
-          source={{ uri: profileImg }}
-          style={{
-            width: 90,
-            height: 90,
-            borderRadius: 50,
-            marginRight: 22,
-            backgroundColor: "#eee",
-          }}
-          contentFit="cover"
-          cachePolicy="immutable"
-        />
+        {profileImg ? (
+          <ExpoImage
+            source={{ uri: profileImg }}
+            style={{
+              width: 90,
+              height: 90,
+              borderRadius: 50,
+              marginRight: 22,
+              backgroundColor: "#eee",
+            }}
+            contentFit="cover"
+            cachePolicy="immutable"
+          />
+        ) : (
+          <Ionicons
+            name="person-circle-outline"
+            size={90}
+            color="#bbb"
+            style={{ marginRight: 22 }}
+          />
+        )}
 
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 8 }}>
@@ -101,7 +122,6 @@ export default function UserPosts() {
         </View>
       </View>
 
-      {/* 제목 */}
       <Text
         style={{
           fontSize: 18,
@@ -113,7 +133,6 @@ export default function UserPosts() {
         올린 게시물
       </Text>
 
-      {/* 게시물 목록 */}
       <FlatList
         numColumns={2}
         data={posts}

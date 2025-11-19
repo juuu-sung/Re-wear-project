@@ -143,6 +143,8 @@ async def websocket_endpoint(
 # =================================================================
 @router.get("/my-rooms")
 def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
+    from app.models.user import User
+
     rooms = (
         db.query(ChatRoom)
         .filter(
@@ -158,6 +160,8 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
     for room in rooms:
         opponent_id = room.user2_id if room.user1_id == user_id else room.user1_id
 
+        opponent = db.query(User).filter(User.id == opponent_id).first()
+
         last_msg = (
             db.query(ChatMessage)
             .filter(ChatMessage.room_id == room.id)
@@ -168,6 +172,8 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
         result.append({
             "room_id": room.id,
             "opponent_id": opponent_id,
+            "opponent_name": opponent.name if opponent else None,
+            "opponent_profile": opponent.profile_image if opponent else None,   # ← 핵심
             "last_message": last_msg.message if last_msg else None,
             "updated_at": room.updated_at
         })
