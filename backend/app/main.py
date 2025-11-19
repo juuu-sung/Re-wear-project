@@ -13,6 +13,7 @@ from app.db import Base, SessionLocal
 from alembic import command
 from alembic.config import Config
 
+
 # Routers
 from app.routers import (
     event as event_router,
@@ -28,8 +29,9 @@ from app.routers import (
     chat as chat_router,
     laundry as laundry_router,
     alerts as alerts_router
+    
 )
-
+from app.routers import like_brands
 # Services
 from app.core.scheduler import start_scheduler, stop_scheduler
 from app.services.material_infer import warmup
@@ -141,3 +143,4 @@ app.include_router(community_router.router)   # ← 커뮤니티 통합
 app.include_router(chat_router.router)
 app.include_router(laundry_router.router, prefix="/laundry", tags=["laundry"])
 app.include_router(alerts_router.router)
+app.include_router(like_brands.router)
