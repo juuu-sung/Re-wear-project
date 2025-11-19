@@ -1,7 +1,9 @@
-import { useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -14,7 +16,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 export default function ChatRoom() {
-  const { room_id, myId } = useLocalSearchParams();
+  const {
+    room_id,
+    myId,
+    opponentId,
+    opponentName,
+    opponentProfile,
+  } = useLocalSearchParams();
+
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const messagesRef = useRef([]);
   const updateTimerRef = useRef(null);
@@ -22,8 +33,6 @@ export default function ChatRoom() {
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-
-  const insets = useSafeAreaInsets();
 
   const loadMessages = async () => {
     const res = await fetch(`${BASE_URL}/v1/chat/rooms/${room_id}/messages`);
@@ -100,42 +109,78 @@ export default function ChatRoom() {
     [myId]
   );
 
+  const goToProfile = () => {
+    if (!opponentId) return;
+
+    router.push({
+      pathname: `/community/users/${opponentId}`,
+      params: {
+        user_name: opponentName,
+        profile_image: opponentProfile,
+      },
+    });
+  };
+
+  const hasProfile =
+    opponentProfile && opponentProfile.trim() !== "" ? true : false;
+
   return (
     <KeyboardAvoidingView
       style={{
         flex: 1,
         backgroundColor: "#fff",
-        paddingTop: insets.top + 50,
+        paddingTop: insets.top - 50,
       }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {/* 상대방 프로필 영역 */}
+      <TouchableOpacity
+        onPress={goToProfile}
+        style={{
+          alignItems: "center",
+          paddingVertical: 14,
+          borderBottomWidth: 1,
+          borderColor: "#eee",
+          marginBottom: 8,
+        }}
+      >
+        {hasProfile ? (
+          <Image
+            source={{ uri: opponentProfile }}
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 29,
+              marginBottom: 6,
+            }}
+          />
+        ) : (
+          <Ionicons
+            name="person-circle-outline"
+            size={60}
+            color="#bbb"
+            style={{ marginBottom: 6 }}
+          />
+        )}
+
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "#222" }}>
+          {opponentName || "상대방"}
+        </Text>
+      </TouchableOpacity>
+
+      {/* 메시지 리스트 */}
       <FlatList
         data={messages}
         keyExtractor={(item, index) => (item.id ?? index).toString()}
         renderItem={renderItem}
         contentContainerStyle={{
-          padding: 15,
+          paddingHorizontal: 15,
+          paddingTop: 5,
+          paddingBottom: 10,
         }}
-        ListHeaderComponent={
-          messages.length === 0 ? (
-            <View style={{ marginBottom: 20 }}>
-              <Text
-                style={{
-                  color: "#999",
-                  fontSize: 12,
-                  lineHeight: 18,
-                  textAlign: "center",
-                }}
-              >
-                상대방과 처음 주고받는 대화입니다{"\n"}
-                친절하고 예의를 지켜 대화해주세요.
-              </Text>
-            </View>
-          ) : null
-        }
       />
 
-      {/* 메시지 입력창 */}
+      {/* 입력창 */}
       <View
         style={{
           flexDirection: "row",

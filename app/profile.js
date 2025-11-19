@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons"; // 🔥 아이콘 추가
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -30,23 +31,22 @@ export default function ProfileScreen() {
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
   const [userInfo, setUserInfo] = useState({ name: "", email: "" });
   const [isMounted, setIsMounted] = useState(true);
-  const [profileImage, setProfileImage] = useState(null); // ✅ 프로필 사진 state 추가
+  const [profileImage, setProfileImage] = useState(null);
   const [userId, setUserId] = useState(null);
 
-  // ✅ 프로필 불러오기
+  // 사용자 정보 + 프로필 불러오기
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const token = await AsyncStorage.getItem("access_token");
         const savedImage = await AsyncStorage.getItem("profile_image");
         const storedUid = await AsyncStorage.getItem("user_id");
+
         if (storedUid) setUserId(storedUid);
-        if (savedImage) setProfileImage(savedImage); // ✅ 저장된 이미지 로드
+        if (savedImage) setProfileImage(savedImage);
 
         if (!token) {
-          if (isMounted) {
-            router.replace("/");
-          }
+          if (isMounted) router.replace("/");
           return;
         }
 
@@ -61,11 +61,9 @@ export default function ProfileScreen() {
             setProfileImage(data.profile_image);
             await AsyncStorage.setItem("profile_image", data.profile_image);
           }
-        } else {
-          console.warn("❌ 사용자 정보 불러오기 실패:", data);
         }
       } catch (err) {
-        console.error("❌ 네트워크 오류:", err);
+        console.error(err);
       }
     };
 
@@ -73,6 +71,7 @@ export default function ProfileScreen() {
     return () => setIsMounted(false);
   }, [isMounted]);
 
+  // 🔥 프로필 업로드 함수 그대로 유지
   const uploadProfileImage = async (uri) => {
     try {
       const uid = userId ?? (await AsyncStorage.getItem("user_id"));
@@ -82,6 +81,7 @@ export default function ProfileScreen() {
       const extMatch = /\.(\w+)$/.exec(filename);
       const ext = extMatch ? extMatch[1].toLowerCase() : "jpg";
       const formData = new FormData();
+
       formData.append("file", {
         uri,
         name: filename,
@@ -93,32 +93,21 @@ export default function ProfileScreen() {
         body: formData,
       });
 
-      if (!res.ok) {
-        const body = await res.text();
-        console.warn("❌ 프로필 업로드 실패:", body);
-        return null;
-      }
+      if (!res.ok) return null;
 
       const body = await res.json();
       return body.url;
     } catch (err) {
-      console.error("❌ 프로필 업로드 오류:", err);
+      console.error(err);
       return null;
     }
   };
 
-  // ✅ 프로필 사진 선택 함수
   const pickProfileImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("권한 필요", "갤러리 접근 권한이 필요합니다.");
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
-      aspect: [1, 1], // 정사각형 자르기
+      aspect: [1, 1],
       quality: 0.8,
     });
 
@@ -127,60 +116,56 @@ export default function ProfileScreen() {
       const uploadedUrl = await uploadProfileImage(uri);
       const finalUri = uploadedUrl ?? uri;
       setProfileImage(finalUri);
-      await AsyncStorage.setItem("profile_image", finalUri); // ✅ 로컬 저장
-      console.log("🖼️ 프로필 이미지 저장됨:", finalUri);
+      await AsyncStorage.setItem("profile_image", finalUri);
     }
   };
 
-  // ✅ 로그아웃 기능 (전체 스토리지 초기화)
-  // ✅ 로그아웃 기능 (선택 삭제 방식)
   const handleLogout = async () => {
     try {
-      // 로그인 관련 키만 삭제
       await AsyncStorage.multiRemove([
         "access_token",
         "refresh_token",
         "username",
         "name",
-    ]);
+      ]);
 
       setUserInfo({ name: "", email: "" });
-      // 프로필 이미지는 유지, categories도 그대로 남음
 
       Alert.alert("로그아웃 완료", "로그인 화면으로 이동합니다.", [
         { text: "확인", onPress: () => router.replace("/") },
       ]);
     } catch (err) {
-      console.error("❌ 로그아웃 오류:", err);
-      Alert.alert("오류", "로그아웃 중 문제가 발생했습니다.");
+      console.error(err);
     }
   };
-
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        {/* 상단 프로필 */}
+        {/* ---------- 프로필 섹션 ---------- */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.profileImage}
-              />
+            {profileImage && profileImage.trim() !== "" ? (
+              <Image source={{ uri: profileImage }} style={styles.profileImage} />
             ) : (
-              <View style={styles.profileImagePlaceholder} />
+              <Ionicons
+                name="person-circle-outline"
+                size={100}
+                color="#bbb"
+                style={{ marginBottom: 0 }}
+              />
             )}
 
             <TouchableOpacity style={styles.editIcon} onPress={pickProfileImage}>
               <PencilIcon width={18} height={18} stroke="#333" />
             </TouchableOpacity>
           </View>
+
           <Text style={styles.name}>{userInfo.name || "???"}</Text>
           <Text style={styles.email}>{userInfo.email || " "}</Text>
         </View>
 
-        {/* 설정 */}
+        {/* ---------- 나머지 설정/메뉴 영역 동일 ---------- */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>설정</Text>
           <View style={styles.menuCard}>
@@ -207,7 +192,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* 계정 */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>계정</Text>
           <View style={styles.menuCard}>
@@ -242,16 +226,16 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
   },
   profileImageContainer: { position: "relative", marginBottom: 15 },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
   profileImagePlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
     backgroundColor: "#e9e9e9",
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
   },
   editIcon: {
     position: "absolute",
