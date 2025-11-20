@@ -1,11 +1,11 @@
-import { Ionicons } from "@expo/vector-icons"; // 🔥 기본 아이콘
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "expo-image"; // 🔥 Expo Image
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Text,
   TouchableOpacity,
   View,
@@ -63,10 +63,9 @@ export default function MyProfile() {
   if (!posts || !user)
     return <ActivityIndicator style={{ marginTop: 40 }} size="large" />;
 
-  const finalName =
-    localName || user.real_name || user.name || "사용자";
+  const finalName = localName || user.real_name || user.name || "사용자";
 
-  // 🔥 프로필 이미지 여부 체크 (null, undefined, 빈 문자열 모두 처리)
+  // 프로필 이미지 준비
   const profileImg =
     user.profile_image && user.profile_image !== "" ? user.profile_image : null;
 
@@ -80,9 +79,7 @@ export default function MyProfile() {
     >
       <View style={{ height: 20 }} />
 
-      {/* ================================
-          프로필 영역
-      ================================= */}
+      {/* 프로필 영역 */}
       <View
         style={{
           paddingHorizontal: 22,
@@ -94,7 +91,7 @@ export default function MyProfile() {
       >
         {profileImg ? (
           <Image
-            source={{ uri: profileImg }}
+            source={profileImg}
             style={{
               width: 90,
               height: 90,
@@ -102,9 +99,10 @@ export default function MyProfile() {
               marginRight: 22,
               backgroundColor: "#eee",
             }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
           />
         ) : (
-          // 🔥 기본 아이콘
           <Ionicons
             name="person-circle-outline"
             size={90}
@@ -132,9 +130,7 @@ export default function MyProfile() {
         내가 올린 게시물
       </Text>
 
-      {/* ================================
-          게시물 그리드
-      ================================= */}
+      {/* 게시물 그리드 */}
       <FlatList
         numColumns={2}
         data={posts}
@@ -167,13 +163,15 @@ export default function MyProfile() {
           >
             {Array.isArray(item.images) && item.images.length > 0 ? (
               <Image
-                source={{ uri: item.images[0] }}
+                source={item.images[0]}
                 style={{
                   width: "100%",
                   height: 170,
                   borderRadius: 10,
                   backgroundColor: "#eee",
                 }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
               />
             ) : (
               <View

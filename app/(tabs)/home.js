@@ -11,7 +11,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
-  Image,
   Modal,
   RefreshControl,
   SafeAreaView,
@@ -23,6 +22,7 @@ import {
   View
 } from "react-native";
 
+import { Image } from "expo-image"; // 🔥 Expo Image 추가
 import brandsData from "../../assets/data/slowfashion_brands.json";
 
 
@@ -68,11 +68,9 @@ export default function HomeScreen() {
   const [loadingNews, setLoadingNews] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 🎯 likedBrands → 절대 undefined 방지 위해 초기값은 빈 배열
   const [likedBrands, setLikedBrands] = useState([]);
   const [likedPopupVisible, setLikedPopupVisible] = useState(false);
 
-  // 브랜드 1시간 로테이션
   const [displayBrands, setDisplayBrands] = useState([]);
 
   // 로딩 애니메이션
@@ -105,7 +103,7 @@ export default function HomeScreen() {
 
 
   // =========================
-  // SERVER → 좋아요 브랜드 로드 (🔥 핵심 수정됨)
+  // SERVER → 좋아요 브랜드 로드
   // =========================
   useEffect(() => {
     const loadLikedFromServer = async () => {
@@ -125,7 +123,6 @@ export default function HomeScreen() {
 
         const data = await res.json();
 
-        // 🔥 서버 응답 모양에 상관없이 배열로 강제 변환
         const list =
           Array.isArray(data)
             ? data
@@ -136,7 +133,7 @@ export default function HomeScreen() {
         setLikedBrands(list);
       } catch (err) {
         console.log("좋아요 브랜드 로드 실패:", err);
-        setLikedBrands([]); // fallback
+        setLikedBrands([]);
       }
     };
 
@@ -144,49 +141,47 @@ export default function HomeScreen() {
   }, []);
 
 
-
   // =========================
-  // 토글 좋아요 (프론트 저장)
+  // 좋아요 토글
   // =========================
   const toggleLike = async (name) => {
-  const myId = await AsyncStorage.getItem("user_id");
-  const token = await AsyncStorage.getItem("access_token");
+    const myId = await AsyncStorage.getItem("user_id");
+    const token = await AsyncStorage.getItem("access_token");
 
-  const already = likedBrands.includes(name);
+    const already = likedBrands.includes(name);
 
-  if (already) {
-    await fetch(`${BASE_URL}/v1/brands/like`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ user_id: myId, brand_name: name }),
-    });
+    if (already) {
+      await fetch(`${BASE_URL}/v1/brands/like`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: myId, brand_name: name }),
+      });
 
-    setLikedBrands(likedBrands.filter((n) => n !== name));
-  } else {
-    await fetch(`${BASE_URL}/v1/brands/like`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ user_id: myId, brand_name: name }),
-    });
+      setLikedBrands(likedBrands.filter((n) => n !== name));
+    } else {
+      await fetch(`${BASE_URL}/v1/brands/like`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: myId, brand_name: name }),
+      });
 
-    setLikedBrands([...likedBrands, name]);
-  }
-};
+      setLikedBrands([...likedBrands, name]);
+    }
+  };
 
 
   // =========================
-  // 좋아요한 브랜드 리스트 필터
+  // 필터된 브랜드 리스트
   // =========================
   const likedBrandList = brandsData.brands.filter((b) =>
     likedBrands.includes(b.name)
   );
-
 
 
   // =========================
@@ -251,7 +246,7 @@ export default function HomeScreen() {
 
 
   // =========================
-  // 캘린더 & 전체 이벤트
+  // 캘린더 로드
   // =========================
   const loadCalendarPreview = async () => {
     if (!userId) return;
@@ -268,7 +263,6 @@ export default function HomeScreen() {
       );
 
       const data = await res.json();
-
 
       const formatted = {};
       const wearDates = Array.isArray(data.wear) ? data.wear : [];
@@ -335,7 +329,6 @@ export default function HomeScreen() {
   };
 
 
-  // 뉴스 자동 새로고침 (12h)
   useEffect(() => {
     if (!userId) return;
 
@@ -346,7 +339,6 @@ export default function HomeScreen() {
   }, [userId]);
 
 
-  // 랜덤 셔플
   useEffect(() => {
     const interval = setInterval(() => {
       setNews((current) => [...current].sort(() => Math.random() - 0.5));
@@ -356,7 +348,7 @@ export default function HomeScreen() {
 
 
   // =========================
-  // 브랜드 1시간마다 3개 변경
+  // 브랜드 로테이션
   // =========================
   useEffect(() => {
     const updateBrands = () => {
@@ -379,7 +371,7 @@ export default function HomeScreen() {
 
 
   // =========================
-  // Focus 시 최신 데이터 로드
+  // Focus 시 로딩
   // =========================
   useFocusEffect(
     useCallback(() => {
@@ -393,7 +385,7 @@ export default function HomeScreen() {
 
 
   // =========================
-  // 화면 당겨서 새로고침
+  // Pull refresh
   // =========================
   const onRefresh = async () => {
     setRefreshing(true);
@@ -510,8 +502,10 @@ export default function HomeScreen() {
             {closetItems.map((cloth) => (
               <Image
                 key={cloth.id}
-                source={{ uri: `${BASE_URL}/uploads/clothes/${cloth.image_path}` }}
+                source={`${BASE_URL}/uploads/clothes/${cloth.image_path}`}
                 style={styles.clothImg}
+                contentFit="cover"
+                cachePolicy="memory-disk"
               />
             ))}
           </ScrollView>
@@ -651,9 +645,10 @@ export default function HomeScreen() {
                 <View key={idx} style={styles.brandCard}>
                   <TouchableOpacity onPress={() => openLink(brand.url)}>
                     <Image
-                      source={{ uri: brand.image }}
+                      source={brand.image}
                       style={styles.brandImage}
-                      resizeMode="contain"
+                      contentFit="contain"
+                      cachePolicy="memory-disk"
                     />
                     <Text style={styles.brandName}>{brand.name}</Text>
                     <Text style={styles.brandDesc} numberOfLines={2}>
@@ -713,10 +708,11 @@ export default function HomeScreen() {
                         onPress={() => openLink(brand.url)}
                         style={styles.likedBrandRow}
                       >
-
                         <Image
-                          source={{ uri: brand.image }}
+                          source={brand.image}
                           style={styles.likedBrandImage}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
                         />
 
                         <View style={{ flex: 1, marginLeft: 10 }}>
@@ -747,7 +743,6 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
 
 
       {/* 캘린더 상세 모달 */}
@@ -788,8 +783,10 @@ export default function HomeScreen() {
                         <View style={styles.clothRow}>
                           {event.clothes.image_url && (
                             <Image
-                              source={{ uri: event.clothes.image_url }}
+                              source={event.clothes.image_url}
                               style={styles.eventImage}
+                              contentFit="cover"
+                              cachePolicy="memory-disk"
                             />
                           )}
                           <Text style={styles.clothName}>{event.clothes.name}</Text>
@@ -803,7 +800,6 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
 
 
     </SafeAreaView>
