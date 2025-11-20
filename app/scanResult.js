@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   SafeAreaView,
@@ -12,7 +13,10 @@ import {
 } from 'react-native';
 
 // 👇 1. (NEW) 방금 만든 '설명' 파일을 import 합니다.
-import { careLabelDescriptions } from './util/careLabelDescriptions';
+import { careLabelInfo, defaultCareLabelInfo } from './util/careLabelDescriptions';
+
+const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? '').toString().trim();
+const BASE_URL = RAW_BASE_URL.replace(/\/+$/, '');
 
 // ... (COLORS 배열은 동일) ...
 const COLORS = [
@@ -25,6 +29,10 @@ export default function ScanResultScreen() {
   const { imageUri, detections: detectionsString } = params;
   const router = useRouter(); 
   const [imageLayout, setImageLayout] = useState({ width: 0, height: 0 });
+  const [geminiGuide, setGeminiGuide] = useState(null);
+  const [geminiSummary, setGeminiSummary] = useState('');
+  const [geminiError, setGeminiError] = useState('');
+  const [isLoadingGemini, setIsLoadingGemini] = useState(false);
 
   let detections = [];
   try {
@@ -39,6 +47,89 @@ export default function ScanResultScreen() {
   const onManualSelect = () => {
     router.push('/carelabel');
   };
+
+  useEffect(() => {
+    if (!detections.length) {
+      setGeminiGuide(null);
+      setGeminiSummary('');
+      setGeminiError('');
+      setIsLoadingGemini(false);
+      return;
+    }
+
+    if (!BASE_URL) {
+      setGeminiGuide(null);
+      setGeminiSummary('');
+      setGeminiError('서버 주소가 설정되지 않았어요. EXPO_PUBLIC_BASE_URL을 확인해 주세요.');
+      setIsLoadingGemini(false);
+      return;
+    }
+
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchGeminiSummary = async () => {
+      try {
+        setIsLoadingGemini(true);
+        setGeminiGuide(null);
+        setGeminiError('');
+
+        const payload = {
+          detections: detections.map((item) => {
+            const info = careLabelInfo[item.class_name] || defaultCareLabelInfo;
+            return {
+              class_name: item.class_name,
+              description: info.description,
+              confidence: item.confidence,
+            };
+          }),
+        };
+
+        const response = await fetch(`${BASE_URL}/laundry/explain`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.detail || 'Gemini 응답 실패');
+        }
+        if (isMounted) {
+          const summaryPayload = data?.summary;
+          if (summaryPayload && typeof summaryPayload === 'object' && !Array.isArray(summaryPayload)) {
+            setGeminiGuide(summaryPayload);
+            setGeminiSummary('');
+          } else if (typeof summaryPayload === 'string') {
+            setGeminiGuide(null);
+            setGeminiSummary(summaryPayload.trim());
+          } else {
+            setGeminiGuide(null);
+            setGeminiSummary('');
+          }
+          setGeminiError('');
+        }
+      } catch (error) {
+        if (isMounted) {
+          if (error?.name === 'AbortError') return;
+          setGeminiGuide(null);
+          setGeminiSummary('');
+          setGeminiError(error?.message || 'Gemini 요약을 불러오지 못했어요.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingGemini(false);
+        }
+      }
+    };
+
+    fetchGeminiSummary();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [detectionsString, BASE_URL]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -94,10 +185,7 @@ export default function ScanResultScreen() {
             </Text>
           ) : (
             detections.map((item, index) => {
-              
-              // 👇 2. (NEW) 클래스 이름으로 '설명'을 조회합니다.
-              const description = careLabelDescriptions[item.class_name] || careLabelDescriptions.default;
-
+              const info = careLabelInfo[item.class_name] || defaultCareLabelInfo;
               return (
                 <View 
                   key={index} 
@@ -106,12 +194,21 @@ export default function ScanResultScreen() {
                     { borderLeftColor: COLORS[index % COLORS.length], borderLeftWidth: 5 }
                   ]}
                 >
-                  {/* 👇 3. (NEW) 텍스트를 담을 컨테이너와 '설명' 텍스트를 추가합니다. */}
-                  <View style={styles.textContainer}>
-                    <Text style={styles.className}>{item.class_name}</Text>
-                    <Text style={styles.description}>{description}</Text>
+                  <View style={styles.resultContent}>
+                    {info.image ? (
+                      <Image source={info.image} style={styles.resultIcon} />
+                    ) : (
+                      <View style={styles.resultIconPlaceholder}>
+                        <Text style={styles.resultIconPlaceholderText}>?</Text>
+                      </View>
+                    )}
+                    {/* 👇 3. (NEW) 텍스트를 담을 컨테이너와 '설명' 텍스트를 추가합니다. */}
+                    <View style={styles.textContainer}>
+                      <Text style={styles.className}>{item.class_name}</Text>
+                      <Text style={styles.description}>{info.description}</Text>
+                    </View>
                   </View>
-                  
+
                   <Text style={styles.confidence}>
                     {Math.round(item.confidence * 100)}%
                   </Text>
@@ -120,6 +217,65 @@ export default function ScanResultScreen() {
             })
           )}
         </View>
+
+        {detections.length > 0 && (
+          <View style={styles.geminiContainer}>
+            <View style={styles.geminiHeader}>
+              <Text style={styles.geminiTitle}>세탁 요약 (Gemini)</Text>
+              <Text style={styles.geminiBadge}>AI</Text>
+            </View>
+
+            {isLoadingGemini ? (
+              <View style={styles.geminiLoading}>
+                <ActivityIndicator color="#2e7d32" />
+                <Text style={styles.geminiLoadingText}>세탁 요약을 불러오는 중...</Text>
+              </View>
+            ) : geminiError ? (
+              <Text style={styles.geminiError}>{geminiError}</Text>
+            ) : geminiGuide ? (
+              <>
+                {geminiGuide.headline ? (
+                  <Text style={styles.geminiHeadline}>{geminiGuide.headline}</Text>
+                ) : null}
+
+                {geminiGuide.alert ? (
+                  <View style={styles.geminiAlert}>
+                    <Text style={styles.geminiAlertText}>{geminiGuide.alert}</Text>
+                  </View>
+                ) : null}
+
+                {Array.isArray(geminiGuide.steps) && geminiGuide.steps.length > 0 ? (
+                  <View style={styles.geminiSteps}>
+                    {geminiGuide.steps.map((step, idx) => (
+                      <View key={`step-${idx}`} style={styles.geminiStepRow}>
+                        <View style={styles.geminiStepBadge}>
+                          <Text style={styles.geminiStepBadgeText}>{idx + 1}</Text>
+                        </View>
+                        <View style={styles.geminiStepContent}>
+                          <Text style={styles.geminiStepTitle}>{step.title}</Text>
+                          <Text style={styles.geminiStepDescription}>{step.description}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                {geminiGuide.tips ? (
+                  <View style={styles.geminiTips}>
+                    <Text style={styles.geminiTipsLabel}>추가 팁</Text>
+                    <Text style={styles.geminiTipsText}>{geminiGuide.tips}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : geminiSummary ? (
+              <Text style={styles.geminiSummary}>{geminiSummary}</Text>
+            ) : (
+              <Text style={styles.geminiLoadingText}>
+                요약 결과가 비어 있어요. 잠시 후 다시 시도해 주세요.
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* --- "직접 선택하기" 버튼 (동일) --- */}
         <TouchableOpacity
@@ -169,10 +325,36 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   
+  resultContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  resultIcon: {
+    width: 52,
+    height: 52,
+    resizeMode: 'contain',
+    marginRight: 12,
+  },
+  resultIconPlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  resultIconPlaceholderText: {
+    fontSize: 18,
+    color: '#999',
+    fontWeight: 'bold',
+  },
+
   // --- 👇 4. (NEW) 텍스트 관련 스타일 추가/수정 ---
   textContainer: {
     flex: 1, // (중요) 퍼센트 텍스트를 제외한 모든 공간을 차지
-    marginRight: 10, // 퍼센트 텍스트와의 간격
   },
   className: { 
     fontSize: 16, 
@@ -190,6 +372,136 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   // --- ----------------------------------- ---
+
+  geminiContainer: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 18,
+    marginTop: 10,
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: '#dbe5d5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  geminiTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1b5e20',
+  },
+  geminiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  geminiBadge: {
+    fontSize: 13,
+    color: '#1b5e20',
+    backgroundColor: '#e1f5e0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontWeight: 'bold',
+  },
+  geminiHeadline: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2e7d32',
+    marginBottom: 10,
+    lineHeight: 22,
+  },
+  geminiSummary: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: '#333',
+  },
+  geminiAlert: {
+    backgroundColor: '#eff8e7',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  geminiAlertText: {
+    color: '#4a7a1f',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  geminiSteps: {
+    borderTopWidth: 1,
+    borderTopColor: '#eef2ec',
+    paddingTop: 10,
+    marginBottom: 10,
+  },
+  geminiStepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f2f4f1',
+  },
+  geminiStepBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#e0f0e5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    marginTop: 4,
+  },
+  geminiStepBadgeText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+  },
+  geminiStepContent: {
+    flex: 1,
+  },
+  geminiStepTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  geminiStepDescription: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 21,
+  },
+  geminiTips: {
+    borderRadius: 8,
+    backgroundColor: '#f6faf4',
+    padding: 12,
+  },
+  geminiTipsLabel: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#5b7d4e',
+    marginBottom: 4,
+  },
+  geminiTipsText: {
+    fontSize: 14,
+    color: '#4f5b46',
+    lineHeight: 20,
+  },
+  geminiLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  geminiLoadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#555',
+  },
+  geminiError: {
+    fontSize: 14,
+    color: '#d32f2f',
+  },
 
   manualButton: {
     backgroundColor: '#2e7d32',

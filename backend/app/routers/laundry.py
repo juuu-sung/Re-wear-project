@@ -1,9 +1,13 @@
 # /backend/app/routers/laundry.py (새 파일 예시)
 
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from ultralytics import YOLO
 import io
 from PIL import Image
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+from app.services.gemini_client import summarize_care_labels
 
 router = APIRouter()
 
@@ -18,6 +22,33 @@ try:
 except Exception as e:
     print(f"YOLOv8 모델 로드 실패: {e}")
     model = None
+
+
+class DetectionPayload(BaseModel):
+    class_name: str
+    description: Optional[str] = None
+    confidence: Optional[float] = None
+
+
+class ExplainRequest(BaseModel):
+    detections: List[DetectionPayload]
+
+
+class GuideStep(BaseModel):
+    title: str
+    description: str
+
+
+class GeminiSummary(BaseModel):
+    headline: str
+    alert: Optional[str] = None
+    steps: List[GuideStep] = Field(default_factory=list)
+    tips: Optional[str] = None
+    raw_text: Optional[str] = None
+
+
+class ExplainResponse(BaseModel):
+    summary: GeminiSummary
 
 
 @router.post("/scan", summary="케어라벨 스캔 API")
@@ -67,4 +98,15 @@ async def scan_care_label(file: UploadFile = File(...)):
     except Exception as e:
         print(f"모델 예측 오류: {e}")
         return {"error": f"모델 예측 중 오류 발생: {e}"}, 500
+
+
+@router.post("/explain", response_model=ExplainResponse, summary="Gemini 기반 세탁 요약")
+async def explain_care_label(payload: ExplainRequest):
+    if not payload.detections:
+        raise HTTPException(status_code=400, detail="detections가 비어 있습니다.")
+    try:
+        summary = await summarize_care_labels([d.model_dump() for d in payload.detections])
+        return {"summary": summary}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 # ----------------------------------------------------
