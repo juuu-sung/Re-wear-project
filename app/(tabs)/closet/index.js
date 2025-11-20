@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { Image } from "expo-image"; // 🔥 Expo Image 추가
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
@@ -27,7 +28,7 @@ export default function ClosetMain() {
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
 
-  // 사용자 이름 + 카테고리 불러오기
+  // 사용자 이름 + 카테고리
   useEffect(() => {
     const init = async () => {
       try {
@@ -60,23 +61,18 @@ export default function ClosetMain() {
       const res = await fetch(`${BASE_URL}/clothes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = await res.json();
 
       if (res.ok) {
-        // 서버가 내려주는 필드: id, name, category, image_path, material, washing_info
         const filtered = data.filter((i) => i.category === selected);
         setItems(filtered);
-      } else {
-        console.warn("옷 목록 응답 오류:", data);
       }
-    } catch (err) {
-      console.error("서버 연결 오류:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // 탭 변경 시 / 포커스 시 새로고침
   useEffect(() => {
     loadClothes();
   }, [selected]);
@@ -97,7 +93,7 @@ export default function ClosetMain() {
     }
   }, [selected]);
 
-  // 카테고리 추가/관리(기존 로직 유지)
+  // 카테고리 추가
   const addCategory = () => {
     Alert.prompt("새 옷장 추가", "추가할 옷장 이름을 입력하세요.", async (text) => {
       const name = text?.trim();
@@ -113,11 +109,13 @@ export default function ClosetMain() {
     });
   };
 
+  // 카테고리 롱프레스
   const handleCategoryLongPress = (name) => {
     if (["상의", "하의", "아우터"].includes(name)) {
       Alert.alert("기본 옷장은 수정/삭제할 수 없습니다.");
       return;
     }
+
     Alert.alert(`"${name}" 옷장 관리`, "원하는 작업을 선택하세요.", [
       {
         text: "이름 수정",
@@ -135,6 +133,7 @@ export default function ClosetMain() {
               const updated = categories.map((c) => (c === name ? newName : c));
               setCategories(updated);
               await AsyncStorage.setItem("categories", JSON.stringify(updated));
+
               if (selected === name) setSelected(newName);
               Alert.alert("수정 완료", `"${name}" → "${newName}"으로 변경되었습니다.`);
             }
@@ -148,6 +147,7 @@ export default function ClosetMain() {
           const updated = categories.filter((c) => c !== name);
           setCategories(updated);
           await AsyncStorage.setItem("categories", JSON.stringify(updated));
+
           if (selected === name) setSelected("상의");
           Alert.alert("삭제 완료", `"${name}" 옷장이 삭제되었습니다.`);
         },
@@ -172,7 +172,7 @@ export default function ClosetMain() {
       </View>
       <View style={styles.headerDivider} />
 
-      {/* 카테고리 탭 */}
+      {/* 카테고리 */}
       <View style={styles.categoryContainer}>
         <ScrollView
           horizontal
@@ -198,7 +198,7 @@ export default function ClosetMain() {
         <View style={styles.divider} />
       </View>
 
-      {/* 목록 */}
+      {/* 옷 리스트 */}
       {loading ? (
         <ActivityIndicator size="large" color="#000" style={{ marginTop: 40 }} />
       ) : items.length > 0 ? (
@@ -223,7 +223,6 @@ export default function ClosetMain() {
                       name: item.name,
                       category: item.category,
                       image: `${BASE_URL}/uploads/clothes/${item.image_path}`,
-                      // ✅ detail로 소재/세탁법 함께 전달
                       material: item.material ?? "",
                       washing: item.washing_info ?? "",
                       materialBreakdown: item.material_breakdown ?? "",
@@ -232,12 +231,18 @@ export default function ClosetMain() {
                 }
               >
                 {imgUri ? (
-                  <Image source={{ uri: imgUri }} style={styles.image} />
+                  <Image
+                    source={imgUri}
+                    style={styles.image}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
                 ) : (
                   <View style={[styles.image, { justifyContent: "center", alignItems: "center" }]}>
                     <Ionicons name="shirt-outline" size={40} color="#ccc" />
                   </View>
                 )}
+
                 <Text style={styles.name}>{item.name}</Text>
               </TouchableOpacity>
             );
@@ -276,6 +281,7 @@ const styles = StyleSheet.create({
   },
   headerText: { fontSize: 26, fontWeight: "800", color: "#2e7d32" },
   headerDivider: { borderBottomWidth: 1, borderColor: "#ddd" },
+
   categoryContainer: { marginTop: 8, marginBottom: 10 },
   tabRow: {
     flexDirection: "row",
@@ -284,6 +290,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   divider: { borderBottomWidth: 1, borderColor: "#ddd", marginTop: 4 },
+
   tab: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -302,6 +309,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 5,
   },
+
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -321,15 +329,11 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+
   image: { width: "100%", height: 150, borderRadius: 8 },
-  name: {
-    textAlign: "center",
-    fontWeight: "600",
-    fontSize: 15,
-    marginTop: 8,
-    color: "#000",
-  },
+  name: { textAlign: "center", fontWeight: "600", fontSize: 15, marginTop: 8, color: "#000" },
   emptyText: { textAlign: "center", color: "#777", fontSize: 16 },
+
   fabContainer: { position: "absolute", bottom: 30, right: 25, zIndex: 999, elevation: 10 },
   fab: {
     backgroundColor: "#2e7d32",
