@@ -15,10 +15,37 @@ console.log("✅ 최종 BASE_URL:", BASE_URL);
 export default function SignUpScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('010-');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handlePhoneChange = (text) => {
+    // 1. 숫자만 남기고 다 지움
+    let clean = text.replace(/[^0-9]/g, '');
+
+    // 2. '010'으로 시작하지 않으면 강제로 '010' 고정 (지우기 방지)
+    if (!clean.startsWith('010')) {
+      clean = '010';
+    }
+
+    // 3. 최대 11자리까지만 입력 가능 (010 + 8자리)
+    if (clean.length > 11) {
+      clean = clean.substring(0, 11);
+    }
+
+    // 4. 하이픈(-) 자동 추가 로직
+    let formatted = clean;
+    if (clean.length > 3) {
+      formatted = `${clean.slice(0, 3)}-${clean.slice(3)}`;
+    }
+    if (clean.length > 7) {
+      formatted = `${formatted.slice(0, 8)}-${formatted.slice(8)}`;
+    }
+
+    setPhoneNumber(formatted);
+  };
 
   // ✅ 앱 시작 시 서버 연결 확인 (네트워크 체크)
   useEffect(() => {
@@ -37,10 +64,14 @@ export default function SignUpScreen() {
   // 이메일/비번 검증
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // 영문+숫자, 8자 이상
+const PHONE_RE = /^010-\d{4}-\d{4}$/;
 
-  function validateInputs({ name, email, password, confirmPassword }) {
-    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+  function validateInputs({ name, email, password, confirmPassword , phoneNumber}) {
+    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim() || !phoneNumber.trim()) {
       return "모든 항목을 입력해주세요.";
+    }
+    if (!PHONE_RE.test(phoneNumber)) {
+      return "전화번호 형식이 올바르지 않습니다. (010-0000-0000)";
     }
     if (!EMAIL_RE.test(email.trim())) {
       return "이메일 형식이 올바르지 않습니다.";
@@ -98,7 +129,7 @@ const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // 영문+숫자, 8자 이상
 
   // ✅ 회원가입 요청
   const handleSignUp = async () => {
-    const errMsg = validateInputs({ name, email, password, confirmPassword });
+    const errMsg = validateInputs({ name, email, password, confirmPassword, phoneNumber });
     if (errMsg) {
       Alert.alert("입력 오류", errMsg);
       return;
@@ -113,6 +144,7 @@ const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // 영문+숫자, 8자 이상
           name: name.trim(),
           email: email.trim().toLowerCase(),
           password,
+          phone_number: phoneNumber
         }),
       });
   
@@ -157,6 +189,14 @@ const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // 영문+숫자, 8자 이상
               value={name}
               onChangeText={setName}
               placeholder="이름을 입력하세요"
+            />
+            <LabeledInput
+              label="전화번호"
+              placeholder="010-1234-5678"
+              value={phoneNumber}
+              onChangeText={handlePhoneChange}
+              keyboardType="number-pad"
+              maxLength={13}
             />
             <LabeledInput
               label="아이디 (이메일)"

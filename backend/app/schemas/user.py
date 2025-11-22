@@ -17,6 +17,7 @@ class UserOut(BaseModel):
     id: int
     email: EmailStr
     name: str | None = None
+    phone_number: Optional[str] = None
     profile_image: Optional[str] = None
     class Config:
         from_attributes = True  # SQLAlchemy 객체 직렬화 허용
@@ -26,6 +27,7 @@ class RegisterIn(BaseModel):
     name: constr(strip_whitespace=True, min_length=1, max_length=50)
     email: EmailStr
     password: constr(min_length=8, max_length=72)
+    phone_number: Optional[str] = None
 
 class TokenOut(BaseModel):
     access_token: str
