@@ -36,6 +36,7 @@ def create_user(db: Session, *, user_in: RegisterIn, kakao_id: int = None) -> Us
         email=user_in.email,
         name=user_in.name,
         hashed_password=hashed_password, # ✅ 암호화된 비밀번호 저장
+        phone_number=user_in.phone_number,
         kakao_id=kakao_id               # ✅ kakao_id 저장
     )
 
