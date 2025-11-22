@@ -24,13 +24,21 @@ os.environ["PASSLIB_DISABLE_OS_CRYPTO"] = "1"
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(
-    schemes=["pbkdf2_sha256"],
+    schemes=["bcrypt", "pbkdf2_sha256"], 
     deprecated="auto"
 )
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 3  # 3시간
+
+
+def verify_password(plain_password, hashed_password):
+    """
+    입력받은 평문 비밀번호(plain_password)와 
+    DB에 저장된 해시 비밀번호(hashed_password)가 일치하는지 확인
+    """
+    return pwd_context.verify(plain_password, hashed_password)
 
 # ==========================================================
 # Helper Functions
