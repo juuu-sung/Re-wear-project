@@ -1,15 +1,66 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from sqlalchemy import or_, and_
+import uuid
+import os
 
 from app.db import get_db
 from app.models.chat import ChatRoom, ChatMessage
+from app.models.user import User
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
+
 # =================================================================
-# 1) 기존 DM 방 조회 또는 생성
+# 업로드 폴더 (자동 생성)
+# =================================================================
+UPLOAD_DIR = "uploads/chat"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+MAX_VIDEO_SIZE = 50 * 1024 * 1024
+
+IMAGE_TYPES = [
+    "image/jpeg", "image/jpg", "image/png",
+    "image/webp", "image/heic", "image/heif"
+]
+VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/mov"]
+
+
+# =================================================================
+# 0) 업로드 API — 이미지 / 영상 파일 저장
+# =================================================================
+@router.post("/upload")
+async def upload_media(file: UploadFile = File(...)):
+    content = await file.read()
+    size = len(content)
+
+    ext = file.filename.split(".")[-1].lower()
+    filename = f"{uuid.uuid4()}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+
+    # 이미지
+    if file.content_type in IMAGE_TYPES:
+        if size > MAX_IMAGE_SIZE:
+            raise HTTPException(status_code=400, detail="IMAGE_TOO_LARGE")
+
+    # 영상
+    elif file.content_type in VIDEO_TYPES:
+        if size > MAX_VIDEO_SIZE:
+            raise HTTPException(status_code=400, detail="VIDEO_TOO_LARGE")
+
+    else:
+        raise HTTPException(status_code=400, detail="UNSUPPORTED_FILE_TYPE")
+
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    return {"url": f"/static/chat/{filename}"}
+
+
+# =================================================================
+# 1) DM 방 생성 or 가져오기
 # =================================================================
 @router.get("/room")
 def get_or_create_room(user1: int, user2: int, db: Session = Depends(get_db)):
@@ -45,18 +96,45 @@ def get_messages(room_id: int, db: Session = Depends(get_db)):
         .order_by(ChatMessage.created_at.asc())
         .all()
     )
-    return msgs
 
+    # ⭐ 무조건 배열로 변환해서 JSON으로 보냄
+    return [
+        {
+            "id": m.id,
+            "room_id": m.room_id,
+            "sender_id": m.sender_id,
+            "message": m.message,
+            "media_url": m.media_url,
+            "thumbnail_url": m.thumbnail_url,
+            "media_type": m.media_type,
+            "media_urls": m.media_urls,
+            "created_at": m.created_at.isoformat(),
+        }
+        for m in msgs
+    ]
 
 # =================================================================
-# 3) 메시지 전송 API
+# 3) REST 방식 단일 메시지 전송 (프론트에서는 사용 X)
 # =================================================================
 @router.post("/rooms/{room_id}/messages")
-def send_message(room_id: int, sender_id: int, message: str, db: Session = Depends(get_db)):
+def send_message(
+    room_id: int,
+    sender_id: int,
+    message: str = "",
+    media_url: str = None,
+    thumbnail_url: str = None,
+    media_type: str = None,
+    media_urls: list = None,
+    db: Session = Depends(get_db),
+):
     msg = ChatMessage(
         room_id=room_id,
         sender_id=sender_id,
-        message=message,
+        message=message or None,
+        media_url=media_url,
+        thumbnail_url=thumbnail_url,
+        media_type=media_type,
+        media_urls=media_urls,
         created_at=datetime.utcnow(),
     )
     db.add(msg)
@@ -66,100 +144,90 @@ def send_message(room_id: int, sender_id: int, message: str, db: Session = Depen
 
 
 # =================================================================
-# 4) WebSocket 안정 버전
+# 4) WebSocket 메시지 전송 (🔥 핵심 multi-image 지원)
 # =================================================================
 
-active_connections = {}  # {"123": [ws1, ws2]}
+active_connections = {}  # {"room_id": [ws1, ws2]}
 
 @router.websocket("/ws/{room_id}")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    room_id: int,
-    db: Session = Depends(get_db)
-):
+async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = Depends(get_db)):
     await websocket.accept()
     room_key = str(room_id)
 
     if room_key not in active_connections:
         active_connections[room_key] = []
-
     active_connections[room_key].append(websocket)
-    print("WS CONNECTED", room_key)
+
+    print("WS CONNECTED:", room_key)
 
     try:
         while True:
             data = await websocket.receive_json()
 
-            # DB 저장
             msg = ChatMessage(
                 room_id=room_id,
                 sender_id=data.get("sender_id"),
                 message=data.get("message"),
+                media_url=data.get("media_url"),
+                thumbnail_url=data.get("thumbnail_url"),
+                media_type=data.get("media_type"),
+                media_urls=data.get("media_urls"),   # 🔥 multi-image
                 created_at=datetime.utcnow(),
             )
+
             db.add(msg)
             db.commit()
             db.refresh(msg)
 
             payload = {
                 "id": msg.id,
-                "room_id": room_id,
+                "room_id": msg.room_id,
                 "sender_id": msg.sender_id,
                 "message": msg.message,
+                "media_url": msg.media_url,
+                "thumbnail_url": msg.thumbnail_url,
+                "media_type": msg.media_type,
+                "media_urls": msg.media_urls,
                 "created_at": msg.created_at.isoformat(),
             }
 
             # 브로드캐스트
-            for ws in list(active_connections[room_key]):
+            for ws in list(active_connections.get(room_key, [])):
                 try:
                     await ws.send_json(payload)
                 except:
                     active_connections[room_key].remove(ws)
 
     except WebSocketDisconnect:
-        print("WS DISCONNECT", room_key)
+        print("WS DISCONNECT:", room_key)
 
     except Exception as e:
         print("WS ERROR:", e)
 
     finally:
-        print("WS FINALLY CLEANUP", room_key)
-
-        # 이 방에서 제거
         if websocket in active_connections.get(room_key, []):
             active_connections[room_key].remove(websocket)
 
-        # 방이 비었으면 목록 삭제
-        if room_key in active_connections and len(active_connections[room_key]) == 0:
-            del active_connections[room_key]
+        if not active_connections.get(room_key):
+            active_connections.pop(room_key, None)
 
-        # ❌ close() 절대 호출하지 않음!
-        # Starlette가 자동으로 close handshake 처리함
-
+        print("WS FINALLY", room_key)
 
 
 # =================================================================
-# 5) 내 방 목록 (DM 리스트)
+# 5) 내 DM 리스트
 # =================================================================
 @router.get("/my-rooms")
 def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
-    from app.models.user import User
-
     rooms = (
         db.query(ChatRoom)
-        .filter(
-            or_(
-                ChatRoom.user1_id == user_id,
-                ChatRoom.user2_id == user_id
-            )
-        )
+        .filter(or_(ChatRoom.user1_id == user_id, ChatRoom.user2_id == user_id))
         .all()
     )
 
     result = []
     for room in rooms:
         opponent_id = room.user2_id if room.user1_id == user_id else room.user1_id
-
         opponent = db.query(User).filter(User.id == opponent_id).first()
 
         last_msg = (
@@ -173,9 +241,33 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
             "room_id": room.id,
             "opponent_id": opponent_id,
             "opponent_name": opponent.name if opponent else None,
-            "opponent_profile": opponent.profile_image if opponent else None,   # ← 핵심
+            "opponent_profile": opponent.profile_image if opponent else None,
             "last_message": last_msg.message if last_msg else None,
             "updated_at": room.updated_at
         })
 
     return result
+
+# =================================================================
+# 6) 채팅방 삭제 API
+# =================================================================
+@router.delete("/rooms/{room_id}")
+def delete_room(room_id: int, user_id: int, db: Session = Depends(get_db)):
+    # 방 가져오기
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="ROOM_NOT_FOUND")
+
+    # 사용자 권한 체크 (방의 user1 또는 user2만 삭제 가능)
+    if room.user1_id != user_id and room.user2_id != user_id:
+        raise HTTPException(status_code=403, detail="NOT_ALLOWED")
+
+    # 메시지 먼저 삭제
+    db.query(ChatMessage).filter(ChatMessage.room_id == room_id).delete()
+
+    # 방 삭제
+    db.delete(room)
+    db.commit()
+
+    return {"status": "ok", "deleted_room_id": room_id}
+

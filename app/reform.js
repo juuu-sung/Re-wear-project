@@ -24,7 +24,8 @@ export default function ReformScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const [history, setHistory] = useState([]); // 🔥 최근 검색어 5개
+  const [history, setHistory] = useState([]);
+  const [category, setCategory] = useState(""); // 🔥 현재 추천 카테고리
 
   useEffect(() => {
     loadDefault();
@@ -35,12 +36,13 @@ export default function ReformScreen() {
   // ----------------------------------------------------------
   const loadDefault = async () => {
     setLoading(true);
-    const rand = Math.random(); // 매번 다른 요청 만들기
+    const rand = Math.random();
 
     const res = await axios.get(`${BASE_URL}/v1/reform/`, {
       params: { r: rand },
     });
 
+    setCategory(res.data.category || "");
     setVideos(res.data.results || []);
     setNextPageToken(res.data.nextPageToken || null);
     setLoading(false);
@@ -56,7 +58,7 @@ export default function ReformScreen() {
     saveSearchHistory(q);
 
     setLoading(true);
-    const rand = Math.random(); // 검색도 매번 랜덤
+    const rand = Math.random();
 
     const res = await axios.get(`${BASE_URL}/v1/reform/search`, {
       params: { query: q, r: rand },
@@ -78,15 +80,15 @@ export default function ReformScreen() {
   };
 
   // ----------------------------------------------------------
-  // ⭐ 새로고침: 항상 새로운 영상 로드
+  // ⭐ 새로고침
   // ----------------------------------------------------------
   const onRefresh = async () => {
     setRefreshing(true);
 
     if (query.trim()) {
-      await search(); // 검색 상태 → 검색 새로고침
+      await search();
     } else {
-      await loadDefault(); // 기본 상태 → 기본 목록 다시
+      await loadDefault();
     }
 
     setRefreshing(false);
@@ -115,7 +117,7 @@ export default function ReformScreen() {
   const openLink = (url) => Linking.openURL(url);
 
   // ----------------------------------------------------------
-  // ⭐ Skeleton (로딩 시)
+  // ⭐ Skeleton
   // ----------------------------------------------------------
   const SkeletonCard = () => (
     <View style={styles.skeletonCard}>
@@ -138,13 +140,18 @@ export default function ReformScreen() {
         <Text style={styles.header}>리폼/업사이클링</Text>
         <Text style={styles.sub}>검색하실 때 예시에 맞게 입력해주세요!</Text>
 
-        {/* 🔍 검색 UI */}
+        {/* 🔥 추천 카테고리 */}
+        {category !== "" && (
+          <Text style={styles.categoryText}>오늘 추천 카테고리: {category}</Text>
+        )}
+
+        {/* 🔍 검색 */}
         <View style={styles.searchWrap}>
           <TextInput
             placeholder="EX)셔츠로 치마를 만들고 싶다면 셔츠 치마"
             value={query}
             onChangeText={setQuery}
-            onSubmitEditing={search} // 🔥 엔터로 검색
+            onSubmitEditing={search}
             style={styles.input}
           />
           <TouchableOpacity style={styles.searchBtn} onPress={search}>
@@ -207,7 +214,14 @@ export default function ReformScreen() {
 
 const styles = StyleSheet.create({
   header: { fontSize: 26, fontWeight: "800", color: "#23422D" },
-  sub: { fontSize: 13, color: "#777", marginBottom: 16 },
+  sub: { fontSize: 13, color: "#777", marginBottom: 10 },
+
+  categoryText: {
+    fontSize: 14,
+    color: "#23422D",
+    marginBottom: 10,
+    fontWeight: "700",
+  },
 
   searchWrap: { flexDirection: "row", marginBottom: 20 },
   input: {
@@ -225,7 +239,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // 카드
   card: {
     marginBottom: 20,
     backgroundColor: "#fafafa",
@@ -244,7 +257,6 @@ const styles = StyleSheet.create({
     color: "#23422D",
   },
 
-  // 더보기
   moreBtn: {
     marginVertical: 20,
     padding: 12,
@@ -259,7 +271,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Skeleton
   skeletonCard: {
     marginBottom: 20,
     backgroundColor: "#eee",
@@ -280,7 +291,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
 
-  // 최근 검색어
   historyTitle: {
     fontSize: 14,
     fontWeight: "700",

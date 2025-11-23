@@ -2,10 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Easing,
   FlatList,
   Text,
   TouchableOpacity,
@@ -18,120 +20,69 @@ const screenWidth = Dimensions.get("window").width;
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
-export default function CommunityFeed() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
+// ====================================================================
+// 🔥 메모된 PostItem (재렌더링 ZERO)
+// ====================================================================
+const PostItem = React.memo(function PostItem({ item, myUid, router, openSheet }) {
+  const [post, setPost] = useState(item);
+  const [expanded, setExpanded] = useState(false);
 
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [myUid, setMyUid] = useState(null);
+  const lines = post.description.split("\n");
+  const MAX = 3;
+  const visibleLines = expanded ? lines : lines.slice(0, MAX);
 
-  useEffect(() => {
-    const loadMyUid = async () => {
-      const id = await AsyncStorage.getItem("user_id");
-      setMyUid(id);
-    };
-    loadMyUid();
-  }, []);
-
-  const loadPosts = async () => {
-    if (!myUid) return;
-    try {
-      const res = await fetch(`${BASE_URL}/v1/community/posts?user_id=${myUid}`);
-      const data = await res.json();
-      setPosts(data);
-    } catch (err) {
-      console.log("게시물 로딩 오류:", err);
+  const goToProfile = () => {
+    if (String(post.user_id) === String(myUid)) {
+      router.push("/community/profile");
+    } else {
+      router.push({
+        pathname: `/community/users/${post.user_id}`,
+        params: {
+          user_name: post.user_name,
+          profile_image: post.profile_image,
+        },
+      });
     }
-    setLoading(false);
   };
 
-  useEffect(() => {
-  if (myUid) {
-    loadPosts();
-  }
-}, [myUid]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadPosts();
-    setRefreshing(false);
-  };
-
-  // 🔥 PostItem
-  const PostItem = ({ item }) => {
-    const [post, setPost] = useState(item); // 🔥 로컬 상태
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [expanded, setExpanded] = useState(false);
-
-    const lines = post.description.split("\n");
-    const MAX = 3;
-    const visibleLines = expanded ? lines : lines.slice(0, MAX);
-
-    const handleScroll = (event) => {
-      const x = event.nativeEvent.contentOffset.x;
-      const index = Math.round(x / screenWidth);
-      setCurrentIndex(index);
-    };
-
-    const goToProfile = () => {
-      if (!myUid) return;
-
-      if (String(post.user_id) === String(myUid)) {
-        router.push("/community/profile");
-      } else {
-        router.push({
-          pathname: `/community/users/${post.user_id}`,
-          params: {
-            user_name: post.user_name,
-            profile_image: post.profile_image,
-          },
-        });
-      }
-    };
-
-    // 🔥 좋아요 토글 — 로컬 UI + 상위 posts 모두 적용
-    const toggleLike = async () => {
-  if (!myUid) return;
-
-  // 1) 로컬 UI 즉시 반영
-  setPost((prev) => ({
-    ...prev,
-    liked: !prev.liked,
-    like_count: prev.liked ? prev.like_count - 1 : prev.like_count + 1,
-  }));
-
-  try {
-    const res = await fetch(
-      `${BASE_URL}/v1/community/posts/${post.id}/like?user_id=${myUid}`,
-      { method: "POST" }
-    );
-    const data = await res.json();
-
-    // 2) 서버 값으로 동기화
+  const toggleLike = async () => {
     setPost((prev) => ({
       ...prev,
-      liked: data.liked,
-      like_count: data.like_count,
+      liked: !prev.liked,
+      like_count: prev.liked ? prev.like_count - 1 : prev.like_count + 1,
     }));
 
-  } catch (err) {
-    console.log("좋아요 오류:", err);
-  }
-};
+    try {
+      const res = await fetch(
+        `${BASE_URL}/v1/community/posts/${post.id}/like?user_id=${myUid}`,
+        { method: "POST" }
+      );
+      const data = await res.json();
 
+      setPost((prev) => ({
+        ...prev,
+        liked: data.liked,
+        like_count: data.like_count,
+      }));
+    } catch (e) {
+      console.log("좋아요 오류:", e);
+    }
+  };
 
-    return (
-      <View style={{ backgroundColor: "#fff", marginBottom: 30 }}>
-        {/* 프로필 */}
+  return (
+    <View style={{ backgroundColor: "#fff", marginBottom: 30 }}>
+      {/* 상단 프로필 */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          padding: 12,
+          justifyContent: "space-between",
+        }}
+      >
         <TouchableOpacity
           onPress={goToProfile}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            padding: 12,
-          }}
+          style={{ flexDirection: "row", alignItems: "center" }}
         >
           {post.profile_image ? (
             <ExpoImage
@@ -141,18 +92,10 @@ export default function CommunityFeed() {
                 height: 36,
                 borderRadius: 18,
                 marginRight: 10,
-                backgroundColor: "#eee",
               }}
-              contentFit="cover"
-              cachePolicy="immutable"
             />
           ) : (
-            <Ionicons
-              name="person-circle-outline"
-              size={36}
-              color="#bbb"
-              style={{ marginRight: 10 }}
-            />
+            <Ionicons name="person-circle-outline" size={36} color="#bbb" />
           )}
 
           <Text style={{ fontWeight: "700", fontSize: 15 }}>
@@ -160,149 +103,169 @@ export default function CommunityFeed() {
           </Text>
         </TouchableOpacity>
 
-        {/* 이미지 */}
-        {post.images.length > 0 && (
-          <View>
-            <FlatList
-              data={post.images}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleScroll}
-              keyExtractor={(uri, idx) => uri + idx}
-              renderItem={({ item: uri }) => (
-                <TouchableOpacity
-                  onPress={() => router.push(`/community/${post.id}`)}
-                  activeOpacity={1}
-                >
-                  <ExpoImage
-                    source={{ uri }}
-                    style={{
-                      width: screenWidth,
-                      height: 400,
-                    }}
-                    contentFit="cover"
-                    cachePolicy="immutable"
-                  />
-                </TouchableOpacity>
-              )}
-            />
-
-            {post.images.length > 1 && (
-              <View
-                style={{
-                  position: "absolute",
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  flexDirection: "row",
-                  justifyContent: "center",
-                }}
-              >
-                {post.images.map((_, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      marginHorizontal: 3,
-                      backgroundColor:
-                        currentIndex === i
-                          ? "white"
-                          : "rgba(255,255,255,0.4)",
-                    }}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* 좋아요/댓글 */}
-        <View
-          style={{
-            flexDirection: "row",
-            paddingHorizontal: 12,
-            paddingTop: 12,
-          }}
-        >
-          {/* ❤️ 좋아요 */}
-          <TouchableOpacity onPress={toggleLike}>
-            <Ionicons
-              name={post.liked ? "heart" : "heart-outline"}
-              size={28}
-              color={post.liked ? "red" : "#333"}
-              style={{ marginRight: 14 }}
-            />
-          </TouchableOpacity>
-
-          {/* ... 댓글 */}
-          <TouchableOpacity
-            onPress={() => router.push(`/community/${post.id}`)}
-          >
-            <Ionicons
-              name="ellipsis-horizontal"
-              size={26}
-              color="#333"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* 좋아요 수 */}
-        <Text
-          style={{
-            paddingHorizontal: 12,
-            marginTop: 6,
-            fontWeight: "600",
-          }}
-        >
-          좋아요 {post.like_count}개
-        </Text>
-
-        {/* 본문 */}
-        <View style={{ paddingHorizontal: 12, marginTop: 6 }}>
-          <Text style={{ fontWeight: "700" }}>{post.user_name}</Text>
-
-          <View style={{ marginTop: 4 }}>
-            {visibleLines.map((line, index) => (
-              <Text key={index} style={{ lineHeight: 20 }}>
-                {line}
-              </Text>
-            ))}
-
-            {!expanded && lines.length > MAX && (
-              <TouchableOpacity
-                onPress={() => setExpanded(true)}
-                style={{ marginTop: 4 }}
-              >
-                <Text style={{ color: "#666" }}>더보기</Text>
-              </TouchableOpacity>
-            )}
-
-            {expanded && lines.length > MAX && (
-              <TouchableOpacity
-                onPress={() => setExpanded(false)}
-                style={{ marginTop: 6 }}
-              >
-                <Text style={{ color: "#666" }}>접기</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* 댓글 보기 */}
-        <TouchableOpacity
-          onPress={() => router.push(`/community/${post.id}`)}
-          style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 10 }}
-        >
-          <Text style={{ color: "#888" }}>
-            댓글 {post.comment_count}개 모두 보기
-          </Text>
+        <TouchableOpacity onPress={() => openSheet(post)}>
+          <Ionicons name="ellipsis-horizontal" size={22} color="#333" />
         </TouchableOpacity>
       </View>
-    );
+
+      {/* 이미지 리스트 */}
+      {post.images.length > 0 && (
+        <FlatList
+          data={post.images}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(uri, idx) => uri + idx}
+          renderItem={({ item: uri }) => (
+            <ExpoImage
+              source={{ uri }}
+              style={{ width: screenWidth, height: 400 }}
+              contentFit="cover"
+            />
+          )}
+        />
+      )}
+
+      {/* 좋아요 / 댓글 */}
+      <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingTop: 12 }}>
+        <TouchableOpacity onPress={toggleLike}>
+          <Ionicons
+            name={post.liked ? "heart" : "heart-outline"}
+            size={28}
+            color={post.liked ? "red" : "#333"}
+            style={{ marginRight: 14 }}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push(`/community/${post.id}`)}>
+          <Ionicons name="chatbubble-outline" size={26} color="#333" />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={{ paddingHorizontal: 12, marginTop: 6, fontWeight: "600" }}>
+        좋아요 {post.like_count}개
+      </Text>
+
+      {/* 본문 */}
+      <View style={{ paddingHorizontal: 12, marginTop: 6 }}>
+        <Text style={{ fontWeight: "700" }}>{post.user_name}</Text>
+
+        {visibleLines.map((line, idx) => (
+          <Text key={idx}>{line}</Text>
+        ))}
+
+        {!expanded && lines.length > MAX && (
+          <TouchableOpacity onPress={() => setExpanded(true)}>
+            <Text style={{ color: "#666", marginTop: 4 }}>더보기</Text>
+          </TouchableOpacity>
+        )}
+
+        {expanded && lines.length > MAX && (
+          <TouchableOpacity onPress={() => setExpanded(false)}>
+            <Text style={{ color: "#666", marginTop: 6 }}>접기</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* 댓글 보기 */}
+      <TouchableOpacity
+        onPress={() => router.push(`/community/${post.id}`)}
+        style={{ paddingHorizontal: 12, marginBottom: 10 }}
+      >
+        <Text style={{ color: "#888" }}>
+          댓글 {post.comment_count}개 모두 보기
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+// ====================================================================
+// 🔥 메인 컴포넌트
+// ====================================================================
+export default function CommunityFeed() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [myUid, setMyUid] = useState(null);
+
+  // 모달 상태
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
+
+  // 바텀시트 애니메이션
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = sheetAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [300, 0],
+  });
+
+  const openSheet = useCallback((post) => {
+    setSelectedPost(post);
+    setMenuVisible(true);
+
+    Animated.timing(sheetAnim, {
+      toValue: 1,
+      duration: 250,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: false,
+    }).start();
+  }, []);
+
+  const closeSheet = () => {
+    Animated.timing(sheetAnim, {
+      toValue: 0,
+      duration: 180,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: false,
+    }).start(() => {
+      setMenuVisible(false);
+      setSelectedPost(null);
+    });
   };
+
+  // 사용자 ID 로드
+  useEffect(() => {
+    const loadUid = async () => {
+      const id = await AsyncStorage.getItem("user_id");
+      setMyUid(id);
+    };
+    loadUid();
+  }, []);
+
+  const loadPosts = async () => {
+    if (!myUid) return;
+    try {
+      const res = await fetch(`${BASE_URL}/v1/community/posts?user_id=${myUid}`);
+      const data = await res.json();
+      
+      setPosts(data);
+    } catch (e) {
+      console.log("Error loading posts:", e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (myUid) loadPosts();
+  }, [myUid]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadPosts();
+    setRefreshing(false);
+  };
+
+  // PostItem 메모 + 콜백
+  const renderPostItem = useCallback(
+    ({ item }) => (
+      <PostItem item={item} myUid={myUid} router={router} openSheet={openSheet} />
+    ),
+    [myUid]
+  );
 
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
@@ -316,12 +279,105 @@ export default function CommunityFeed() {
     >
       <FlatList
         data={posts}
-        extraData={posts} // 🔥 중요: 상태 변경 시 목록 자동 갱신
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <PostItem item={item} />}
+        renderItem={renderPostItem}
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
+
+      {/* =====================================================
+         🔥 깜빡임 없는 바텀시트 모달
+      ===================================================== */}
+      {menuVisible && (
+        <>
+          {/* 배경 */}
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={closeSheet}
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: "rgba(0,0,0,0.35)",
+            }}
+          />
+
+          {/* 바텀시트 */}
+          <Animated.View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              paddingBottom: 30,
+              paddingTop: 20,
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              transform: [{ translateY: sheetTranslateY }],
+            }}
+          >
+            {String(selectedPost?.user_id) === String(myUid) ? (
+              <>
+                {/* 수정 */}
+                <TouchableOpacity
+                  onPress={() => {
+                    closeSheet();
+                    router.push({
+                      pathname: "/community/write",
+                      params: {
+                        mode: "edit",
+                        post_id: selectedPost.id,
+                        description: selectedPost.description,
+                        images: JSON.stringify(selectedPost.images),
+                      },
+                    });
+                  }}
+                  style={{ paddingVertical: 16, alignItems: "center" }}
+                >
+                  <Text style={{ fontSize: 17 }}>게시물 수정하기</Text>
+                </TouchableOpacity>
+
+                {/* 삭제 */}
+                <TouchableOpacity
+                  onPress={async () => {
+                    closeSheet();
+                    await fetch(
+                      `${BASE_URL}/v1/community/posts/${selectedPost.id}?user_id=${myUid}`,
+                      { method: "DELETE" }
+                    );
+                    setPosts((prev) =>
+                      prev.filter((p) => p.id !== selectedPost.id)
+                    );
+                  }}
+                  style={{ paddingVertical: 16, alignItems: "center" }}
+                >
+                  <Text style={{ fontSize: 17, color: "red" }}>
+                    게시물 삭제하기
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                onPress={closeSheet}
+                style={{ paddingVertical: 16, alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 17, color: "red" }}>게시물 신고하기</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* 취소 */}
+            <TouchableOpacity
+              onPress={closeSheet}
+              style={{ marginTop: 8, paddingVertical: 14, alignItems: "center" }}
+            >
+              <Text style={{ fontSize: 16, color: "#555" }}>취소</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </>
+      )}
 
       {/* DM */}
       <TouchableOpacity
