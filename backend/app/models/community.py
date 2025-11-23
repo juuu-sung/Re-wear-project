@@ -1,3 +1,4 @@
+# app/models/community.py
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, func
 from sqlalchemy.orm import relationship
 from app.db import Base
@@ -11,7 +12,7 @@ class ReformPost(Base):
     category = Column(String)
     created_at = Column(DateTime, server_default=func.now())
 
-    user = relationship("User")
+    user = relationship("User", back_populates="reform_posts")
     images = relationship("ReformImage", cascade="all, delete")
     likes = relationship("ReformLike", cascade="all, delete")
     comments = relationship("ReformComment", cascade="all, delete")
@@ -33,6 +34,8 @@ class ReformLike(Base):
     post_id = Column(Integer, ForeignKey("reform_posts.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
 
+    user = relationship("User", back_populates="reform_likes")
+
 
 class ReformComment(Base):
     __tablename__ = "reform_comments"
@@ -43,4 +46,4 @@ class ReformComment(Base):
     comment = Column(String)
     created_at = Column(DateTime, server_default=func.now())
 
-    user = relationship("User")
+    user = relationship("User", back_populates="reform_comments")

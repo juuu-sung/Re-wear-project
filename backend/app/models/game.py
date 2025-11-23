@@ -1,12 +1,10 @@
+# app/models/game.py
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date
 from sqlalchemy.orm import relationship
-from datetime import date
 from sqlalchemy.sql import func
+from datetime import date
 from app.db import Base
 
-# ================================
-# ✔ 구매한 동물
-# ================================
 class OwnedAnimal(Base):
     __tablename__ = "owned_animals"
 
@@ -14,10 +12,9 @@ class OwnedAnimal(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     animal_id = Column(Integer)
 
+    user = relationship("User", back_populates="owned_animals")
 
-# ================================
-# ✔ 구매한 구조물
-# ================================
+
 class OwnedObject(Base):
     __tablename__ = "owned_objects"
 
@@ -25,10 +22,9 @@ class OwnedObject(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     object_id = Column(Integer)
 
+    user = relationship("User", back_populates="owned_objects")
 
-# ================================
-# ✔ 배치된 구조물
-# ================================
+
 class PlacedObject(Base):
     __tablename__ = "placed_objects"
 
@@ -39,10 +35,9 @@ class PlacedObject(Base):
     y = Column(Float)
     scale = Column(Float)
 
+    user = relationship("User", back_populates="placed_objects")
 
-# ================================
-# ✔ 활성화된 동물
-# ================================
+
 class ActiveAnimal(Base):
     __tablename__ = "active_animals"
 
@@ -50,20 +45,18 @@ class ActiveAnimal(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     animal_id = Column(Integer)
 
+    user = relationship("User", back_populates="active_animals")
 
-# ================================
-# ✔ 사용자 RP
-# ================================
+
 class UserRP(Base):
     __tablename__ = "user_rp"
 
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     rp = Column(Integer, default=500)
 
+    user = relationship("User", back_populates="user_rp")
 
-# ================================
-# ✔ 일일 미션 상태
-# ================================
+
 class DailyMissionState(Base):
     __tablename__ = "daily_mission_state"
 
@@ -72,4 +65,6 @@ class DailyMissionState(Base):
     mission_key = Column(String, index=True)
     done = Column(Boolean, default=False)
     claimed = Column(Boolean, default=False)
-    date = Column(Date, default=func.current_date())  # ⭐ 문제 해결
+    date = Column(Date, default=func.current_date())
+
+    user = relationship("User", back_populates="daily_mission_state")
