@@ -243,6 +243,13 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
             "opponent_name": opponent.name if opponent else None,
             "opponent_profile": opponent.profile_image if opponent else None,
             "last_message": last_msg.message if last_msg else None,
+            "last_message": last_msg.message if last_msg else None,
+
+            
+            "last_media_type": last_msg.media_type if last_msg else None,
+            "last_media_url": last_msg.media_url if last_msg else None,
+            "last_media_urls": last_msg.media_urls if last_msg else None,
+            "last_thumbnail_url": last_msg.thumbnail_url if last_msg else None,
             "updated_at": room.updated_at
         })
 

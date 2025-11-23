@@ -15,7 +15,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -105,6 +107,8 @@ export default function ChatRoom() {
   const flatListRef = useRef(null);
   const wsRef = useRef(null);
 
+  const inputRef = useRef(null);
+
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [pendingMedia, setPendingMedia] = useState([]);
@@ -133,7 +137,7 @@ export default function ChatRoom() {
   };
 
   // =====================================================
-  // 방이 없으면 생성
+  // 방 생성
   // =====================================================
   const ensureRoomExists = async () => {
     if (currentRoomId) return currentRoomId;
@@ -180,24 +184,22 @@ export default function ChatRoom() {
     wsRef.current = socket;
 
     socket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
+      const msg = JSON.parse(event.data);
 
-        // 중복 제거
-        const key = `${msg.sender_id}-${msg.created_at}-${msg.message}-${msg.media_url}`;
-        if (messagesRef.current.some(m =>
-          `${m.sender_id}-${m.created_at}-${m.message}-${m.media_url}` === key
-        )) {
-          return; // 이미 있으면 추가 X
-        }
+      const key = `${msg.sender_id}-${msg.created_at}-${msg.message}-${msg.media_url}`;
+      if (messagesRef.current.some(m =>
+        `${m.sender_id}-${m.created_at}-${m.message}-${m.media_url}` === key
+      )) {
+        return;
+      }
 
-  messagesRef.current = [...messagesRef.current, msg];
-  setMessages([...messagesRef.current]);
+      messagesRef.current = [...messagesRef.current, msg];
+      setMessages([...messagesRef.current]);
 
-  setTimeout(() => {
-    flatListRef.current?.scrollToEnd({ animated: true });
-  }, 30);
-};
-
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 30);
+    };
   };
 
   useEffect(() => {
@@ -209,28 +211,14 @@ export default function ChatRoom() {
   }, [currentRoomId]);
 
   // =====================================================
-  // 이미지 압축
+  // 사진 / 영상 선택
   // =====================================================
-  const compressImage = async (uri) => {
-    return await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 1080 } }],
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-    );
-  };
 
-  // =====================================================
-  // (❗ 수정된 sendMessage는 2/2에 있음)
-// =====================================================
-
-
-  // =====================================================
-  // 미디어 선택
-  // =====================================================
-  const handleMediaPick = (asset) => {
+  const handleMediaPick = async (asset) => {
     if (pendingMedia.length >= 5) return;
 
-    if (asset.type.startsWith("image")) {
+    // 사진
+    if (asset.type?.startsWith("image")) {
       setPendingMedia((prev) => [
         ...prev,
         {
@@ -243,42 +231,96 @@ export default function ChatRoom() {
       return;
     }
 
-    if (asset.type.startsWith("video")) {
-      VideoThumbnails.getThumbnailAsync(asset.uri, { time: 1000 }).then(
-        (thumbnail) => {
-          setPendingMedia((prev) => [
-            ...prev,
-            {
-              uri: asset.uri,
-              type: "video/mp4",
-              fileName: asset.fileName,
-              kind: "video",
-              thumbnail: thumbnail.uri,
-            },
-          ]);
-        }
-      );
+    // 동영상
+    if (asset.type?.startsWith("video")) {
+      try {
+        const thumb = await VideoThumbnails.getThumbnailAsync(asset.uri, {
+          time: 1000,
+        });
+
+        setPendingMedia((prev) => [
+          ...prev,
+          {
+            uri: asset.uri,
+            type: "video/mp4",
+            fileName: asset.fileName,
+            kind: "video",
+            thumbnail: thumb.uri,
+          },
+        ]);
+      } catch (e) {
+        console.log("Video thumbnail error:", e);
+
+        setPendingMedia((prev) => [
+          ...prev,
+          {
+            uri: asset.uri,
+            type: "video/mp4",
+            fileName: asset.fileName,
+            kind: "video",
+            thumbnail: null,
+          },
+        ]);
+      }
     }
   };
 
-  const openAlbum = async () => {
+  // ===============================
+  // 📌 사진 앨범 (여러 장 가능)
+  // ===============================
+  const openAlbumImages = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("권한 필요", "사진 접근 권한이 필요합니다.");
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
       selectionLimit: 5,
       quality: 0.8,
+      copyToCacheDirectory: true,
     });
 
     if (!result.canceled) {
       for (let asset of result.assets) {
         if (pendingMedia.length >= 5) break;
-        handleMediaPick(asset);
+        await handleMediaPick(asset);
       }
     }
 
     setShowMenu(false);
   };
 
+  // ===============================
+  // 📌 동영상 앨범 (iCloud 대응)
+  // ===============================
+  const openAlbumVideo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("권한 필요", "동영상 접근 권한이 필요합니다.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsMultipleSelection: false,
+      allowsEditing: true,            // 🔥 iCloud 영상 로컬화
+      quality: 1,
+      copyToCacheDirectory: true,     // 🔥 필수
+    });
+
+    if (!result.canceled) {
+      await handleMediaPick(result.assets[0]);
+    }
+
+    setShowMenu(false);
+  };
+
+  // ===============================
+  // 카메라
+  // ===============================
   const openCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return;
@@ -384,12 +426,10 @@ export default function ChatRoom() {
     },
     [myId]
   );
-  // ==========================
-  //      CHATROOM FULL CODE
-  //         (3/3 SECTION)
-  // ==========================
 
-  // WebSocket OPEN 기다리는 함수
+  // =====================================================
+  // WebSocket READY 대기
+  // =====================================================
   const waitForSocketReady = (callback) => {
     if (wsRef.current && wsRef.current.readyState === 1) {
       callback();
@@ -399,87 +439,110 @@ export default function ChatRoom() {
   };
 
   // =====================================================
-  // 메시지 전송 (INVALID_STATE_ERR 방지 완전 패치 버전)
+  // 메시지 전송
   // =====================================================
   const sendMessage = async () => {
-    if (!text.trim() && pendingMedia.length === 0) return;
+  if (!text.trim() && pendingMedia.length === 0) return;
 
-    setUploading(true);
-    let uploadedUrls = [];
+  setUploading(true);
+  let uploadedUrls = [];
 
-    try {
-      // temp이면 여기서 방 생성
-      const rid = await ensureRoomExists();
+  try {
+    const rid = await ensureRoomExists();
 
-      // 방 생성 직후 WebSocket 없으면 즉시 새로 연결
-      if (!wsRef.current || wsRef.current.readyState !== 1) {
-        connectSocket(rid);
-      }
+    if (!wsRef.current || wsRef.current.readyState !== 1) {
+      connectSocket(rid);
+    }
 
-      // 🔥 미디어 업로드
-      if (pendingMedia.length > 0) {
-        for (let item of pendingMedia) {
-          const form = new FormData();
-          let uploadUri = item.uri;
+    // 파일 업로드
+    if (pendingMedia.length > 0) {
+      for (let item of pendingMedia) {
+        const form = new FormData();
+        let uploadUri = item.uri;
 
-          if (item.kind === "image") {
-            const compressed = await ImageManipulator.manipulateAsync(
-              item.uri,
-              [{ resize: { width: 1080 } }],
-              { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-            );
-            uploadUri = compressed.uri;
-          }
-
-          form.append("file", {
-            uri: uploadUri,
-            type: item.type,
-            name: item.fileName || "media",
-          });
-
-          const r = await fetch(`${BASE_URL}/v1/chat/upload`, {
-            method: "POST",
-            body: form,
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-
-          const uploaded = await r.json();
-          uploadedUrls.push(`${BASE_URL}${uploaded.url}`);
+        if (item.kind === "image") {
+          const compressed = await ImageManipulator.manipulateAsync(
+            item.uri,
+            [{ resize: { width: 1080 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          uploadUri = compressed.uri;
         }
+
+        form.append("file", {
+          uri: uploadUri,
+          type: item.type,
+          name: item.fileName || "media",
+        });
+
+        const r = await fetch(`${BASE_URL}/v1/chat/upload`, {
+          method: "POST",
+          body: form,
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        const uploaded = await r.json();
+        uploadedUrls.push(`${BASE_URL}${uploaded.url}`);
       }
+    }
 
-      // 페이로드 구성
-      const payload = {
-        sender_id: Number(myId),
-        message: text.trim() || null,
-      };
+    // PAYLOAD
+    const payload = {
+      sender_id: Number(myId),
+      message: text.trim() || null,
+    };
 
-      if (pendingMedia.length === 1 && pendingMedia[0].kind === "image") {
-        payload.media_type = "image";
-        payload.media_url = uploadedUrls[0];
-      }
-
-      if (pendingMedia.length > 1) {
-        payload.media_type = "multi-image";
-        payload.media_urls = uploadedUrls;
-      }
-
-      // 🔥 WebSocket OPEN 상태까지 기다렸다가 안전 전송
-      waitForSocketReady(() => {
-        wsRef.current?.send(JSON.stringify(payload));
+    // 🔥🔥🔥 추가됨: 단일 동영상 처리
+    if (pendingMedia.length === 1 && pendingMedia[0].kind === "video") {
+      payload.media_type = "video";
+      payload.media_url = uploadedUrls[0];
+      const thumbnailForm = new FormData();
+      thumbnailForm.append("file", {
+        uri: pendingMedia[0].thumbnail,
+        type: "image/jpeg",
+        name: "thumbnail.jpg",
       });
 
-      setText("");
-      setPendingMedia([]);
+      const thumbRes = await fetch(`${BASE_URL}/v1/chat/upload`, {
+        method: "POST",
+        body: thumbnailForm,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      
-    } finally {
-      setUploading(false);
+  const thumbData = await thumbRes.json();
+
+  // 🔥 2) 서버 URL을 thumbnail_url 값으로 설정
+  payload.thumbnail_url = `${BASE_URL}${thumbData.url}`; 
     }
-  };
+
+    // 기존 이미지 조건
+    if (pendingMedia.length === 1 && pendingMedia[0].kind === "image") {
+      payload.media_type = "image";
+      payload.media_url = uploadedUrls[0];
+    }
+
+    // 기존 멀티 이미지
+    if (pendingMedia.length > 1) {
+      payload.media_type = "multi-image";
+      payload.media_urls = uploadedUrls;
+    }
+
+    // 메시지 전송
+    waitForSocketReady(() => {
+      wsRef.current?.send(JSON.stringify(payload));
+    });
+
+    setText("");
+    setPendingMedia([]);
+
+  } finally {
+    setUploading(false);
+  }
+};
+
 
   // =====================================================
-  // 렌더링 (입력창 + 메뉴 + 미디어 뷰어)
+  // 렌더링
   // =====================================================
   return (
     <KeyboardAvoidingView
@@ -527,8 +590,6 @@ export default function ChatRoom() {
           paddingTop: 10,
         }}
       />
-
-
 
       {/* 미디어 미리보기 */}
       {pendingMedia.length > 0 && (
@@ -584,7 +645,19 @@ export default function ChatRoom() {
           alignItems: "center",
         }}
       >
-        <TouchableOpacity onPress={() => setShowMenu((v) => !v)}>
+
+        {/* 🔥 수정된 + / X 버튼 */}
+        <TouchableOpacity
+          onPress={() => {
+            if (!showMenu) {
+              Keyboard.dismiss();
+              setShowMenu(true);
+            } else {
+              setShowMenu(false);
+              setTimeout(() => inputRef.current?.focus(), 150);
+            }
+          }}
+        >
           <Ionicons
             name={showMenu ? "close" : "add-circle-outline"}
             size={30}
@@ -593,6 +666,7 @@ export default function ChatRoom() {
         </TouchableOpacity>
 
         <TextInput
+          ref={inputRef}
           placeholder="메시지 입력…"
           value={text}
           onChangeText={setText}
@@ -625,7 +699,7 @@ export default function ChatRoom() {
         </TouchableOpacity>
       </View>
 
-      {/* 하단 메뉴 */}
+      {/* 하단 팝업 메뉴 */}
       {showMenu && (
         <View
           style={{
@@ -640,18 +714,43 @@ export default function ChatRoom() {
             borderColor: "#eee",
           }}
         >
+          {/* X 버튼 */}
+          <TouchableOpacity
+            onPress={() => {
+              setShowMenu(false);
+              setTimeout(() => inputRef.current?.focus(), 150);
+            }}
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 20,
+              zIndex: 10,
+            }}
+          >
+            <Ionicons name="close" size={32} color="#444" />
+          </TouchableOpacity>
+
           <View
             style={{
               flexDirection: "row",
               justifyContent: "center",
+              marginTop: 20,
             }}
           >
             <TouchableOpacity
-              onPress={openAlbum}
+              onPress={openAlbumImages}
               style={{ alignItems: "center", marginHorizontal: 40 }}
             >
               <Ionicons name="image-outline" size={32} color="#333" />
-              <Text>앨범</Text>
+              <Text>사진</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={openAlbumVideo}
+              style={{ alignItems: "center", marginHorizontal: 40 }}
+            >
+              <Ionicons name="videocam-outline" size={32} color="#333" />
+              <Text>동영상</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
