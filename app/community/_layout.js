@@ -1,23 +1,24 @@
-import { Stack, usePathname, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { Text, TouchableOpacity } from "react-native";
 
 export default function CommunityLayout() {
   const router = useRouter();
-  const pathname = usePathname();   // 🔥 현재 어떤 화면인지 알 수 있음
 
   return (
     <Stack
       screenOptions={{
         headerTitle: "",
         headerBackTitleVisible: false,
-        headerShown: true,  // 전체 화면에서 헤더 기본 켜기
+        headerShown: true,
       }}
     >
-      {/* 🔥 커뮤니티 메인(index) → recycle 로 이동하는 커스텀 헤더 */}
+      {/* 🔥 커뮤니티 메인(index) → 중앙 타이틀: Rewear Lounge */}
       <Stack.Screen
         name="index"
         options={{
           headerShown: true,
+          headerTitle: "Rewear Lounge",
+          headerTitleAlign: "center",
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.replace("/recycle")}
@@ -29,10 +30,13 @@ export default function CommunityLayout() {
         }}
       />
 
-      {/* 🔥 나머지는 community 내부 뒤로가기 (community로) */}
+      {/* 나머지 화면들은 기존처럼 뒤로가기만 */}
       <Stack.Screen
         name="[id]"
         options={{
+          headerShown: true,
+          headerTitle: "Rewear Lounge",
+          headerTitleAlign: "center",
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.replace("/community")}
@@ -47,6 +51,9 @@ export default function CommunityLayout() {
       <Stack.Screen
         name="users/[uid]"
         options={{
+          headerShown: true,
+          headerTitle: "Rewear Lounge",
+          headerTitleAlign: "center",
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.replace("/community")}
@@ -61,6 +68,9 @@ export default function CommunityLayout() {
       <Stack.Screen
         name="profile"
         options={{
+          headerShown: true,
+          headerTitle: "Rewear Lounge",
+          headerTitleAlign: "center",
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.replace("/community")}
@@ -75,6 +85,9 @@ export default function CommunityLayout() {
       <Stack.Screen
         name="write"
         options={{
+          headerShown: true,
+          headerTitle: "Rewear Lounge",
+          headerTitleAlign: "center",
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.replace("/community")}
@@ -89,6 +102,9 @@ export default function CommunityLayout() {
       <Stack.Screen
         name="dm"
         options={{
+          headerShown: true,
+          headerTitle: "Rewear Lounge",
+          headerTitleAlign: "center",
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.replace("/community")}

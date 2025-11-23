@@ -1,3 +1,6 @@
+// ===============================
+// UserPosts.jsx  (수정완료)
+// ===============================
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image as ExpoImage } from "expo-image";
@@ -35,23 +38,16 @@ export default function UserPosts() {
     return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
 
   const finalName = user_name ?? "사용자";
+  const profileImg = profile_image && profile_image !== "" ? profile_image : null;
 
-  const profileImg =
-    profile_image && profile_image !== "" ? profile_image : null;
-
+  // 🔥 방 생성하지 않고 "DM 화면으로만 이동"
   const handleSendMessage = async () => {
     const myId = await AsyncStorage.getItem("user_id");
     if (!myId) return;
 
-    const res = await fetch(
-      `${BASE_URL}/v1/chat/room?user1=${myId}&user2=${uid}`
-    );
-    const data = await res.json();
-
     router.push({
-      pathname: `/chat/${data.room_id}`,
+      pathname: `/chat/temp`,
       params: {
-        room_id: data.room_id,
         myId,
         opponentId: uid,
         opponentName: user_name,

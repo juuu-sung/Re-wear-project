@@ -2,6 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
+
+import { Ionicons } from "@expo/vector-icons"; // ←🔥 추가됨
 import {
   Dimensions,
   FlatList,
@@ -11,7 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -72,7 +74,6 @@ export default function PostDetail() {
       <View style={{ paddingTop: insets.top - 30 }} />
 
       <ScrollView style={{ flex: 1 }}>
-
         {/* 이미지 */}
         <FlatList
           data={post.images}
@@ -128,18 +129,49 @@ export default function PostDetail() {
               }}
             />
           )}
-          <Text style={{ fontWeight: "700", fontSize: 15 }}>{post.user_name}</Text>
+          <Text style={{ fontWeight: "700", fontSize: 15 }}>
+            {post.user_name}
+          </Text>
         </View>
 
-        {/* 좋아요/댓글 아이콘 */}
-        <View style={{ paddingHorizontal: 15, paddingTop: 15 }}>
-          <Text style={{ fontSize: 22 }}>♡  💬</Text>
+        {/* 🔥 좋아요 + 댓글 아이콘 (피드랑 동일 디자인) */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 15,
+            paddingTop: 15,
+          }}
+        >
+          {/* 좋아요 */}
+          <TouchableOpacity onPress={() => console.log("좋아요 기능 연결 예정")}>
+            <Ionicons
+              name={post.liked ? "heart" : "heart-outline"}
+              size={28}
+              color={post.liked ? "red" : "#333"}
+              style={{ marginRight: 14 }}
+            />
+          </TouchableOpacity>
+
+          {/* 댓글 */}
+          <TouchableOpacity
+            onPress={() => {
+              // 댓글 아이콘 누르면 입력창에 포커스 줄 수도 있음
+              console.log("댓글 아이콘 클릭");
+            }}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={26}
+              color="#333"
+            />
+          </TouchableOpacity>
         </View>
 
         {/* 좋아요 수 */}
         <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
           <Text style={{ fontWeight: "700" }}>
-            좋아요 {post.likes}개
+            좋아요 {post.like_count ?? post.likes ?? 0}개
           </Text>
         </View>
 
@@ -151,7 +183,7 @@ export default function PostDetail() {
           </Text>
         </View>
 
-        {/* 🔥 본문과 댓글 사이 Divider */}
+        {/* 구분선 */}
         <View
           style={{
             height: 1,
@@ -162,7 +194,7 @@ export default function PostDetail() {
           }}
         />
 
-        {/* 댓글 */}
+        {/* 댓글 리스트 */}
         <View style={{ paddingHorizontal: 15, paddingBottom: 80 }}>
           {(post.comments ?? []).map((c, i) => (
             <View key={i} style={{ marginBottom: 12 }}>
@@ -173,7 +205,6 @@ export default function PostDetail() {
             </View>
           ))}
         </View>
-
       </ScrollView>
 
       {/* 댓글 입력창 */}

@@ -315,6 +315,39 @@ export default function HomeScreen() {
   // =========================
   // 뉴스
   // =========================
+// 🔥 환경 뉴스(read_news) 미션 완료 처리 (하루 1회)
+const completeNewsMission = async () => {
+  if (!userId) return;
+
+  const dateKey = `daily_mission_date_${userId}`;
+  const missionKey = `daily_missions_${userId}`;
+
+  const today = new Date().toISOString().split("T")[0];
+  const storedDate = await AsyncStorage.getItem(dateKey);
+  const missionsRaw = await AsyncStorage.getItem(missionKey);
+
+  if (!storedDate || !missionsRaw) return;
+  if (storedDate !== today) return; // 날짜 다르면 무시
+
+  const missions = JSON.parse(missionsRaw);
+  const target = missions.find((m) => m.key === "read_news");
+
+  // 이미 완료된 경우 무시
+  if (target && target.done) {
+    console.log("📰 '환경 뉴스' 미션 이미 완료됨");
+    return;
+  }
+
+  // 완료 처리
+  const updated = missions.map((m) =>
+    m.key === "read_news" ? { ...m, done: true } : m
+  );
+
+  await AsyncStorage.setItem(missionKey, JSON.stringify(updated));
+  console.log("🎉 '환경 뉴스' 미션 완료됨");
+};
+
+
   const loadNews = async () => {
     try {
       setLoadingNews(true);
@@ -587,7 +620,11 @@ export default function HomeScreen() {
             {news.map((n, idx) => (
               <TouchableOpacity
                 key={idx}
-                onPress={() => openLink(n.url)}
+                onPress={async () => {
+                  await completeNewsMission();   // 🔥 미션 완료
+                  openLink(n.url);               // 링크 열기
+                }}
+
                 style={{
                   width: 280,
                   marginRight: 12,
