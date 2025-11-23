@@ -138,6 +138,7 @@ const saveEvent = async (date, newEvent) => {
       type: newEvent.type,
       garment_id: newEvent.cloth_id,
     };
+
     const token = await AsyncStorage.getItem("access_token");
     const res = await fetch(`${BASE_URL}/events`, {
       method: "POST",
@@ -147,33 +148,52 @@ const saveEvent = async (date, newEvent) => {
       },
       body: JSON.stringify(payload),
     });
+
     if (!res.ok) throw new Error("이벤트 저장 실패");
 
-    // ✅ 미션 완료 여부만 기록 (알림, RP 없음)
-    const missionKey = newEvent.type === "wear" ? "add_wear" :
-                       newEvent.type === "wash" ? "add_wash" : null;
+    // ==============================
+    // ⭐ Daily Mission 연동 (수정됨)
+    // ==============================
+    const missionKey =
+      newEvent.type === "wear"
+        ? "add_wear"
+        : newEvent.type === "wash"
+        ? "add_wash"
+        : null;
 
-    if (missionKey) {
+    if (missionKey && userId) {
       const today = new Date().toISOString().split("T")[0];
-      const storedDate = await AsyncStorage.getItem("daily_mission_date");
-      const missionsRaw = await AsyncStorage.getItem("daily_missions");
 
-      if (storedDate === today && missionsRaw) {
+      const dateKey = `daily_mission_date_${userId}`;
+      const missionStorageKey = `daily_missions_${userId}`;
+
+      const storedDate = await AsyncStorage.getItem(dateKey);
+      const missionsRaw = await AsyncStorage.getItem(missionStorageKey);
+
+      if (missionsRaw && storedDate === today) {
         const missions = JSON.parse(missionsRaw);
 
-        // 이미 완료된 미션이면 건너뜀
         const target = missions.find((m) => m.key === missionKey);
-        if (!target?.done) {
+
+        // 아직 완료되지 않은 경우만 처리
+        if (target && !target.done) {
           const updated = missions.map((m) =>
             m.key === missionKey ? { ...m, done: true } : m
           );
-          await AsyncStorage.setItem("daily_missions", JSON.stringify(updated));
-          console.log(`🎯 '${missionKey}' 미션 완료 기록됨 (알림/포인트 없음)`);
+
+          await AsyncStorage.setItem(
+            missionStorageKey,
+            JSON.stringify(updated)
+          );
+
+          console.log(`🎯 미션 '${missionKey}' 완료 처리됨`);
         }
       }
     }
 
-    // ✅ 캘린더 갱신
+    // ==============================
+    // 캘린더 갱신
+    // ==============================
     fetchCalendar(date, userId);
     fetchEvents(userId);
 
@@ -182,6 +202,7 @@ const saveEvent = async (date, newEvent) => {
     Alert.alert("저장 실패", "서버와 통신 중 문제가 발생했습니다.");
   }
 };
+
 
 
 
