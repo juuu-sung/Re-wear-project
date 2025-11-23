@@ -28,13 +28,18 @@ from app.routers import (
     community as community_router,
     chat as chat_router,
     laundry as laundry_router,
-    alerts as alerts_router
+    alerts as alerts_router,
+    game as game_router,
     
 )
 from app.routers import like_brands
 # Services
 from app.core.scheduler import start_scheduler, stop_scheduler
 from app.services.material_infer import warmup
+from fastapi.staticfiles import StaticFiles
+
+
+
 
 
 # FastAPI 초기화
@@ -42,6 +47,8 @@ app = FastAPI(title="ReWear API", version="0.1.0")
 
 # 정적 파일 업로드 경로
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+app.mount("/static/chat", StaticFiles(directory="uploads/chat"), name="chat_uploads")
 
 load_dotenv()
 
@@ -144,3 +151,4 @@ app.include_router(chat_router.router)
 app.include_router(laundry_router.router, prefix="/laundry", tags=["laundry"])
 app.include_router(alerts_router.router)
 app.include_router(like_brands.router)
+app.include_router(game_router.router)
