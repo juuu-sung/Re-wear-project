@@ -187,11 +187,18 @@ export default function MessageList() {
                     </Text>
 
                     <Text
-                      numberOfLines={1}
-                      style={{ marginTop: 3, color: "#555" }}
-                    >
-                      {item.last_message || "채팅을 시작하세요"}
+                        numberOfLines={1}
+                        style={{ marginTop: 3, color: "#555" }}
+                      >
+                        {item.last_media_type === "image"
+                          ? "사진을 보냈습니다."
+                          : item.last_media_type === "multi-image"
+                          ? "여러 장의 사진을 보냈습니다."
+                          : item.last_media_type === "video"
+                          ? "동영상을 보냈습니다."
+                          : item.last_message || "채팅을 시작하세요"}
                     </Text>
+
                   </View>
                 </TouchableOpacity>
               </Swipeable>
