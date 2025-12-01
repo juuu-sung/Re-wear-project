@@ -33,7 +33,8 @@ class ChatMessage(Base):
     media_type = Column(String)
     media_urls = Column(JSON)
 
-    read = Column(Boolean, default=False)
+    read = Column(Boolean, default=False, nullable=False)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     room = relationship("ChatRoom", back_populates="messages")

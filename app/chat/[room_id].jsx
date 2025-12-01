@@ -23,7 +23,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -99,6 +99,9 @@ export default function ChatRoom() {
 
   const { myId, opponentId, opponentName, opponentProfile } = params;
 
+  const myIdNum = Number(myId);
+  const opponentIdNum = Number(opponentId);
+
   const [currentRoomId, setCurrentRoomId] = useState(
     isTemp ? null : rawRoomId
   );
@@ -162,13 +165,52 @@ export default function ChatRoom() {
 
     const safeData = Array.isArray(data) ? data : [];
 
-    messagesRef.current = safeData;
-    setMessages([...safeData]);
+    // read 필드가 없을 수도 있으니 기본값 처리
+    const normalized = safeData.map((m) => ({
+      ...m,
+      read: !!m.read,
+    }));
+
+    messagesRef.current = normalized;
+    setMessages([...normalized]);
 
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: false });
     }, 30);
   };
+
+  // =====================================================
+  // 🔥 카카오톡/DM 방식 읽음 처리: 화면에 보이는 메시지 기준
+  // =====================================================
+  const lastSeenIdRef = useRef(null);
+
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (!wsRef.current || wsRef.current.readyState !== 1) return;
+
+    // 화면에 보이는 "상대가 보낸 메시지"만
+    const opponentVisible = viewableItems.filter(
+      (v) => Number(v.item.sender_id) === opponentIdNum
+    );
+
+    if (opponentVisible.length === 0) return;
+
+    const lastMsg = opponentVisible[opponentVisible.length - 1].item;
+
+    if (!lastMsg?.id) return;
+
+    // 이미 처리한 마지막 메시지면 패스
+    if (lastSeenIdRef.current === lastMsg.id) return;
+    lastSeenIdRef.current = lastMsg.id;
+
+    // 서버에 last_read_id 전달
+    wsRef.current.send(
+      JSON.stringify({
+        type: "read_receipt",
+        user_id: myIdNum,
+        last_read_id: lastMsg.id,
+      })
+    );
+  }).current;
 
   // =====================================================
   // WebSocket 연결
@@ -183,22 +225,57 @@ export default function ChatRoom() {
     const socket = new WebSocket(`${wsUrl}/v1/chat/ws/${rid}`);
     wsRef.current = socket;
 
+    // onopen 에서 읽음 신호 절대 보내지 않음 (카카오톡/DM 방식)
+
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
 
-      const key = `${msg.sender_id}-${msg.created_at}-${msg.message}-${msg.media_url}`;
-      if (messagesRef.current.some(m =>
-        `${m.sender_id}-${m.created_at}-${m.message}-${m.media_url}` === key
-      )) {
-        return;
+      // =====================================================
+      // 🔥 읽음 이벤트 처리
+      // =====================================================
+      if (msg.type === "read_receipt") {
+        if (String(msg.user_id) !== String(opponentId)) return;
+
+        const lastReadId = Number(msg.last_read_id);
+
+      messagesRef.current = messagesRef.current.map((m) => {
+    if (m.sender_id === myIdNum && m.id <= lastReadId) {
+      return { ...m, read: true };
+    }
+    return m;
+  });
+
+  setMessages([...messagesRef.current]);
+}
+
+
+
+
+      // =====================================================
+      // 🔥 일반 메시지 처리
+      //    (서버에서 type: "message" 로 보낸다고 가정)
+      // =====================================================
+      if (msg.type === "message" || !msg.type) {
+        // 중복 방지 (id 기준)
+        if (
+          msg.id &&
+          messagesRef.current.some((m) => Number(m.id) === Number(msg.id))
+        ) {
+          return;
+        }
+
+        const normalized = {
+          ...msg,
+          read: !!msg.read,
+        };
+
+        messagesRef.current = [...messagesRef.current, normalized];
+        setMessages([...messagesRef.current]);
+
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 30);
       }
-
-      messagesRef.current = [...messagesRef.current, msg];
-      setMessages([...messagesRef.current]);
-
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 30);
     };
   };
 
@@ -306,9 +383,9 @@ export default function ChatRoom() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsMultipleSelection: false,
-      allowsEditing: true,            // 🔥 iCloud 영상 로컬화
+      allowsEditing: true,
       quality: 1,
-      copyToCacheDirectory: true,     // 🔥 필수
+      copyToCacheDirectory: true,
     });
 
     if (!result.canceled) {
@@ -340,91 +417,115 @@ export default function ChatRoom() {
   // =====================================================
   const renderItem = useCallback(
     ({ item }) => {
-      const isMine = String(item.sender_id) === String(myId);
+      const isMine = Number(item.sender_id) === myIdNum;
+      const isImage = item.media_type === "image";
+      const isVideo = item.media_type === "video";
+      const isMulti = item.media_type === "multi-image";
 
-      if (item.media_type === "multi-image") {
-        return (
+      const isRead = !!item.read;
+
+      return (
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: isMine ? "flex-end" : "flex-start",
+            marginBottom: 16,
+            paddingRight: isMine ? 6 : 0,
+            paddingLeft: isMine ? 0 : 6,
+          }}
+        >
+          {/* 내가 보낸 메시지일 때만 V 표시 */}
+          {isMine && (
+            <Text
+              style={{
+                fontSize: 14,
+                color: isRead ? "#2e7d32" : "transparent",
+                fontWeight: "700",
+                marginRight: 6,
+                alignSelf: "flex-end",
+              }}
+            >
+              ✓
+            </Text>
+          )}
+
           <View
             style={{
-              alignSelf: isMine ? "flex-end" : "flex-start",
-              marginBottom: 16,
               maxWidth: "80%",
+              alignSelf: isMine ? "flex-end" : "flex-start",
             }}
           >
-            <CardStack
-              images={item.media_urls}
-              onPress={() =>
-                setPreviewMulti({ visible: true, images: item.media_urls })
-              }
-            />
+            {/* 멀티 이미지 */}
+            {isMulti && (
+              <>
+                <CardStack
+                  images={item.media_urls}
+                  onPress={() =>
+                    setPreviewMulti({
+                      visible: true,
+                      images: item.media_urls,
+                    })
+                  }
+                />
 
-            {item.message && (
+                {item.message && (
+                  <View
+                    style={{
+                      backgroundColor: isMine ? "#DCF8C6" : "#eee",
+                      padding: 10,
+                      borderRadius: 10,
+                      marginTop: 6,
+                    }}
+                  >
+                    <Text>{item.message}</Text>
+                  </View>
+                )}
+              </>
+            )}
+
+            {/* 단일 이미지 */}
+            {isImage && (
+              <ExpoImage
+                source={{ uri: item.media_url }}
+                style={{ width: 220, height: 220, borderRadius: 10 }}
+              />
+            )}
+
+            {/* 동영상 */}
+            {isVideo && (
+              <TouchableOpacity
+                onPress={() => setPreviewVideoVisible(item.media_url)}
+              >
+                <ExpoImage
+                  source={{ uri: item.thumbnail_url }}
+                  style={{ width: 220, height: 220, borderRadius: 10 }}
+                />
+                <Ionicons
+                  name="play-circle"
+                  size={60}
+                  color="white"
+                  style={{ position: "absolute", top: 80, left: 80 }}
+                />
+              </TouchableOpacity>
+            )}
+
+            {/* 텍스트 메시지 */}
+            {!isImage && !isVideo && !isMulti && item.message && (
               <View
                 style={{
                   backgroundColor: isMine ? "#DCF8C6" : "#eee",
                   padding: 10,
                   borderRadius: 10,
-                  marginTop: 6,
                 }}
               >
                 <Text>{item.message}</Text>
               </View>
             )}
           </View>
-        );
-      }
-
-      const isImage = item.media_type === "image";
-      const isVideo = item.media_type === "video";
-
-      return (
-        <View
-          style={{
-            alignSelf: isMine ? "flex-end" : "flex-start",
-            marginBottom: 16,
-            maxWidth: "80%",
-          }}
-        >
-          {isImage && (
-            <ExpoImage
-              source={{ uri: item.media_url }}
-              style={{ width: 220, height: 220, borderRadius: 10 }}
-            />
-          )}
-
-          {isVideo && (
-            <TouchableOpacity
-              onPress={() => setPreviewVideoVisible(item.media_url)}
-            >
-              <ExpoImage
-                source={{ uri: item.thumbnail_url }}
-                style={{ width: 220, height: 220, borderRadius: 10 }}
-              />
-              <Ionicons
-                name="play-circle"
-                size={60}
-                color="white"
-                style={{ position: "absolute", top: 80, left: 80 }}
-              />
-            </TouchableOpacity>
-          )}
-
-          {item.message && (
-            <View
-              style={{
-                backgroundColor: isMine ? "#DCF8C6" : "#eee",
-                padding: 10,
-                borderRadius: 10,
-                marginTop: isImage || isVideo ? 6 : 0,
-              }}
-            >
-              <Text>{item.message}</Text>
-            </View>
-          )}
         </View>
       );
     },
-    [myId]
+    [myIdNum]
   );
 
   // =====================================================
@@ -442,104 +543,101 @@ export default function ChatRoom() {
   // 메시지 전송
   // =====================================================
   const sendMessage = async () => {
-  if (!text.trim() && pendingMedia.length === 0) return;
+    if (!text.trim() && pendingMedia.length === 0) return;
 
-  setUploading(true);
-  let uploadedUrls = [];
+    setUploading(true);
+    let uploadedUrls = [];
 
-  try {
-    const rid = await ensureRoomExists();
+    try {
+      const rid = await ensureRoomExists();
 
-    if (!wsRef.current || wsRef.current.readyState !== 1) {
-      connectSocket(rid);
-    }
+      if (!wsRef.current || wsRef.current.readyState !== 1) {
+        connectSocket(rid);
+      }
 
-    // 파일 업로드
-    if (pendingMedia.length > 0) {
-      for (let item of pendingMedia) {
-        const form = new FormData();
-        let uploadUri = item.uri;
+      // 파일 업로드
+      if (pendingMedia.length > 0) {
+        for (let item of pendingMedia) {
+          const form = new FormData();
+          let uploadUri = item.uri;
 
-        if (item.kind === "image") {
-          const compressed = await ImageManipulator.manipulateAsync(
-            item.uri,
-            [{ resize: { width: 1080 } }],
-            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-          );
-          uploadUri = compressed.uri;
+          if (item.kind === "image") {
+            const compressed = await ImageManipulator.manipulateAsync(
+              item.uri,
+              [{ resize: { width: 1080 } }],
+              { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+            );
+            uploadUri = compressed.uri;
+          }
+
+          form.append("file", {
+            uri: uploadUri,
+            type: item.type,
+            name: item.fileName || "media",
+          });
+
+          const r = await fetch(`${BASE_URL}/v1/chat/upload`, {
+            method: "POST",
+            body: form,
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+
+          const uploaded = await r.json();
+          uploadedUrls.push(`${BASE_URL}${uploaded.url}`);
         }
+      }
 
-        form.append("file", {
-          uri: uploadUri,
-          type: item.type,
-          name: item.fileName || "media",
+      // PAYLOAD
+      const payload = {
+        sender_id: myIdNum,
+        message: text.trim() || null,
+      };
+
+      // 단일 동영상
+      if (pendingMedia.length === 1 && pendingMedia[0].kind === "video") {
+        payload.media_type = "video";
+        payload.media_url = uploadedUrls[0];
+
+        const thumbnailForm = new FormData();
+        thumbnailForm.append("file", {
+          uri: pendingMedia[0].thumbnail,
+          type: "image/jpeg",
+          name: "thumbnail.jpg",
         });
 
-        const r = await fetch(`${BASE_URL}/v1/chat/upload`, {
+        const thumbRes = await fetch(`${BASE_URL}/v1/chat/upload`, {
           method: "POST",
-          body: form,
+          body: thumbnailForm,
           headers: { "Content-Type": "multipart/form-data" },
         });
 
-        const uploaded = await r.json();
-        uploadedUrls.push(`${BASE_URL}${uploaded.url}`);
+        const thumbData = await thumbRes.json();
+        payload.thumbnail_url = `${BASE_URL}${thumbData.url}`;
       }
-    }
 
-    // PAYLOAD
-    const payload = {
-      sender_id: Number(myId),
-      message: text.trim() || null,
-    };
+      // 단일 이미지
+      if (pendingMedia.length === 1 && pendingMedia[0].kind === "image") {
+        payload.media_type = "image";
+        payload.media_url = uploadedUrls[0];
+      }
 
-    // 🔥🔥🔥 추가됨: 단일 동영상 처리
-    if (pendingMedia.length === 1 && pendingMedia[0].kind === "video") {
-      payload.media_type = "video";
-      payload.media_url = uploadedUrls[0];
-      const thumbnailForm = new FormData();
-      thumbnailForm.append("file", {
-        uri: pendingMedia[0].thumbnail,
-        type: "image/jpeg",
-        name: "thumbnail.jpg",
+      // 멀티 이미지
+      if (pendingMedia.length > 1) {
+        payload.media_type = "multi-image";
+        payload.media_urls = uploadedUrls;
+      }
+
+      // 메시지 전송
+      waitForSocketReady(() => {
+        wsRef.current?.send(JSON.stringify(payload));
       });
 
-      const thumbRes = await fetch(`${BASE_URL}/v1/chat/upload`, {
-        method: "POST",
-        body: thumbnailForm,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-  const thumbData = await thumbRes.json();
-
-  // 🔥 2) 서버 URL을 thumbnail_url 값으로 설정
-  payload.thumbnail_url = `${BASE_URL}${thumbData.url}`; 
+      setText("");
+      setPendingMedia([]);
+    } finally {
+      setUploading(false);
     }
-
-    // 기존 이미지 조건
-    if (pendingMedia.length === 1 && pendingMedia[0].kind === "image") {
-      payload.media_type = "image";
-      payload.media_url = uploadedUrls[0];
-    }
-
-    // 기존 멀티 이미지
-    if (pendingMedia.length > 1) {
-      payload.media_type = "multi-image";
-      payload.media_urls = uploadedUrls;
-    }
-
-    // 메시지 전송
-    waitForSocketReady(() => {
-      wsRef.current?.send(JSON.stringify(payload));
-    });
-
-    setText("");
-    setPendingMedia([]);
-
-  } finally {
-    setUploading(false);
-  }
-};
-
+  };
 
   // =====================================================
   // 렌더링
@@ -580,13 +678,17 @@ export default function ChatRoom() {
         ref={flatListRef}
         data={messages}
         renderItem={renderItem}
-        keyExtractor={(_, index) => index.toString()}
+        keyExtractor={(item, index) =>
+          item?.id ? String(item.id) : String(index)
+        }
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
         onContentSizeChange={() =>
           flatListRef.current?.scrollToEnd({ animated: true })
         }
         contentContainerStyle={{
           paddingHorizontal: 15,
-          paddingBottom: pendingMedia.length > 0 ? 150 : 100,
+          paddingBottom: pendingMedia.length > 0 ? 20 : 10,
           paddingTop: 10,
         }}
       />
@@ -645,8 +747,7 @@ export default function ChatRoom() {
           alignItems: "center",
         }}
       >
-
-        {/* 🔥 수정된 + / X 버튼 */}
+        {/* + / X 버튼 */}
         <TouchableOpacity
           onPress={() => {
             if (!showMenu) {

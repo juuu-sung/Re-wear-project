@@ -108,6 +108,7 @@ def get_messages(room_id: int, db: Session = Depends(get_db)):
             "thumbnail_url": m.thumbnail_url,
             "media_type": m.media_type,
             "media_urls": m.media_urls,
+            "read": m.read,
             "created_at": m.created_at.isoformat(),
         }
         for m in msgs
@@ -158,12 +159,45 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
         active_connections[room_key] = []
     active_connections[room_key].append(websocket)
 
-    print("WS CONNECTED:", room_key)
+    print("WS CONNECT:", room_key)
 
     try:
         while True:
             data = await websocket.receive_json()
 
+            # ======================================================
+            # ⭐ 1) read_receipt (카카오톡/DM 방식)
+            # ======================================================
+            if data.get("type") == "read_receipt":
+                reader_id = data["user_id"]
+                last_read_id = data["last_read_id"]
+
+                # last_read_id 이하의 메시지만 read 처리
+                db.query(ChatMessage).filter(
+                    ChatMessage.room_id == room_id,
+                    ChatMessage.sender_id != reader_id,
+                    ChatMessage.id <= last_read_id,
+                    ChatMessage.read == False
+                ).update({ChatMessage.read: True})
+
+                db.commit()
+
+                # 상대방에게 방송
+                for ws in list(active_connections.get(room_key, [])):
+                    try:
+                        await ws.send_json({
+                            "type": "read_receipt",
+                            "user_id": reader_id,
+                            "last_read_id": last_read_id
+                        })
+                    except:
+                        active_connections[room_key].remove(ws)
+
+                continue
+
+            # ======================================================
+            # ⭐ 2) 일반 메시지 저장
+            # ======================================================
             msg = ChatMessage(
                 room_id=room_id,
                 sender_id=data.get("sender_id"),
@@ -171,15 +205,20 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
                 media_url=data.get("media_url"),
                 thumbnail_url=data.get("thumbnail_url"),
                 media_type=data.get("media_type"),
-                media_urls=data.get("media_urls"),   # 🔥 multi-image
+                media_urls=data.get("media_urls"),
                 created_at=datetime.utcnow(),
+                read=False
             )
 
             db.add(msg)
             db.commit()
             db.refresh(msg)
 
+            # ======================================================
+            # ⭐ 3) 메시지 broadcast
+            # ======================================================
             payload = {
+                "type": "message",
                 "id": msg.id,
                 "room_id": msg.room_id,
                 "sender_id": msg.sender_id,
@@ -188,10 +227,10 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
                 "thumbnail_url": msg.thumbnail_url,
                 "media_type": msg.media_type,
                 "media_urls": msg.media_urls,
+                "read": msg.read,
                 "created_at": msg.created_at.isoformat(),
             }
 
-            # 브로드캐스트
             for ws in list(active_connections.get(room_key, [])):
                 try:
                     await ws.send_json(payload)
@@ -199,10 +238,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
                     active_connections[room_key].remove(ws)
 
     except WebSocketDisconnect:
-        print("WS DISCONNECT:", room_key)
-
-    except Exception as e:
-        print("WS ERROR:", e)
+        print("WS DISC:", room_key)
 
     finally:
         if websocket in active_connections.get(room_key, []):
@@ -211,7 +247,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
         if not active_connections.get(room_key):
             active_connections.pop(room_key, None)
 
-        print("WS FINALLY", room_key)
+        print("WS CLOSED:", room_key)
+
 
 
 # =================================================================
@@ -230,6 +267,7 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
         opponent_id = room.user2_id if room.user1_id == user_id else room.user1_id
         opponent = db.query(User).filter(User.id == opponent_id).first()
 
+        # 🔥 마지막 메시지
         last_msg = (
             db.query(ChatMessage)
             .filter(ChatMessage.room_id == room.id)
@@ -237,23 +275,37 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
             .first()
         )
 
+        # 🔥 읽지 않은 메시지 개수(unread_count) 계산
+        unread_count = (
+            db.query(ChatMessage)
+            .filter(
+                ChatMessage.room_id == room.id,
+                ChatMessage.sender_id != user_id,   # 내가 보낸 것은 제외
+                ChatMessage.read == False           # 아직 읽지 않은 메시지만
+            )
+            .count()
+        )
+
         result.append({
             "room_id": room.id,
             "opponent_id": opponent_id,
             "opponent_name": opponent.name if opponent else None,
             "opponent_profile": opponent.profile_image if opponent else None,
-            "last_message": last_msg.message if last_msg else None,
-            "last_message": last_msg.message if last_msg else None,
 
-            
+            "last_message": last_msg.message if last_msg else None,
             "last_media_type": last_msg.media_type if last_msg else None,
             "last_media_url": last_msg.media_url if last_msg else None,
             "last_media_urls": last_msg.media_urls if last_msg else None,
             "last_thumbnail_url": last_msg.thumbnail_url if last_msg else None,
+
+            # 🔥 추가된 unread_count
+            "unread_count": unread_count,
+
             "updated_at": room.updated_at
         })
 
     return result
+
 
 # =================================================================
 # 6) 채팅방 삭제 API
@@ -277,4 +329,15 @@ def delete_room(room_id: int, user_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"status": "ok", "deleted_room_id": room_id}
+
+@router.post("/rooms/{room_id}/read")
+def mark_as_read(room_id: int, user_id: int, db: Session = Depends(get_db)):
+    db.query(ChatMessage).filter(
+        ChatMessage.room_id == room_id,
+        ChatMessage.sender_id != user_id,   # 내가 보낸 건 제외
+        ChatMessage.read == False
+    ).update({ChatMessage.read: True})
+
+    db.commit()
+    return {"status": "ok"}
 
