@@ -185,10 +185,10 @@ const PHONE_RE = /^010-\d{4}-\d{4}$/;
 
           <View style={styles.form}>
             <LabeledInput
-              label="이름"
+              label="닉네임"
               value={name}
               onChangeText={setName}
-              placeholder="이름을 입력하세요"
+              placeholder="낙네임을 입력하세요"
             />
             <LabeledInput
               label="전화번호"

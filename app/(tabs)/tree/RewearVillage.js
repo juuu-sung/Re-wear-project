@@ -1,5 +1,5 @@
 // ===============================================================
-// RewearVillage.js — PART 1 (IMPORTS + BASE_URL + DAILY MISSION TAB)
+// RewearVillage.js — DAILY MISSION + 게임 화면 전체
 // ===============================================================
 
 import { Ionicons } from "@expo/vector-icons";
@@ -32,7 +32,7 @@ const TOP_H = SCREEN_H * TOP_RATIO;
 // ======================================================
 // ⭐ DAILY MISSION TAB
 // ======================================================
-function DailyMissionTab({ userRP, setUserRP }) {
+function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
   const [missions, setMissions] = useState([]);
   const [userId, setUserId] = useState(null);
 
@@ -43,32 +43,41 @@ function DailyMissionTab({ userRP, setUserRP }) {
     })();
   }, []);
 
+  // 기본 미션 목록
   const FIXED_MISSIONS = [
     { id: 1, title: "1회 접속", key: "login", reward: 10 },
     { id: 2, title: "캘린더에 착용기록 추가하기", key: "add_wear", reward: 30 },
     { id: 3, title: "캘린더에 세탁기록 추가하기", key: "add_wash", reward: 50 },
     { id: 4, title: "옷장에 옷 등록하기", key: "add_cloth", reward: 40 },
-    { id: 5, title: "친구들 맵에 추가하기", key: "touch_friends", reward: 20 },
-    { id: 6, title: "오늘의 환경뉴스 읽기", key: "read_news", reward: 30 },
+    { id: 5, title: "세탁 라벨 검색하기", key: "scan_label", reward: 40 },
+    { id: 6, title: "친구들 맵에 추가(제거)하기", key: "touch_friends", reward: 20 },
+    { id: 7, title: "오늘의 환경뉴스 읽기", key: "read_news", reward: 30 },
   ];
 
+  // ✅ 유저/탭 상태에 따라 미션 초기화 & 리로드
   useEffect(() => {
     if (!userId) return;
+    if (selectedTab !== "mission") return; // 미션 탭일 때만 동작
 
     const init = async () => {
       const today = new Date().toISOString().split("T")[0];
 
-      const storedDate = await AsyncStorage.getItem(`daily_mission_date_${userId}`);
+      const storedDate = await AsyncStorage.getItem(
+        `daily_mission_date_${userId}`
+      );
       const saved = await AsyncStorage.getItem(`daily_missions_${userId}`);
 
       if (storedDate !== today || !saved) {
         const newList = FIXED_MISSIONS.map((m) => ({
           ...m,
-          done: m.key === "login",
+          done: m.key === "login", // 접속 미션은 자동 완료
           claimed: false,
         }));
 
-        await AsyncStorage.setItem(`daily_missions_${userId}`, JSON.stringify(newList));
+        await AsyncStorage.setItem(
+          `daily_missions_${userId}`,
+          JSON.stringify(newList)
+        );
         await AsyncStorage.setItem(`daily_mission_date_${userId}`, today);
         setMissions(newList);
       } else {
@@ -77,9 +86,9 @@ function DailyMissionTab({ userRP, setUserRP }) {
     };
 
     init();
-  }, [userId]);
+  }, [userId, selectedTab]);
 
-  // ⭐ 미션 보상 받기 (RP 증가 + DB 저장)
+  // ⭐ 미션 보상 받기
   const claimReward = async (mission) => {
     if (!mission.done || mission.claimed) return;
 
@@ -89,7 +98,7 @@ function DailyMissionTab({ userRP, setUserRP }) {
     setUserRP(newRP);
     await AsyncStorage.setItem("user_rp", String(newRP));
 
-    // ⭐ 2) 서버(DB)에 저장
+    // 2) 서버(DB)에 저장
     const userId = await AsyncStorage.getItem("user_id");
     await fetch(`${BASE_URL}/v1/game/rp/set?user_id=${userId}&rp=${newRP}`, {
       method: "POST",
@@ -100,9 +109,12 @@ function DailyMissionTab({ userRP, setUserRP }) {
     );
 
     setMissions(updated);
-    await AsyncStorage.setItem(`daily_missions_${userId}`, JSON.stringify(updated));
+    await AsyncStorage.setItem(
+      `daily_missions_${userId}`,
+      JSON.stringify(updated)
+    );
 
-    Alert.alert("🎉 미션 완료!", `+${mission.reward} RP 획득!`);
+    Alert.alert("미션 완료!", `+${mission.reward} RP 획득!`);
   };
 
   // ⭐ 모두 받기
@@ -118,7 +130,7 @@ function DailyMissionTab({ userRP, setUserRP }) {
     setUserRP(newRP);
     await AsyncStorage.setItem("user_rp", String(newRP));
 
-    // ⭐ 2) 서버(DB)에 저장
+    // 2) 서버(DB)에 저장
     const userId = await AsyncStorage.getItem("user_id");
     await fetch(`${BASE_URL}/v1/game/rp/set?user_id=${userId}&rp=${newRP}`, {
       method: "POST",
@@ -129,7 +141,10 @@ function DailyMissionTab({ userRP, setUserRP }) {
     );
 
     setMissions(updated);
-    await AsyncStorage.setItem(`daily_missions_${userId}`, JSON.stringify(updated));
+    await AsyncStorage.setItem(
+      `daily_missions_${userId}`,
+      JSON.stringify(updated)
+    );
 
     Alert.alert("🎁 모두 받기 완료!", `총 +${total} RP`);
   };
@@ -175,11 +190,10 @@ function DailyMissionTab({ userRP, setUserRP }) {
   );
 }
 
-export default function RewearVillage() {
-  // ===============================================================
-// RewearVillage.js — PART 2 (MAIN SCREEN + RENDER + STYLE)
 // ===============================================================
-
+// RewearVillage — MAIN SCREEN
+// ===============================================================
+export default function RewearVillage() {
   const BG_PATH = require("../../../assets/game/grass.png");
   const TWINKLE_PATH = require("../../../assets/game/twinkle.json");
 
@@ -228,10 +242,17 @@ export default function RewearVillage() {
     { id: 8, type: "animal", name: "오렌지", desc: "상큼한 에너지!", price: 0, anim: require("../../../assets/game/walk_orange.json") },
     { id: 9, type: "animal", name: "강아지2", desc: "멋진 강아지!", price: 0, anim: require("../../../assets/game/walk_dog2.json") },
     { id: 10, type: "animal", name: "새", desc: "귀여운 새!", price: 0, anim: require("../../../assets/game/walk_bird.json") },
+    { id: 11, type: "animal", name: "말", desc: "빠른 말!", price: 0, anim: require("../../../assets/game/walk_horse.json") },
+    { id: 12, type: "animal", name: "새2", desc: "꽃을 전달하는 새!", price: 0, anim: require("../../../assets/game/peace.json") },
 
     { id: 101, type: "object", name: "완두콩", desc: "귀여운 완두!", price: 0, anim: require("../../../assets/game/peas.json") },
     { id: 102, type: "object", name: "점퍼", desc: "귀염뽀짝 점퍼!", price: 0, anim: require("../../../assets/game/jump_pear.json") },
     { id: 103, type: "object", name: "바나나", desc: "노랗고 매력적!", price: 0, anim: require("../../../assets/game/banana.json") },
+    { id: 104, type: "object", name: "장미", desc: "흩날리는 장미", price: 0, anim: require("../../../assets/game/rose.json") },
+    { id: 105, type: "object", name: "트리", desc: "크리스마스다!", price: 0, anim: require("../../../assets/game/christmas-tree.json") },
+    { id: 106, type: "object", name: "벌", desc: "물리면 아파요!", price: 0, anim: require("../../../assets/game/bee.json") },
+    { id: 107, type: "object", name: "토네이도", desc: "바람이 슝슝!", price: 0, anim: require("../../../assets/game/tornado.json") },
+    
   ];
 
   // ======================================================
@@ -250,7 +271,7 @@ export default function RewearVillage() {
       setPlacedObjects(data.placedObjects || []);
       setActiveAnimals(data.activeAnimals || []);
 
-      // ⭐ 서버 RP → 프론트 반영
+      // 서버 RP → 프론트 반영
       if (data.rp !== undefined) {
         setUserRP(data.rp);
         await AsyncStorage.setItem("user_rp", String(data.rp));
@@ -266,7 +287,7 @@ export default function RewearVillage() {
   useEffect(() => {
     const updateMode = () => {
       const now = new Date();
-      const hour = (now.getUTCHours() + 9) % 24;
+      const hour = (now.getUTCHours() + 9) % 24; // KST
       setIsNight(hour < 6 || hour >= 18);
     };
 
@@ -306,8 +327,11 @@ export default function RewearVillage() {
         const duration = (isNight ? 4500 : 3000) + Math.random() * 2000;
 
         pos.flattenOffset();
-        let nextX = Math.max(40, Math.min(SCREEN_W - 100, pos.x._value + dx));
-        let nextY = Math.max(TOP_H * 0.2, Math.min(TOP_H * 0.85, pos.y._value + dy));
+        const nextX = Math.max(40, Math.min(SCREEN_W - 100, pos.x._value + dx));
+        const nextY = Math.max(
+          TOP_H * 0.2,
+          Math.min(TOP_H * 0.85, pos.y._value + dy)
+        );
 
         setDirections((prev) => ({ ...prev, [id]: dx >= 0 ? 1 : -1 }));
 
@@ -343,11 +367,11 @@ export default function RewearVillage() {
 
     if (locationY > TOP_H) return;
 
-    // ⭐ 구조물 설치 모드
+    // 구조물 설치 모드
     if (pendingPlacement) {
       const newObj = {
         id: Date.now(),
-        object_id: pendingPlacement.id,   // ⭐ 수정됨
+        object_id: pendingPlacement.id,
         x: locationX,
         y: locationY,
         scale: scaleValue,
@@ -359,7 +383,7 @@ export default function RewearVillage() {
       return;
     }
 
-    // ⭐ 별 생성
+    // 별 생성
     if (!isNight) return;
 
     const opacity = new Animated.Value(1);
@@ -389,7 +413,10 @@ export default function RewearVillage() {
   // ⭐ PURCHASE (포인트 DB 저장도 함께 적용)
   // ======================================================
   const handlePurchase = async (item) => {
-    const currentRP = parseInt((await AsyncStorage.getItem("user_rp")) || "500", 10);
+    const currentRP = parseInt(
+      (await AsyncStorage.getItem("user_rp")) || "500",
+      10
+    );
 
     if (item.type === "animal" && ownedAnimals.includes(item.id)) return;
     if (item.type === "object" && ownedObjects.includes(item.id)) return;
@@ -405,7 +432,7 @@ export default function RewearVillage() {
     await AsyncStorage.setItem("user_rp", newRP.toString());
     setUserRP(newRP);
 
-    // ⭐ 2) 서버 저장
+    // 2) 서버 저장
     const userId = await AsyncStorage.getItem("user_id");
     await fetch(`${BASE_URL}/v1/game/rp/set?user_id=${userId}&rp=${newRP}`, {
       method: "POST",
@@ -413,15 +440,21 @@ export default function RewearVillage() {
 
     // 구매 처리
     if (item.type === "animal") {
-      await fetch(`${BASE_URL}/v1/game/buy/animal?user_id=${userId}&animal_id=${item.id}`, {
-        method: "POST",
-      });
+      await fetch(
+        `${BASE_URL}/v1/game/buy/animal?user_id=${userId}&animal_id=${item.id}`,
+        {
+          method: "POST",
+        }
+      );
       setOwnedAnimals((prev) => [...prev, item.id]);
       Alert.alert(`${item.name} 구매 완료!`);
     } else if (item.type === "object") {
-      await fetch(`${BASE_URL}/v1/game/buy/object?user_id=${userId}&object_id=${item.id}`, {
-        method: "POST",
-      });
+      await fetch(
+        `${BASE_URL}/v1/game/buy/object?user_id=${userId}&object_id=${item.id}`,
+        {
+          method: "POST",
+        }
+      );
       setOwnedObjects((prev) => [...prev, item.id]);
       setSelectedTab("decorate");
       setPendingPlacement(item);
@@ -457,7 +490,7 @@ export default function RewearVillage() {
       );
 
       await AsyncStorage.setItem(missionKey, JSON.stringify(updated));
-      Alert.alert("🎯 미션 완료!", "'친구들 맵에 추가하기' 완료!");
+      Alert.alert("미션 완료!", "'친구들 맵에 추가하기' 완료!");
     } catch (err) {
       console.error("❌ 친구 미션 처리 오류:", err);
     }
@@ -531,7 +564,7 @@ export default function RewearVillage() {
           ))}
 
           {placedObjects.map((obj) => {
-            const item = shopItems.find(i => i.id === obj.object_id);
+            const item = shopItems.find((i) => i.id === obj.object_id);
             if (!item) return null;
 
             return (
@@ -564,7 +597,10 @@ export default function RewearVillage() {
             if (!animal || !pos) return null;
 
             return (
-              <TouchableWithoutFeedback key={id} onPress={() => handleAnimalPress(id)}>
+              <TouchableWithoutFeedback
+                key={id}
+                onPress={() => handleAnimalPress(id)}
+              >
                 <Animated.View
                   style={[
                     styles.animalContainer,
@@ -659,7 +695,10 @@ export default function RewearVillage() {
 
                   <TouchableOpacity
                     disabled={owned}
-                    style={[styles.buyButton, owned && { backgroundColor: "#bbb" }]}
+                    style={[
+                      styles.buyButton,
+                      owned && { backgroundColor: "#bbb" },
+                    ]}
                     onPress={() => handlePurchase(item)}
                   >
                     <Text style={styles.buyText}>
@@ -673,7 +712,9 @@ export default function RewearVillage() {
           {/* OWNED ANIMALS */}
           {selectedTab === "owned" &&
             (ownedAnimals.length === 0 ? (
-              <Text style={{ textAlign: "center", color: "#666", marginTop: 10 }}>
+              <Text
+                style={{ textAlign: "center", color: "#666", marginTop: 10 }}
+              >
                 아직 친구들이 없어요.
               </Text>
             ) : (
@@ -697,7 +738,9 @@ export default function RewearVillage() {
                     <TouchableOpacity
                       style={[
                         styles.mapToggleBtn,
-                        activeAnimals.includes(id) && { backgroundColor: "#F39C12" },
+                        activeAnimals.includes(id) && {
+                          backgroundColor: "#F39C12",
+                        },
                       ]}
                       onPress={() => handleAddToMap(id)}
                     >
@@ -713,7 +756,9 @@ export default function RewearVillage() {
           {/* DECORATE TAB */}
           {selectedTab === "decorate" &&
             (ownedObjects.length === 0 ? (
-              <Text style={{ textAlign: "center", color: "#666", marginTop: 10 }}>
+              <Text
+                style={{ textAlign: "center", color: "#666", marginTop: 10 }}
+              >
                 아직 구조물이 없어요.
               </Text>
             ) : (
@@ -747,7 +792,11 @@ export default function RewearVillage() {
 
           {/* DAILY MISSION */}
           {selectedTab === "mission" && (
-            <DailyMissionTab userRP={userRP} setUserRP={setUserRP} />
+            <DailyMissionTab
+              userRP={userRP}
+              setUserRP={setUserRP}
+              selectedTab={selectedTab}
+            />
           )}
         </ScrollView>
       </View>
@@ -900,4 +949,3 @@ const styles = StyleSheet.create({
 
   rewardText: { color: "#fff", fontWeight: "600" },
 });
-

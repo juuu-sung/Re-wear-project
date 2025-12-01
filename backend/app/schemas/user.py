@@ -33,3 +33,7 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user_id: int
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = None 
