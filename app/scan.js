@@ -1,13 +1,14 @@
 // app/scan.js  (🚨 기존 내용 다 지우고 이걸로 덮어쓰세요!)
 
-import * as ImageManipulator from 'expo-image-manipulator';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
 // -----------------------------------------------------------
-// (필수) 본인 컴퓨터 IP 주소 (이전과 동일)
+// 서버 URL
 // -----------------------------------------------------------
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 export const BASE_URL = RAW_BASE_URL.replace(/\/+$/, "");
@@ -18,55 +19,72 @@ export default function ScanScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  // 화면이 열리자마자 1번 실행
+  // 화면 진입 시 카메라 자동 실행
   useEffect(() => {
-    // 🚨 0.5초 딜레이를 줘서 모달이 열릴 시간을 줍니다.
     const timer = setTimeout(() => {
       launchNativeCamera();
-    }, 500); // 0.5초 (500ms)
-
-    // 화면을 나가면 타이머를 취소합니다. (메모리 누수 방지)
+    }, 500);
     return () => clearTimeout(timer);
   }, []);
 
-  // "add.js"의 카메라 실행 로직을 가져왔습니다.
   const launchNativeCamera = async () => {
     setIsLoading(true);
     try {
-      // 1. 카메라 권한 요청
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('권한 필요', '카메라 접근 권한을 허용해주세요.');
-        router.back(); // 홈으로 돌아가기
+        Alert.alert("권한 필요", "카메라 접근 권한을 허용해주세요.");
+        router.back();
         return;
       }
 
-      // 2. "아이폰 기본 카메라" 실행
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: false, // 🚨 편집 없이 원본 비율 사용
+        allowsEditing: false,
         quality: 0.8,
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
       });
 
-      // 3. 사진을 찍은 경우
       if (!result.canceled && result.assets?.length > 0) {
         const imageUri = result.assets[0].uri;
-        // 4. 백엔드로 업로드
         await uploadImage(imageUri);
       } else {
-        // 5. 사용자가 "취소" 누른 경우
-        console.log('카메라 촬영 취소');
-        router.back(); // 홈으로 돌아가기
+        router.back();
       }
     } catch (err) {
-      console.error('❌ 카메라 실행 오류:', err);
-      Alert.alert('카메라 오류', String(err?.message || err));
+      console.error("❌ 카메라 실행 오류:", err);
+      Alert.alert("카메라 오류", String(err?.message || err));
       router.back();
     }
     setIsLoading(false);
   };
 
-  // 백엔드로 이미지 업로드 (결과 페이지로 이동하도록 수정됨)
+  // ✅ 세탁 라벨 미션 완료 처리
+  const markScanMissionDone = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("user_id");
+      if (!userId) return;
+
+      const today = new Date().toISOString().split("T")[0];
+      const dateKey = `daily_mission_date_${userId}`;
+      const missionKey = `daily_missions_${userId}`;
+
+      const storedDate = await AsyncStorage.getItem(dateKey);
+      const missionsRaw = await AsyncStorage.getItem(missionKey);
+
+      if (!missionsRaw || storedDate !== today) return;
+
+      const missions = JSON.parse(missionsRaw);
+      const updated = missions.map((m) =>
+        m.key === "scan_label" ? { ...m, done: true } : m
+      );
+
+      await AsyncStorage.setItem(missionKey, JSON.stringify(updated));
+      console.log("세탁 라벨 검색하기 미션 완료 처리");
+    } catch (err) {
+      console.error("미션 완료 처리 실패:", err);
+    }
+  };
+
+  // 백엔드로 이미지 업로드 (결과 페이지로 이동)
   const uploadImage = async (imageUri) => {
     setIsLoading(true);
     let manipResult;
@@ -74,55 +92,57 @@ export default function ScanScreen() {
       // 1. 이미지 리사이징
       manipResult = await ImageManipulator.manipulateAsync(
         imageUri,
-        [{ resize: { width: 800 } }], // 가로 800으로 리사이징
+        [{ resize: { width: 800 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
 
-      // 2. 'FormData' 형식으로 만들기
+      // 2. FormData 구성
       const formData = new FormData();
-      formData.append('file', {
+      formData.append("file", {
         uri: manipResult.uri,
         name: `scan_${Date.now()}.jpg`,
-        type: 'image/jpeg',
+        type: "image/jpeg",
       });
 
-      // 3. 백엔드로 'POST' 전송
+      // 3. 백엔드로 POST
       const response = await fetch(BACKEND_API_URL, {
-        method: 'POST',
+        method: "POST",
         body: formData,
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '서버 오류');
+        throw new Error(result.error || "서버 오류");
       }
 
-      console.log('✅ 스캔 결과:', result.detections);
+      console.log("스캔 결과:", result.detections);
 
-      // -------------------------------------------------
-      // ✅ 4. (중요!) 결과 페이지로 '이동'
-      // -------------------------------------------------
+      
+      // 미션 완료 처리
+      await markScanMissionDone();
+
+      // 미션 변경 플래그 기록
+      await AsyncStorage.setItem("mission_changed", "1");
+
+      // 결과 페이지 이동
       router.replace({
-        pathname: '/scanResult', // "결과 확인" 새 스크린으로 이동
+        pathname: "/scanResult",
         params: {
-          detections: JSON.stringify(result.detections), // 스캔된 기호 목록
-          imageUri: manipResult.uri, // 사용자가 찍은 사진
+          detections: JSON.stringify(result.detections),
+          imageUri: manipResult.uri,
         },
       });
-      // -------------------------------------------------
 
     } catch (error) {
-      console.error('❌ 업로드 실패:', error);
-      Alert.alert('업로드 실패', '서버에 연결할 수 없거나 오류가 발생했습니다.');
-      setIsLoading(false);
-      router.back(); // 실패 시 홈으로
+      console.error("❌ 업로드 실패:", error);
+      Alert.alert("업로드 실패", "서버에 연결할 수 없거나 오류가 발생했습니다.");
+      router.back();
     }
+    setIsLoading(false);
   };
 
-  // 이 화면은 카메라가 켜지거나, 로딩 중이거나, 다른 화면으로 이동하기 때문에
-  // 사용자에게는 이 로딩 화면만 잠시 보이게 됩니다.
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#0000ff" />
@@ -134,9 +154,9 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
   },
   text: {
     marginTop: 10,

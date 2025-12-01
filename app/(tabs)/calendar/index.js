@@ -298,7 +298,7 @@ const saveEvent = async (date, newEvent) => {
           theme={{
             todayTextColor: "#2e7d32",
             arrowColor: "#2e7d32",
-            monthTextColor: "#2e7d32",
+            monthTextColor: "#000000ff",
           }}
         />
 

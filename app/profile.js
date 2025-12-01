@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -23,12 +24,11 @@ import ChevronIcon from "../assets/icons/chevron-forward.svg";
 import PencilIcon from "../assets/icons/pencil.svg";
 
 const accountMenuItems = [
-  { id: "1", title: "계정 정보 변경", screen: "/account-settings" },
+  { id: "1", title: "계정 정보 변경", screen: "/account-verify" },
   { id: "2", title: "로그아웃", screen: "/logout" },
 ];
 
-// 서버 주소 설정
-const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
+const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
 export default function ProfileScreen() {
@@ -37,85 +37,126 @@ export default function ProfileScreen() {
   const [userInfo, setUserInfo] = useState({ name: "", email: "" });
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true); 
-
-  // 설정 상태
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
 
-  // 회원탈퇴 관련 상태
+  // 🔴 회원탈퇴 상태
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
 
-  // 화면이 포커스될 때마다 최신 정보 갱신
+  // --------------------------------------------------
+  //  프로필 로딩
+  // --------------------------------------------------
   useFocusEffect(
     useCallback(() => {
       loadProfile();
     }, [])
   );
 
-  // 🔥 [핵심] 프로필 정보 불러오기
   const loadProfile = async () => {
     try {
       setLoading(true);
-      console.log("🚀 프로필 로딩 시작!");
 
-      // 1. 로컬 저장소 확인 (이름표 수정: user_id, access_token)
-      const storedId = await AsyncStorage.getItem("user_id");      // 👈 수정됨
-      const storedToken = await AsyncStorage.getItem("access_token"); // 👈 수정됨
+      const storedId = await AsyncStorage.getItem("user_id");
+      const storedToken = await AsyncStorage.getItem("access_token");
       const storedUsername = await AsyncStorage.getItem("username");
 
-      console.log("📂 로컬 저장소 확인:", { storedId, hasToken: !!storedToken });
-
       if (!storedId || !storedToken) {
-        console.log("❌ 로그인 정보 없음 (ID나 토큰이 비어있음)");
         setLoading(false);
         return;
       }
 
-      // 일단 로컬에 있는 이름이라도 먼저 보여줌
       if (storedUsername) {
         setUserInfo(prev => ({ ...prev, name: storedUsername }));
       }
 
-      // 2. 백엔드 요청 (최신 정보 및 이메일 가져오기)
-      console.log(`📡 서버 요청 보냄: ${BASE_URL}/v1/users/${storedId}`);
-      
       const response = await axios.get(`${BASE_URL}/v1/users/${storedId}`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
 
-      console.log("✅ 서버 응답 성공:", response.data);
-
       const { name, email, profile_image, username } = response.data;
 
-      // 받아온 정보로 업데이트
-      setUserInfo({ 
-        name: name || username || "이름 없음", 
-        email: email || "" 
+      setUserInfo({
+        name: name || username || "이름 없음",
+        email: email || ""
       });
 
       if (profile_image) {
-        const imageUrl = profile_image.startsWith("http") 
-          ? profile_image 
+        const url = profile_image.startsWith("http")
+          ? profile_image
           : `${BASE_URL}${profile_image}`;
-        setProfileImage(imageUrl);
+        setProfileImage(url);
       }
 
     } catch (error) {
-      console.error("🚨 프로필 불러오기 에러:", error);
-      // 에러가 나더라도 로컬에 저장된 이름은 유지
+      console.log("🚨 프로필 로딩 오류:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMenuPress = async (item) => {
-    if (item.screen === "/logout") {
-      handleLogout();
-    } else {
-      router.push(item.screen);
+  // --------------------------------------------------
+  //  🔥 사진 선택 + 업로드
+  // --------------------------------------------------
+  const pickImage = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("권한 필요", "프로필 사진을 바꾸려면 앨범 접근 권한이 필요합니다.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled) return;
+
+    uploadProfileImage(result.assets[0].uri);
+  };
+
+  const uploadProfileImage = async (uri) => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      const userId = await AsyncStorage.getItem("user_id");
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri,
+        name: "profile.jpg",
+        type: "image/jpeg",
+      });
+
+      const res = await axios.post(
+        `${BASE_URL}/v1/users/${userId}/profile-image`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const savedUrl = res.data.profile_image;
+
+      const absUrl = savedUrl.startsWith("http")
+        ? savedUrl
+        : `${BASE_URL}${savedUrl}`;
+
+      setProfileImage(absUrl);
+      loadProfile();
+
+    } catch (err) {
+      console.log("🚨 업로드 에러:", err);
+      Alert.alert("업로드 실패", "프로필 사진 업로드 중 문제가 발생했습니다.");
     }
   };
 
+  // --------------------------------------------------
+  //  로그아웃
+  // --------------------------------------------------
   const handleLogout = async () => {
     Alert.alert("로그아웃", "로그아웃 하시겠습니까?", [
       { text: "취소", style: "cancel" },
@@ -129,49 +170,41 @@ export default function ProfileScreen() {
     ]);
   };
 
-  // ---------------------------------------------------------
-  // 🟢 회원 탈퇴 로직
-  // ---------------------------------------------------------
-  const handlePressDelete = () => {
-    Alert.alert(
-      "계정 삭제",
-      "정말로 계정을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
-      [
-        { text: "취소", style: "cancel" },
-        { 
-          text: "삭제", 
-          style: "destructive", 
-          onPress: () => setDeleteModalVisible(true) 
-        },
-      ]
-    );
+  const handleMenuPress = (item) => {
+    if (item.screen === "/logout") return handleLogout();
+    router.push(item.screen);
   };
 
+  // --------------------------------------------------
+  //  🔥 회원탈퇴 로직 추가 (행님이 말한 “잘 되던 코드 그대로”)
+  // --------------------------------------------------
   const performDeleteAccount = async () => {
     if (!deletePassword) {
       Alert.alert("알림", "비밀번호를 입력해주세요.");
       return;
     }
+
     try {
-      const token = await AsyncStorage.getItem("access_token"); // 👈 여기도 수정!
-      
-      await axios.post(`${BASE_URL}/v1/users/delete`, {
-        password: deletePassword
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const token = await AsyncStorage.getItem("access_token");
+
+      await axios.post(
+        `${BASE_URL}/v1/users/delete`,
+        { password: deletePassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.", [
-        { 
-          text: "확인", 
+        {
+          text: "확인",
           onPress: async () => {
-            await AsyncStorage.clear(); 
-            router.replace("/"); 
-          } 
-        }
+            await AsyncStorage.clear();
+            router.replace("/");
+          },
+        },
       ]);
+
     } catch (error) {
-      console.error(error);
+      console.log("🚨 회원탈퇴 에러:", error);
       Alert.alert("탈퇴 실패", "비밀번호가 일치하지 않거나 오류가 발생했습니다.");
     } finally {
       setDeleteModalVisible(false);
@@ -179,29 +212,33 @@ export default function ProfileScreen() {
     }
   };
 
-  // ---------------------------------------------------------
-  // 🔵 UI 렌더링
-  // ---------------------------------------------------------
+  // --------------------------------------------------
+  //  UI
+  // --------------------------------------------------
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        {/* 프로필 섹션 */}
+
+        {/* 프로필 */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
+            
             {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.profileImage} />
             ) : (
               <View style={styles.profileImagePlaceholder}>
-                 <Ionicons name="person" size={50} color="#ccc" />
+                <Ionicons name="person" size={50} color="#ccc" />
               </View>
             )}
-            <TouchableOpacity style={styles.editIcon}>
+
+            <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
               <PencilIcon width={16} height={16} fill="#000" />
             </TouchableOpacity>
+
           </View>
 
-          {loading && !userInfo.name ? (
-            <ActivityIndicator size="small" color="#000" style={{ marginTop: 10 }} />
+          {loading ? (
+            <ActivityIndicator />
           ) : (
             <>
               <Text style={styles.name}>{userInfo.name}</Text>
@@ -210,7 +247,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* 설정 섹션 */}
+        {/* 설정 */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>설정</Text>
           <View style={styles.menuList}>
@@ -219,14 +256,16 @@ export default function ProfileScreen() {
               <Switch
                 trackColor={{ false: "#767577", true: "green" }}
                 thumbColor={isNotificationsEnabled ? "white" : "#f4f3f4"}
-                onValueChange={() => setIsNotificationsEnabled((prev) => !prev)}
+                onValueChange={() =>
+                  setIsNotificationsEnabled((prev) => !prev)
+                }
                 value={isNotificationsEnabled}
               />
             </View>
           </View>
         </View>
 
-        {/* 계정 메뉴 섹션 */}
+        {/* 계정 */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>계정</Text>
           <View style={styles.menuList}>
@@ -243,81 +282,81 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* 회원 탈퇴 버튼 */}
+        {/* 🔴 회원탈퇴 */}
         <TouchableOpacity 
-          style={[styles.menuItem, { marginTop: 20, marginHorizontal: 20, padding: 15, backgroundColor: 'white', borderRadius: 10, marginBottom: 40 }]} 
-          onPress={handlePressDelete}
+          style={[styles.menuItem, { margin: 20, backgroundColor: "white", borderRadius: 10 }]}
+          onPress={() => setDeleteModalVisible(true)}
         >
-          <Text style={{ color: "red", fontSize: 16, fontWeight: "bold", textAlign: 'center' }}>회원 탈퇴</Text>
+          <Text style={{ color: "red", fontWeight: "bold", textAlign: "center" }}>
+            회원 탈퇴
+          </Text>
         </TouchableOpacity>
 
       </ScrollView>
 
-      {/* 비밀번호 입력 모달 */}
+      {/* 🔥 회원탈퇴 모달 */}
       <Modal
-        animationType="slide"
-        transparent={true}
+        transparent
         visible={deleteModalVisible}
+        animationType="fade"
         onRequestClose={() => setDeleteModalVisible(false)}
       >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.centeredView}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalWrap}
         >
-          <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>본인 확인</Text>
-            <Text style={styles.modalText}>계정을 삭제하려면 비밀번호를 입력하세요.</Text>
-            
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>계정 삭제</Text>
+            <Text style={styles.modalSub}>
+              계정 삭제를 위해 비밀번호를 입력하세요.
+            </Text>
+
             <TextInput
-              style={styles.input}
-              placeholder="비밀번호"
-              secureTextEntry
               value={deletePassword}
               onChangeText={setDeletePassword}
+              secureTextEntry
+              placeholder="비밀번호"
+              style={styles.modalInput}
             />
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.button, styles.buttonClose]} 
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.cancelBtn]}
                 onPress={() => setDeleteModalVisible(false)}
               >
-                <Text style={styles.textStyle}>취소</Text>
+                <Text style={styles.cancelText}>취소</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.button, styles.buttonDelete]} 
+
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.deleteBtn]}
                 onPress={performDeleteAccount}
               >
-                <Text style={styles.textStyle}>삭제하기</Text>
+                <Text style={styles.deleteText}>삭제하기</Text>
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f0f0f0" },
+
   profileSection: {
     backgroundColor: "white",
     alignItems: "center",
     paddingVertical: 30,
   },
-  profileImageContainer: { position: "relative", marginBottom: 15, justifyContent: 'center', alignItems: 'center' },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
+
+  profileImageContainer: { position: "relative", marginBottom: 15 },
+  profileImage: { width: 100, height: 100, borderRadius: 50 },
   profileImagePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 100, height: 100, borderRadius: 50,
     backgroundColor: "#e9e9e9",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center", alignItems: "center",
   },
   editIcon: {
     position: "absolute",
@@ -329,69 +368,58 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
-  name: { fontSize: 22, fontWeight: "bold" },
+
+  name: { fontSize: 22, fontWeight: "700" },
   email: { fontSize: 16, color: "gray", marginTop: 5 },
+
   menuSection: { marginTop: 25, paddingHorizontal: 20 },
-  sectionTitle: {
-    fontSize: 14,
-    color: "gray",
-    marginBottom: 10,
-    marginLeft: 10,
-  },
-  menuList: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    overflow: "hidden",
-  },
+  sectionTitle: { fontSize: 14, color: "gray", marginBottom: 10 },
+  menuList: { backgroundColor: "white", borderRadius: 10, overflow: "hidden" },
+
   menuItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: "#eee",
   },
-  menuText: { fontSize: 16 },
-  
-  // 모달 스타일
-  centeredView: {
+
+  // 🔴 모달 스타일
+  modalWrap: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)"
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
-  modalView: {
+  modalBox: {
     width: "80%",
     backgroundColor: "white",
-    borderRadius: 20,
-    padding: 35,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5
+    borderRadius: 16,
+    padding: 24,
   },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 15 },
-  modalText: { marginBottom: 15, textAlign: "center", color: "#666" },
-  input: {
-    width: "100%",
-    height: 50,
+  modalTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
+  modalSub: { fontSize: 14, color: "#666", marginBottom: 20 },
+  modalInput: {
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 20
-  },
-  modalButtons: { flexDirection: "row", gap: 10 },
-  button: {
+    paddingHorizontal: 12,
+    height: 45,
     borderRadius: 10,
-    padding: 10,
-    elevation: 2,
-    minWidth: 80,
-    alignItems: 'center'
+    marginBottom: 20,
   },
-  buttonClose: { backgroundColor: "#ccc" },
-  buttonDelete: { backgroundColor: "#ff4444" },
-  textStyle: { color: "white", fontWeight: "bold" }
+
+  modalBtnRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  cancelBtn: { backgroundColor: "#ddd", marginRight: 10 },
+  deleteBtn: { backgroundColor: "#ff4444", marginLeft: 10 },
+  cancelText: { color: "#333", fontWeight: "700" },
+  deleteText: { color: "white", fontWeight: "700" }
 });

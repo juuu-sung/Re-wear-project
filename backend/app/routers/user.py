@@ -16,6 +16,9 @@ from app.models import User
 class UserDeleteRequest(BaseModel):
     password: str
 
+class PasswordCheckRequest(BaseModel):
+    password: str
+    
 # 기존 users 라우터
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -89,10 +92,21 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 
 @router.patch("/{user_id}", response_model=UserOut)
 def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)):
-    obj = crud_user.update_user(db, user_id, payload)
+    try:
+        obj = crud_user.update_user(db, user_id, payload)
+    except ValueError as e:
+        msg = str(e)
+        if msg == "PASSWORD_SAME_AS_OLD":
+            raise HTTPException(status_code=400, detail="기존 비밀번호와 동일합니다.")
+        if msg == "PASSWORD_TOO_LONG":
+            raise HTTPException(status_code=400, detail="비밀번호는 72바이트 이하만 가능합니다.")
+        raise e
+
     if not obj:
         raise HTTPException(status_code=404, detail="User not found")
+
     return obj
+
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
@@ -155,3 +169,12 @@ def delete_my_account(
          raise HTTPException(status_code=404, detail="User not found")
 
     return {"message": "계정이 성공적으로 삭제되었습니다."}
+
+@router.post("/check-password", summary="비밀번호 확인(본인인증)")
+def check_password(
+    req: PasswordCheckRequest,
+    current_user: User = Depends(get_current_user)
+):
+    if not verify_password(req.password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="비밀번호가 일치하지 않습니다.")
+    return {"valid": True}
