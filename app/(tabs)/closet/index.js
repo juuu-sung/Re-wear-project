@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 
-import { Image } from "expo-image"; // 🔥 Expo Image 추가
+import ImageRatio from "../../components/ImageRatio";
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
@@ -231,11 +231,10 @@ export default function ClosetMain() {
                 }
               >
                 {imgUri ? (
-                  <Image
-                    source={imgUri}
+                  <ImageRatio
+                    source={{ uri: imgUri }}
                     style={styles.image}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
+                    fit="cover"
                   />
                 ) : (
                   <View style={[styles.image, { justifyContent: "center", alignItems: "center" }]}>
@@ -330,7 +329,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  image: { width: "100%", height: 150, borderRadius: 8 },
+  image: {
+  width: "100%",
+  aspectRatio: 1,   // 🔥 여기가 핵심
+  borderRadius: 8,
+}
+,
   name: { textAlign: "center", fontWeight: "600", fontSize: 15, marginTop: 8, color: "#000" },
   emptyText: { textAlign: "center", color: "#777", fontSize: 16 },
 

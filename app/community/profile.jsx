@@ -23,7 +23,7 @@ export default function MyProfile() {
   const [localName, setLocalName] = useState("");
   const [uid, setUid] = useState(null);
 
-  // 로그인 사용자 이름
+  // 🔵 로그인 사용자 이름
   useEffect(() => {
     const loadLocalName = async () => {
       const rawName =
@@ -34,7 +34,7 @@ export default function MyProfile() {
     loadLocalName();
   }, []);
 
-  // 로그인 사용자 UID
+  // 🔵 로그인 사용자 UID
   useEffect(() => {
     const loadUid = async () => {
       const rawId = await AsyncStorage.getItem("user_id");
@@ -43,14 +43,16 @@ export default function MyProfile() {
     loadUid();
   }, []);
 
-  // 프로필 + 게시물 로드
+  // 🔵 프로필 + 게시물 로드
   const load = async () => {
     if (!uid) return;
 
+    // 👤 사용자 정보 요청
     const res1 = await fetch(`${BASE_URL}/v1/users/${uid}`);
     const userJson = await res1.json();
     setUser(userJson);
 
+    // 📝 게시물 요청
     const res2 = await fetch(`${BASE_URL}/v1/community/users/${uid}/posts`);
     const postsJson = await res2.json();
     setPosts(postsJson);
@@ -65,9 +67,15 @@ export default function MyProfile() {
 
   const finalName = localName || user.real_name || user.name || "사용자";
 
-  // 프로필 이미지 준비
-  const profileImg =
-    user.profile_image && user.profile_image !== "" ? user.profile_image : null;
+  // ============================================
+  // 🔥 프로필 이미지 (절대 URL 변환 포함)
+  // ============================================
+  let profileImg = null;
+  if (user.profile_image && user.profile_image !== "") {
+    profileImg = user.profile_image.startsWith("http")
+      ? user.profile_image
+      : `${BASE_URL}${user.profile_image}`;
+  }
 
   return (
     <SafeAreaView
@@ -79,7 +87,9 @@ export default function MyProfile() {
     >
       <View style={{ height: 20 }} />
 
-      {/* 프로필 영역 */}
+      {/* ==========================
+          👤 프로필 영역
+      ========================== */}
       <View
         style={{
           paddingHorizontal: 22,
@@ -91,7 +101,7 @@ export default function MyProfile() {
       >
         {profileImg ? (
           <Image
-            source={profileImg}
+            source={{ uri: profileImg }} // <-- 여기가 핵심
             style={{
               width: 90,
               height: 90,
@@ -130,7 +140,9 @@ export default function MyProfile() {
         내가 올린 게시물
       </Text>
 
-      {/* 게시물 그리드 */}
+      {/* ==========================
+          📸 게시물 그리드
+      ========================== */}
       <FlatList
         numColumns={2}
         data={posts}
@@ -156,39 +168,48 @@ export default function MyProfile() {
             <Text style={{ fontSize: 16, color: "#777" }}>게시물 없음.</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={{ width: "48%" }}
-            onPress={() => router.push(`/community/${item.id}`)}
-          >
-            {Array.isArray(item.images) && item.images.length > 0 ? (
-              <Image
-                source={item.images[0]}
-                style={{
-                  width: "100%",
-                  height: 170,
-                  borderRadius: 10,
-                  backgroundColor: "#eee",
-                }}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-              />
-            ) : (
-              <View
-                style={{
-                  width: "100%",
-                  height: 170,
-                  borderRadius: 10,
-                  backgroundColor: "#ddd",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ color: "#666" }}>이미지 없음</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const img = Array.isArray(item.images)
+            ? item.images[0]
+            : null;
+
+          const imgUrl =
+            img && img.startsWith("http") ? img : `${BASE_URL}${img}`;
+
+          return (
+            <TouchableOpacity
+              style={{ width: "48%" }}
+              onPress={() => router.push(`/community/${item.id}`)}
+            >
+              {img ? (
+                <Image
+                  source={{ uri: imgUrl }}
+                  style={{
+                    width: "100%",
+                    height: 170,
+                    borderRadius: 10,
+                    backgroundColor: "#eee",
+                  }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <View
+                  style={{
+                    width: "100%",
+                    height: 170,
+                    borderRadius: 10,
+                    backgroundColor: "#ddd",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#666" }}>이미지 없음</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        }}
       />
     </SafeAreaView>
   );

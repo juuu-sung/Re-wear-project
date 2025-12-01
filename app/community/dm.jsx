@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router"; // ⭐ 추가
 import { Animated, Image } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   Text,
   TouchableOpacity,
   View,
@@ -23,8 +24,11 @@ export default function MessageList() {
   const [myId, setMyId] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);   // ⭐ 추가
 
-  // 1) 로컬 user_id 불러오기
+  // ============================================
+  // 1) user_id 불러오기
+  // ============================================
   useEffect(() => {
     const loadUid = async () => {
       const uid = await AsyncStorage.getItem("user_id");
@@ -33,30 +37,51 @@ export default function MessageList() {
     loadUid();
   }, []);
 
-  // 2) DM 불러오기
-  useEffect(() => {
+  // ============================================
+  // 2) 실제 DM 목록 fetch 함수
+  // ============================================
+  const loadRooms = useCallback(async () => {       // ⭐ useCallback 적용
     if (!myId) return;
 
-    const loadRooms = async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/v1/chat/my-rooms?user_id=${myId}`);
-        const data = await res.json();
-        setRooms(data);
-      } catch (err) {
-        console.log("채팅방 목록 불러오기 오류:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadRooms();
+    try {
+      const res = await fetch(`${BASE_URL}/v1/chat/my-rooms?user_id=${myId}`);
+      const data = await res.json();
+      setRooms(data);
+    } catch (err) {
+      console.log("채팅방 목록 불러오기 오류:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);   // ⭐ refresh 끝내기
+    }
   }, [myId]);
 
-  if (loading) {
-    return <ActivityIndicator style={{ marginTop: 40 }} />;
-  }
+  // ============================================
+  // 3) 처음 로드시 실행
+  // ============================================
+  useEffect(() => {
+    if (myId) loadRooms();   // ⭐ fetch
+  }, [myId]);
 
-  // 🔥 DM 삭제 함수
+  // ============================================
+  // 4) 화면 다시 들어올 때 자동 새로고침 (★ 강력 추천)
+  // ============================================
+  useFocusEffect(
+    useCallback(() => {
+      if (myId) loadRooms();
+    }, [myId])
+  );
+
+  // ============================================
+  // 5) Pull To Refresh
+  // ============================================
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadRooms();   // ⭐ 바로 재요청
+  };
+
+  // ============================================
+  // 삭제
+  // ============================================
   const deleteRoom = async (room_id) => {
     try {
       await fetch(`${BASE_URL}/v1/chat/rooms/${room_id}?user_id=${myId}`, {
@@ -68,7 +93,6 @@ export default function MessageList() {
     }
   };
 
-  // 🔥 스와이프 삭제 버튼 UI
   const RightActions = (progress, dragX, room_id) => {
     const scale = dragX.interpolate({
       inputRange: [-80, 0],
@@ -99,8 +123,12 @@ export default function MessageList() {
     );
   };
 
+  if (loading) {
+    return <ActivityIndicator style={{ marginTop: 40 }} />;
+  }
+
   // ============================================
-  // UI 렌더링
+  // UI
   // ============================================
   return (
     <View
@@ -111,7 +139,6 @@ export default function MessageList() {
         paddingHorizontal: 12,
       }}
     >
-      {/* 🔥 채팅방이 없을 때 메시지 */}
       {rooms.length === 0 ? (
         <View
           style={{
@@ -128,6 +155,9 @@ export default function MessageList() {
         <FlatList
           data={rooms}
           keyExtractor={(item) => item.room_id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />  // ⭐ 추가
+          }
           renderItem={({ item }) => {
             const hasProfile =
               item.opponent_profile &&
@@ -141,7 +171,17 @@ export default function MessageList() {
                 }
               >
                 <TouchableOpacity
-                  onPress={() => {
+                  onPress={async () => {
+                    // 읽음 처리
+                    try {
+                      await fetch(
+                        `${BASE_URL}/v1/chat/rooms/${item.room_id}/read?user_id=${myId}`,
+                        { method: "POST" }
+                      );
+                    } catch (e) {
+                      console.log("읽음 처리 오류:", e);
+                    }
+
                     const url =
                       `/chat/${item.room_id}?myId=${myId}` +
                       `&opponentId=${item.opponent_id}` +
@@ -159,7 +199,6 @@ export default function MessageList() {
                     backgroundColor: "#fff",
                   }}
                 >
-                  {/* 프로필 */}
                   {hasProfile ? (
                     <Image
                       source={{ uri: item.opponent_profile }}
@@ -180,26 +219,43 @@ export default function MessageList() {
                     />
                   )}
 
-                  {/* 이름 + 최근 메시지 */}
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: "700", fontSize: 16 }}>
                       {item.opponent_name ?? `유저 ${item.opponent_id}`}
                     </Text>
 
                     <Text
-                        numberOfLines={1}
-                        style={{ marginTop: 3, color: "#555" }}
-                      >
-                        {item.last_media_type === "image"
-                          ? "사진을 보냈습니다."
-                          : item.last_media_type === "multi-image"
-                          ? "여러 장의 사진을 보냈습니다."
-                          : item.last_media_type === "video"
-                          ? "동영상을 보냈습니다."
-                          : item.last_message || "채팅을 시작하세요"}
+                      numberOfLines={1}
+                      style={{ marginTop: 3, color: "#555" }}
+                    >
+                      {item.last_media_type === "image"
+                        ? "사진을 보냈습니다."
+                        : item.last_media_type === "multi-image"
+                        ? "여러 장의 사진을 보냈습니다."
+                        : item.last_media_type === "video"
+                        ? "동영상을 보냈습니다."
+                        : item.last_message || "채팅을 시작하세요"}
                     </Text>
-
                   </View>
+
+                  {item.unread_count > 0 && (
+                    <View
+                      style={{
+                        backgroundColor: "#ff4d4d",
+                        minWidth: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        paddingHorizontal: 6,
+                        marginLeft: 10,
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
+                        {item.unread_count >= 10 ? "10+" : item.unread_count}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               </Swipeable>
             );
