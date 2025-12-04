@@ -63,6 +63,7 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const [todayAlerts, setTodayAlerts] = useState([]);
+  const [userName, setUserName] = useState("사용자");
 
   const [news, setNews] = useState([]);
   const [loadingNews, setLoadingNews] = useState(false);
@@ -97,6 +98,15 @@ export default function HomeScreen() {
     const loadUser = async () => {
       const id = await AsyncStorage.getItem("user_id");
       if (id) setUserId(Number(id));
+
+      const rawName =
+        (await AsyncStorage.getItem("name")) ||
+        (await AsyncStorage.getItem("username"));
+      if (rawName && rawName.trim()) {
+        setUserName(rawName.trim());
+      } else {
+        setUserName("사용자");
+      }
     };
     loadUser();
   }, []);
@@ -440,62 +450,50 @@ const completeNewsMission = async () => {
       <ScrollView
         ref={scrollRef}
         style={styles.container}
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-
-        {/* 헤더 */}
-        <View style={styles.header}>
+        <View style={styles.topBar}>
           <Text style={styles.logo}>Re:wear</Text>
           <TouchableOpacity onPress={() => router.push("/profile")}>
-            <Ionicons name="person-circle-outline" size={40} color="#23422D" />
+            <Ionicons name="person-circle-outline" size={38} color="#0f4228" />
           </TouchableOpacity>
         </View>
 
-
-        {/* 오늘의 알림 */}
-        <View style={styles.card}>
-          <Text style={styles.title}>오늘의 알림</Text>
-
-          {todayAlerts.length === 0 ? (
-            <Text style={{ marginTop: 8, color: "#555" }}>
-              오늘은 세탁이 필요한 옷이 없어요.
-            </Text>
-          ) : (
-            <View style={{ marginTop: 12 }}>
-              <Text style={{ marginBottom: 12 }}>
-                오늘은 세탁이 필요한 옷이 {todayAlerts.length}개 있어요.
-              </Text>
-
-              {todayAlerts.slice(0, 3).map((item, idx) => (
-                <Text key={idx} style={{ marginBottom: 5 }}>
-                  · {item.name} ({item.wear_count}회 착용)
-                </Text>
-              ))}
-
-              {todayAlerts.length > 3 && (
-                <Text style={{ color: "#777" }}>
-                  · 외 {todayAlerts.length - 3}개
-                </Text>
-              )}
-
-              <TouchableOpacity
-                onPress={() => router.push("/alert-detail")}
-                style={{ marginTop: 12 }}
-              >
-                <Text
-                  style={{
-                    color: "#1C7C54",
-                    fontWeight: "700",
-                    fontSize: 15,
-                  }}
-                >
-                  더보기
-                </Text>
+        {/* 헤더 */}
+        <View style={{ marginBottom: 18 }}>
+          <View style={styles.heroAlertBox}>
+            <View style={styles.heroAlertHeader}>
+              <Text style={styles.heroAlertTitle}>오늘의 알림</Text>
+              <TouchableOpacity onPress={() => router.push("/alert-detail")}>
+                <Text style={styles.heroAlertAction}>더보기</Text>
               </TouchableOpacity>
             </View>
-          )}
+
+            {todayAlerts.length === 0 ? (
+              <Text style={styles.heroAlertText}>
+                오늘은 세탁이 필요한 옷이 없어요.
+              </Text>
+            ) : (
+              <View style={{ marginTop: 8 }}>
+                <Text style={styles.heroAlertSub}>
+                  오늘은 세탁이 필요한 옷이 {todayAlerts.length}개 있어요.
+                </Text>
+                {todayAlerts.slice(0, 3).map((item, idx) => (
+                  <Text key={idx} style={styles.heroAlertList}>
+                    · {item.name} ({item.wear_count}회 착용)
+                  </Text>
+                ))}
+                {todayAlerts.length > 3 && (
+                  <Text style={styles.heroAlertMore}>
+                    · 외 {todayAlerts.length - 3}개
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
         </View>
 
 
@@ -531,7 +529,11 @@ const completeNewsMission = async () => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.closetRow}
+          >
             {closetItems.map((cloth) => (
               <Image
                 key={cloth.id}
@@ -563,21 +565,22 @@ const completeNewsMission = async () => {
               const dots = calendarDots[date]?.dots || [];
 
               return (
-                <TouchableOpacity
-                  key={date}
-                  style={styles.weekCell}
-                  onPress={() => handleDatePress(date)}
+              <TouchableOpacity
+                key={date}
+                style={[styles.weekCell, isToday && styles.weekCellToday]}
+                onPress={() => handleDatePress(date)}
+                activeOpacity={0.9}
+              >
+                <Text
+                  style={[
+                    styles.weekDay,
+                    isToday && styles.weekDayToday,
+                  ]}
                 >
-                  <Text
-                    style={[
-                      styles.weekDay,
-                      isToday && { color: "#23422D", fontWeight: "bold" },
-                    ]}
-                  >
-                    {dayName}
-                  </Text>
+                  {dayName}
+                </Text>
 
-                  <Text style={styles.weekDate}>{date.split("-")[2]}</Text>
+                <Text style={styles.weekDate}>{date.split("-")[2]}</Text>
 
                   <View style={styles.dotContainer}>
                     {dots.map((d, i) => (
@@ -616,7 +619,11 @@ const completeNewsMission = async () => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.newsRow}
+          >
             {news.map((n, idx) => (
               <TouchableOpacity
                 key={idx}
@@ -624,23 +631,9 @@ const completeNewsMission = async () => {
                   await completeNewsMission();   // 🔥 미션 완료
                   openLink(n.url);               // 링크 열기
                 }}
-
-                style={{
-                  width: 280,
-                  marginRight: 12,
-                  backgroundColor: "#f5f9f6",
-                  borderRadius: 12,
-                  padding: 14,
-                }}
+                style={styles.newsCard}
               >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "700",
-                    color: "#23422D",
-                  }}
-                  numberOfLines={2}
-                >
+                <Text style={styles.newsTitle} numberOfLines={2}>
                   {n.title}
                 </Text>
               </TouchableOpacity>
@@ -661,16 +654,9 @@ const completeNewsMission = async () => {
 
             <TouchableOpacity
               onPress={() => setLikedPopupVisible(true)}
-              style={{
-                backgroundColor: "#e8f5e9df",
-                borderRadius: 8,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-              }}
+              style={styles.likedBtn}
             >
-              <Text style={{ color: "#000", fontSize: 12 }}>
-                좋아요 누른 브랜드 보기
-              </Text>
+              <Text style={styles.likedBtnText}>좋아요 누른 브랜드 보기</Text>
             </TouchableOpacity>
           </View>
 
@@ -729,7 +715,7 @@ const completeNewsMission = async () => {
                 >
                   <Text style={styles.modalTitle}>내가 좋아요한 브랜드</Text>
                   <TouchableOpacity onPress={() => setLikedPopupVisible(false)}>
-                    <Ionicons name="close" size={24} color="#23422D" />
+                    <Ionicons name="close" size={24} color="#0f4228" />
                   </TouchableOpacity>
                 </View>
 
@@ -849,92 +835,213 @@ const completeNewsMission = async () => {
 // STYLE
 // ==========================================
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f0f2f5" },
-  container: { flex: 1, padding: 16 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  logo: { fontSize: 36, fontWeight: "bold", color: "#2e7d32" },
+  safe: { flex: 1, backgroundColor: "#ffffff" },
+  container: { flex: 1 },
+  content: { padding: 18, paddingBottom: 40 },
+
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  logo: { fontSize: 34, fontWeight: "800", color: "#1c5c36" },
+  heroCard: {
+    borderRadius: 24,
+    padding: 22,
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 18,
+  },
+  heroLabel: { color: "#4a8a68", fontSize: 13, fontWeight: "600" },
+  heroTitle: { color: "#0f4228", fontSize: 24, fontWeight: "800", marginTop: 4 },
+  heroSubtitle: { color: "#4a8a68", marginTop: 6, fontSize: 14, lineHeight: 20 },
+  heroStatsContainer: {
+    flexDirection: "row",
+    marginTop: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#dbeee3",
+    overflow: "hidden",
+  },
+  heroStatBox: {
+    flex: 1,
+    backgroundColor: "#f5fffa",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  heroStatLeft: {
+    borderRightWidth: 1,
+    borderRightColor: "#dbeee3",
+  },
+  heroStatRight: {},
+  heroStatLabel: { color: "#5a6b61", fontSize: 12, fontWeight: "600" },
+  heroStatValue: { color: "#0f4228", fontSize: 24, fontWeight: "800", marginTop: 4 },
+  heroAlertBox: {
+    marginTop: 18,
+    backgroundColor: "#f5fffa",
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#dbeee3",
+  },
+  heroAlertHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  heroAlertTitle: { color: "#0f4228", fontSize: 16, fontWeight: "700" },
+  heroAlertAction: { color: "#0f7a4c", fontWeight: "700", fontSize: 13 },
+  heroAlertText: { color: "#4a5f53", fontSize: 14, marginTop: 4 },
+  heroAlertSub: { color: "#4a5f53", fontSize: 14, marginBottom: 6 },
+  heroAlertList: { color: "#0f4228", fontSize: 13, marginBottom: 4 },
+  heroAlertMore: { color: "#5c6f63", fontSize: 13, marginTop: 2 },
+
   card: {
     backgroundColor: "#fff",
     borderRadius: 20,
     paddingHorizontal: 20,
-    paddingVertical: 24,
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    paddingVertical: 22,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e6efe7",
+    shadowColor: "#1d2a23",
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  title: { fontSize: 18, fontWeight: "700", color: "#2e7d32" },
+  title: { fontSize: 18, fontWeight: "700", color: "#0f4228" },
   row: { flexDirection: "row", justifyContent: "space-between" },
   iconBox: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 15,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 18,
     marginHorizontal: 6,
+    borderWidth: 1,
+    borderColor: "#d6eadd",
   },
-  iconText: { marginTop: 6, fontSize: 13, fontWeight: "500" },
+  iconText: { marginTop: 8, fontSize: 13, fontWeight: "600", color: "#0f4228" },
   clothImg: {
-    width: 90,
-    height: 90,
-    borderRadius: 10,
-    marginRight: 10,
-    backgroundColor: "#eee",
+    width: 92,
+    height: 92,
+    borderRadius: 12,
+    marginRight: 12,
+    backgroundColor: "#eef6f0",
+    borderWidth: 1,
+    borderColor: "#deece3",
   },
+  closetRow: { paddingTop: 12, paddingBottom: 4 },
 
   calendarHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
+    marginBottom: 8,
   },
-  weekRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
-  weekCell: { alignItems: "center", flex: 1 },
-  weekDay: { fontSize: 14, color: "#555" },
-  weekDate: { fontSize: 16, color: "#222", marginTop: 4 },
-  dotContainer: { flexDirection: "row", marginTop: 4 },
+  weekRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
+  weekCell: {
+    alignItems: "center",
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  weekCellToday: {
+    backgroundColor: "#e6f8ee",
+    borderColor: "#c5e8d4",
+  },
+  weekDay: { fontSize: 13, color: "#6b736f" },
+  weekDayToday: { color: "#0f7a4c", fontWeight: "700" },
+  weekDate: { fontSize: 16, color: "#13261b", marginTop: 4, fontWeight: "700" },
+  dotContainer: { flexDirection: "row", marginTop: 6 },
 
-  brandRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
+  newsRow: { paddingTop: 12 },
+  newsCard: {
+    width: 280,
+    marginRight: 14,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#d9f0e1",
+  },
+  newsTitle: { fontSize: 16, fontWeight: "700", color: "#0f4228", lineHeight: 22 },
+
+  brandRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
   brandCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 12,
     width: "31%",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: "#e0ebe4",
+    shadowColor: "#152218",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  brandImage: { width: 60, height: 60, borderRadius: 8, marginBottom: 8 },
-  brandName: { fontWeight: "700", color: "#23422D", fontSize: 14 },
-  brandDesc: { fontSize: 12, color: "#555", textAlign: "center", marginTop: 2 },
+  brandImage: { width: 64, height: 64, borderRadius: 10, marginBottom: 8, backgroundColor: "#fff" },
+  brandName: { fontWeight: "700", color: "#0f4228", fontSize: 14, textAlign: "center" },
+  brandDesc: { fontSize: 12, color: "#5b6f63", textAlign: "center", marginTop: 4 },
+
+  likedBtn: {
+    backgroundColor: "#eef9f3",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  likedBtnText: { color: "#0f7a4c", fontSize: 12, fontWeight: "700" },
 
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-
-  likedModal: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "65%" },
-
-  modalContainer: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "60%" },
-
-  modalTitle: { fontSize: 18, fontWeight: "700", color: "#2e7d32", marginBottom: 10 },
+  likedModal: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 22,
+    maxHeight: "65%",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 22,
+    maxHeight: "60%",
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f4228", marginBottom: 12 },
 
   likedBrandRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9faf9",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
+    backgroundColor: "#f7fbf9",
+    padding: 12,
+    borderRadius: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e0ebe4",
   },
-  likedBrandImage: { width: 50, height: 50, borderRadius: 8 },
-  likedBrandName: { fontSize: 15, fontWeight: "600", color: "#23422D" },
+  likedBrandImage: { width: 52, height: 52, borderRadius: 10, backgroundColor: "#fff" },
+  likedBrandName: { fontSize: 15, fontWeight: "600", color: "#0f4228" },
 
-  eventItem: { marginBottom: 14, backgroundColor: "#f8f9f8", borderRadius: 12, padding: 12 },
-  eventType: { fontSize: 16, fontWeight: "600", color: "#23422D" },
-  eventDesc: { fontSize: 13, color: "#444", marginTop: 4 },
-  clothRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  eventImage: { width: 50, height: 50, borderRadius: 8, marginRight: 10 },
-  clothName: { fontSize: 14, color: "#222", fontWeight: "500" },
+  eventItem: {
+    marginBottom: 14,
+    backgroundColor: "#f6fbf8",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e1efe6",
+  },
+  eventType: { fontSize: 16, fontWeight: "600", color: "#0f4228" },
+  eventDesc: { fontSize: 13, color: "#4c5b52", marginTop: 4 },
+  clothRow: { flexDirection: "row", alignItems: "center", marginTop: 10 },
+  eventImage: { width: 52, height: 52, borderRadius: 10, marginRight: 10, backgroundColor: "#fff" },
+  clothName: { fontSize: 14, color: "#13261b", fontWeight: "600" },
 });
