@@ -24,8 +24,9 @@ os.environ["PASSLIB_DISABLE_OS_CRYPTO"] = "1"
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(
-    schemes=["bcrypt", "pbkdf2_sha256"], 
-    deprecated="auto"
+    schemes=["pbkdf2_sha256", "bcrypt"],
+    deprecated="auto",
+    pbkdf2_sha256__default_rounds=390000,
 )
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret")
