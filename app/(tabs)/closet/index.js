@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -158,197 +159,327 @@ export default function ClosetMain() {
 
   if (loadingUser) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color="#2e7d32" />
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.container, styles.centered]}>
+          <ActivityIndicator size="large" color="#18b36a" />
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>{userName}의 옷장</Text>
-      </View>
-      <View style={styles.headerDivider} />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>{userName}의 옷장</Text>
+            <Text style={styles.headerSubtitle}>오늘도 옷장 정리를 통해 지구를 지켜보세요.</Text>
+          </View>
+        </View>
 
-      {/* 카테고리 */}
-      <View style={styles.categoryContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabRow}
-        >
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.tab, selected === cat && styles.activeTab]}
-              onPress={() => setSelected(cat)}
-              onLongPress={() => handleCategoryLongPress(cat)}
-            >
-              <Text style={[styles.tabText, selected === cat && styles.activeText]}>
-                {cat}
-              </Text>
+        {/* 카테고리 */}
+        <View style={styles.categorySection}>
+          <View style={styles.categoryHeader}>
+            <Text style={styles.sectionLabel}>카테고리</Text>
+            <TouchableOpacity style={styles.categoryAddBtn} onPress={addCategory}>
+              <Ionicons name="add" size={16} color="#0f7a4c" />
+              <Text style={styles.categoryAddText}>새 옷장</Text>
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={styles.addTabBtn} onPress={addCategory}>
-            <Ionicons name="add" size={20} color="#000" />
-          </TouchableOpacity>
-        </ScrollView>
-        <View style={styles.divider} />
-      </View>
-
-      {/* 옷 리스트 */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#000" style={{ marginTop: 40 }} />
-      ) : items.length > 0 ? (
-        <ScrollView
-          contentContainerStyle={styles.grid}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          {items.map((item) => {
-            const imgUri = item.image_path
-              ? `${BASE_URL}/uploads/clothes/${encodeURIComponent(item.image_path)}`
-              : null;
-
-            return (
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabRow}
+          >
+            {categories.map((cat) => (
               <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                onPress={() =>
-                  router.push({
-                    pathname: "/(tabs)/closet/detail",
-                    params: {
-                      id: String(item.id),
-                      name: item.name,
-                      category: item.category,
-                      image: `${BASE_URL}/uploads/clothes/${item.image_path}`,
-                      material: item.material ?? "",
-                      washing: item.washing_info ?? "",
-                      materialBreakdown: item.material_breakdown ?? "",
-                    },
-                  })
-                }
+                key={cat}
+                style={[
+                  styles.tab,
+                  selected === cat ? styles.activeTab : styles.inactiveTab,
+                ]}
+                onPress={() => setSelected(cat)}
+                onLongPress={() => handleCategoryLongPress(cat)}
               >
-                {imgUri ? (
-                  <ImageRatio
-                    source={{ uri: imgUri }}
-                    style={styles.image}
-                    fit="cover"
-                  />
-                ) : (
-                  <View style={[styles.image, { justifyContent: "center", alignItems: "center" }]}>
-                    <Ionicons name="shirt-outline" size={40} color="#ccc" />
-                  </View>
-                )}
-
-                <Text style={styles.name}>{item.name}</Text>
+                <Text
+                  style={[styles.tabText, selected === cat && styles.activeText]}
+                >
+                  {cat}
+                </Text>
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center" }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
-        </ScrollView>
-      )}
+            ))}
+          </ScrollView>
+        </View>
 
-      {/* + 버튼 */}
-      <View style={styles.fabContainer}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => router.push("/(tabs)/closet/add")}
-          style={styles.fab}
-        >
-          <Ionicons name="add" size={36} color="#fff" />
-        </TouchableOpacity>
+        {/* 옷 리스트 */}
+        {loading ? (
+          <ActivityIndicator size="large" color="#18b36a" style={styles.listLoader} />
+        ) : items.length > 0 ? (
+          <ScrollView
+            contentContainerStyle={styles.grid}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {items.map((item) => {
+              const imgUri = item.image_path
+                ? `${BASE_URL}/uploads/clothes/${encodeURIComponent(item.image_path)}`
+                : null;
+
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.card}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/closet/detail",
+                      params: {
+                        id: String(item.id),
+                        name: item.name,
+                        category: item.category,
+                        image: `${BASE_URL}/uploads/clothes/${item.image_path}`,
+                        material: item.material ?? "",
+                        washing: item.washing_info ?? "",
+                        materialBreakdown: item.material_breakdown ?? "",
+                      },
+                    })
+                  }
+                >
+                  {imgUri ? (
+                    <ImageRatio source={{ uri: imgUri }} style={styles.image} fit="cover" />
+                  ) : (
+                    <View style={[styles.image, styles.imagePlaceholder]}>
+                      <Ionicons name="shirt-outline" size={40} color="#b0d8c5" />
+                    </View>
+                  )}
+
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <View style={styles.badge}>
+                      <Ionicons name="leaf-outline" color="#0f7a4c" size={14} />
+                      <Text style={styles.badgeText}>{item.category}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.emptyContainer}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            <View style={styles.emptyCard}>
+            <Ionicons name="shirt-outline" size={26} color="#18b36a" />
+              <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
+              <Text style={styles.emptySub}>
+                자주 입는 옷부터 천천히 추가해보세요.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() => router.push("/(tabs)/closet/add")}
+              >
+                <Text style={styles.emptyButtonText}>새 옷 등록</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
+
+        {/* + 버튼 */}
+        <View style={styles.fabContainer}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push("/(tabs)/closet/add")}
+            style={styles.fab}
+          >
+            <Ionicons name="add" size={30} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 6,
-    alignItems: "flex-start",
-  },
-  headerText: { fontSize: 26, fontWeight: "800", color: "#2e7d32" },
-  headerDivider: { borderBottomWidth: 1, borderColor: "#ddd" },
+  safeArea: { flex: 1, backgroundColor: "#ffffff" },
+  container: { flex: 1, padding: 18, backgroundColor: "#ffffff" },
+  centered: { justifyContent: "center", alignItems: "center" },
 
-  categoryContainer: { marginTop: 8, marginBottom: 10 },
-  tabRow: {
+  header: {
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: "#e6f7ef",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 16,
+  },
+  headerLabel: { color: "#4a8a68", fontSize: 13, fontWeight: "600" },
+  headerTitle: { color: "#0f4228", fontSize: 24, fontWeight: "800", marginTop: 2 },
+  headerSubtitle: { color: "#4a8a68", marginTop: 6, fontSize: 14 },
+  headerAction: {
+    backgroundColor: "#d4f1e0",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    gap: 6,
   },
-  divider: { borderBottomWidth: 1, borderColor: "#ddd", marginTop: 4 },
+  headerActionText: { color: "#0f7a4c", fontWeight: "600" },
 
+  categorySection: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
+    shadowColor: "#3d4d42",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  categoryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  sectionLabel: { color: "#526057", fontSize: 15, fontWeight: "600" },
+  categoryAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eefaf3",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 14,
+    gap: 4,
+  },
+  categoryAddText: { color: "#0f7a4c", fontSize: 13, fontWeight: "600" },
+
+  tabRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
   tab: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 18,
-    marginRight: 8,
+    borderRadius: 18,
   },
-  activeTab: { backgroundColor: "#2e7d32", borderColor: "#2e7d32" },
-  tabText: { color: "#777", fontSize: 15 },
+  inactiveTab: {
+    backgroundColor: "#f1f5f2",
+  },
+  activeTab: {
+    backgroundColor: "#18b36a",
+    shadowColor: "#18b36a",
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+  },
+  tabText: { color: "#5a6b61", fontSize: 14, fontWeight: "500" },
   activeText: { color: "#fff", fontWeight: "600" },
-  addTabBtn: {
-    borderWidth: 1,
-    borderColor: "#000",
-    borderRadius: 20,
-    padding: 8,
-    marginLeft: 5,
-  },
 
+  listLoader: { marginTop: 40 },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   card: {
-    width: "47%",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 10,
-    marginBottom: 20,
-    padding: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    width: "48%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#e8f1ea",
+    shadowColor: "#90a29a",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
 
   image: {
-  width: "100%",
-  aspectRatio: 1,   // 🔥 여기가 핵심
-  borderRadius: 8,
-}
-,
-  name: { textAlign: "center", fontWeight: "600", fontSize: 15, marginTop: 8, color: "#000" },
-  emptyText: { textAlign: "center", color: "#777", fontSize: 16 },
-
-  fabContainer: { position: "absolute", bottom: 30, right: 25, zIndex: 999, elevation: 10 },
-  fab: {
-    backgroundColor: "#2e7d32",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    backgroundColor: "#eef7f1",
+  },
+  imagePlaceholder: {
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
+  },
+  cardFooter: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 6,
+  },
+  name: { flex: 1, fontWeight: "700", fontSize: 15, color: "#10281c" },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#e1f6eb",
+  },
+  badgeText: { color: "#0f7a4c", fontSize: 12, fontWeight: "600" },
+
+  emptyContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  emptyCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#dcefe4",
+  },
+  emptyText: { color: "#143520", fontSize: 17, fontWeight: "700" },
+  emptySub: { color: "#5b6f63", textAlign: "center", fontSize: 14 },
+  emptyButton: {
+    marginTop: 10,
+    backgroundColor: "#18b36a",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  emptyButtonText: { color: "#fff", fontWeight: "700" },
+
+  fabContainer: {
+    position: "absolute",
+    bottom: 30,
+    right: 25,
+    zIndex: 999,
+    elevation: 10,
+  },
+  fab: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#18b36a",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#1b9155",
     shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 10,
+    elevation: 8,
   },
 });

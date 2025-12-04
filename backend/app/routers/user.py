@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
 from app.db import SessionLocal
-from app.schemas.user import UserCreate, UserUpdate, UserOut, RegisterIn  # RegisterIn: name/email/password 포함, password max_length=72
+from app.schemas.user import UserCreate, UserUpdate, UserOut, RegisterIn  # RegisterIn: name/email/password 포함
 from app.crud import user as crud_user
 from app.routers.auth import get_current_user, verify_password 
 from app.models import User
@@ -35,12 +35,6 @@ def get_db():
 
 # --- 회원가입 구현 공통부 -------------------------------------------------
 def _register_impl(payload: RegisterIn, db: Session) -> UserOut:
-    # bcrypt 평문 제한(72 bytes) 방어: 이모지/한글 포함 대비해 바이트 기준 검사
-    if len(payload.password.encode("utf-8")) > 72:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be ≤ 72 bytes."
-        )
     try:
         # 실제 생성 로직은 CRUD로 위임 (여기서 해싱/중복 이메일 검사 수행)
         return crud_user.create_user(db, payload)
@@ -48,9 +42,6 @@ def _register_impl(payload: RegisterIn, db: Session) -> UserOut:
         msg = str(e)
         if msg == "EMAIL_ALREADY_EXISTS":
             raise HTTPException(status_code=400, detail="Email already exists")
-        if msg == "PASSWORD_TOO_LONG":
-            # CRUD 내부에서 감지했을 때도 동일 메시지
-            raise HTTPException(status_code=400, detail="Password must be ≤ 72 bytes.")
         # 알 수 없는 에러는 500으로 래핑
         raise HTTPException(status_code=500, detail="DB 저장 실패")
 
@@ -98,8 +89,6 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
         msg = str(e)
         if msg == "PASSWORD_SAME_AS_OLD":
             raise HTTPException(status_code=400, detail="기존 비밀번호와 동일합니다.")
-        if msg == "PASSWORD_TOO_LONG":
-            raise HTTPException(status_code=400, detail="비밀번호는 72바이트 이하만 가능합니다.")
         raise e
 
     if not obj:
