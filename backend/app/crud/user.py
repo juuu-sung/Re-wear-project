@@ -27,7 +27,7 @@ def list_users(db: Session, skip: int = 0, limit: int = 50) -> List[User]:
     return db.execute(select(User).offset(skip).limit(limit)).scalars().all()
 
 
-def create_user(db: Session, *, user_in: RegisterIn, kakao_id: int = None) -> User:
+def create_user(db: Session, user_in: RegisterIn, kakao_id: int = None) -> User:
     # 이메일 중복 체크
     if not kakao_id and get_by_email(db, user_in.email):
         raise ValueError("EMAIL_ALREADY_EXISTS")
