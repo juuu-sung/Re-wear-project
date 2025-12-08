@@ -7,8 +7,9 @@ from passlib.context import CryptContext
 
 # 🔥 auth.py와 동일하게 세팅 (중요!)
 pwd_context = CryptContext(
-    schemes=["bcrypt", "pbkdf2_sha256"],
-    deprecated="auto"
+    schemes=["pbkdf2_sha256", "bcrypt"],
+    deprecated="auto",
+    pbkdf2_sha256__default_rounds=390000,
 )
 
 def get_by_id(db: Session, user_id: int) -> Optional[User]:
@@ -70,10 +71,6 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
         except Exception:
             # verify 불가해도 무시하고 새 비밀번호로 덮어쓰기
             pass
-
-        # 길이 제한 검사
-        if len(data.password.encode("utf-8")) > 72:
-            raise ValueError("PASSWORD_TOO_LONG")
 
         # 🔥 auth.py와 동일한 bcrypt/pbkdf2 자동 hash
         new_hash = pwd_context.hash(str(data.password))

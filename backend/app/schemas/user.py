@@ -26,7 +26,7 @@ class UserOut(BaseModel):
 class RegisterIn(BaseModel):
     name: constr(strip_whitespace=True, min_length=1, max_length=50)
     email: EmailStr
-    password: constr(min_length=8, max_length=72)
+    password: constr(min_length=8, max_length=128)
     phone_number: Optional[str] = None
 
 class TokenOut(BaseModel):

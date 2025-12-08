@@ -248,37 +248,69 @@ export default function AddClothesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>새 옷 등록</Text>
+        <View style={styles.heroCard}>
+          <Text style={styles.heroLabel}>Re:wear Closet</Text>
+          <Text style={styles.heroTitle}>새 옷 등록</Text>
+          <Text style={styles.heroSubtitle}>사진과 정보를 기록하면 관리가 더 쉬워져요.</Text>
+        </View>
 
-        <TouchableOpacity style={styles.imageBox} onPress={pickImage} disabled={loading}>
-          {image ? <Image source={{ uri: image }} style={styles.image} /> : <Ionicons name="camera" size={40} color="#aaa" />}
-        </TouchableOpacity>
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>옷 사진</Text>
+            <Text style={styles.sectionSub}>빛 반사가 없도록 정면에서 촬영해 주세요.</Text>
+          </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="옷 이름"
-          value={name}
-          onChangeText={setName}
-        />
+          <TouchableOpacity
+            style={[styles.imageBox, loading && { opacity: 0.5 }]}
+            onPress={pickImage}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {image ? (
+              <Image source={{ uri: image }} style={styles.image} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="camera-outline" size={36} color="#8fb29f" />
+                <Text style={styles.imagePlaceholderText}>사진 추가</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
-        <View style={styles.categoryRow}>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.catBtn, category === cat && styles.catBtnActive]}
-              onPress={() => setCategory(cat)}
-            >
-              <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>기본 정보</Text>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="pricetag-outline" size={18} color="#5a6b61" />
+            <TextInput
+              style={styles.input}
+              placeholder="옷 이름을 입력하세요"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          <Text style={styles.sectionSub}>카테고리</Text>
+          <View style={styles.categoryRow}>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.catBtn, category === cat && styles.catBtnActive]}
+                onPress={() => setCategory(cat)}
+                activeOpacity={0.9}
+              >
+                <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+          style={[styles.submitBtn, loading && { opacity: 0.7 }]}
           disabled={loading}
           onPress={handleSubmit}
+          activeOpacity={0.85}
         >
           <Text style={styles.submitText}>{loading ? "전송 중..." : "등록하기"}</Text>
         </TouchableOpacity>
@@ -320,52 +352,93 @@ export default function AddClothesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { alignItems: "center", paddingTop: 40, paddingBottom: 70 },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 20, color: "#2e7d32" },
+  safeArea: { flex: 1, backgroundColor: "#ffffff" },
+  content: { padding: 20, paddingBottom: 90, gap: 18 },
+  heroCard: {
+    backgroundColor: "#e6f7ef",
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#cfe9da",
+  },
+  heroLabel: { color: "#4a8a68", fontSize: 13, fontWeight: "600" },
+  heroTitle: { color: "#0f4228", fontSize: 24, fontWeight: "800", marginTop: 6 },
+  heroSubtitle: { color: "#4a8a68", fontSize: 14, marginTop: 4 },
+  sectionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#e0ebe4",
+    shadowColor: "#0d1f14",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  sectionHeader: { marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#0f4228" },
+  sectionSub: { fontSize: 13, color: "#5a6b61", marginTop: 4 },
   imageBox: {
-    width: 180,
-    height: 180,
-    borderRadius: 12,
-    backgroundColor: "#eee",
+    height: 200,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#d6ebdf",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
   },
-  image: { width: "100%", height: "100%", borderRadius: 12 },
-  input: {
-    width: "90%",
+  image: { width: "100%", height: "100%", borderRadius: 18 },
+  imagePlaceholder: { alignItems: "center", gap: 6 },
+  imagePlaceholderText: { color: "#5a6b61", fontSize: 13, fontWeight: "600" },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 20,
+    borderColor: "#dce7df",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 16,
+    backgroundColor: "#f9fcfb",
   },
+  input: { flex: 1, fontSize: 15, color: "#0f4228" },
   categoryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    width: "90%",
-    justifyContent: "center",
-    marginBottom: 30,
     gap: 10,
+    marginTop: 10,
   },
   catBtn: {
     borderWidth: 1,
-    borderRadius: 20,
+    borderColor: "#dbe4dd",
+    borderRadius: 18,
     paddingVertical: 8,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
+    backgroundColor: "#f5f7f6",
   },
-  catBtnActive: { backgroundColor: "#2e7d32", borderColor: "#2e7d32" },
-  catText: { fontSize: 15, color: "#777" },
+  catBtnActive: {
+    backgroundColor: "#18b36a",
+    borderColor: "#18b36a",
+    shadowColor: "#18b36a",
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  catText: { fontSize: 14, color: "#5a6b61", fontWeight: "500" },
   catTextActive: { color: "#fff", fontWeight: "700" },
   submitBtn: {
-    backgroundColor: "#2e7d32",
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 50,
+    backgroundColor: "#18b36a",
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: "center",
+    shadowColor: "#138351",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
-  submitText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  submitText: { color: "#fff", fontSize: 17, fontWeight: "700" },
   tipModal: { backgroundColor: "#fff", padding: 24, borderRadius: 12 },
   tipTitle: { fontSize: 18, fontWeight: "700", marginBottom: 10 },
   tipText: { fontSize: 15, marginBottom: 20, textAlign: "center" },
