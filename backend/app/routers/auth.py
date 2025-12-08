@@ -2,7 +2,7 @@
 
 import httpx
 from app.crud import user as crud_user
-from app.schemas.user import RegisterIn, TokenOut # 스키마 (회원가입 양식, 토큰 양식)
+from app.schemas.user import RegisterIn, TokenOut, LoginIn # 스키마 (회원가입 양식, 토큰 양식)
 
 from fastapi import Header, APIRouter, Depends, HTTPException, status, Form
 from sqlalchemy.orm import Session
@@ -15,6 +15,10 @@ import os, time
 
 from app.db import get_db
 from app.models.user import User
+import uuid # 👈 (랜덤 비번 생성용) 없으면 추가!
+from datetime import timedelta
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
 os.environ["PASSLIB_DISABLE_OS_CRYPTO"] = "1"
 
@@ -90,23 +94,6 @@ def get_current_user(
         return user
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="토큰 검증 실패")
-
-# ==========================================================
-# Schemas
-# ==========================================================
-class RegisterIn(BaseModel):
-    name: constr(min_length=1)
-    email: EmailStr
-    password: constr(min_length=6)
-
-class LoginIn(BaseModel):
-    email: EmailStr
-    password: str
-
-class TokenOut(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user_id: int | None = None
 
 # ==========================================================
 # Routes
@@ -275,3 +262,62 @@ async def kakao_login(token: KakaoToken, db: Session = Depends(get_db)):
     # 우리 앱 전용 JWT 토큰 생성 및 반환
     access_token = create_access_token(sub=str(user.id))
     return TokenOut(access_token=access_token, user_id=user.id)
+
+# 🔥 [추가] 구글 로그인 요청 데이터 모델
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+# 🔥 [추가] 구글 로그인 API
+@router.post("/google", response_model=TokenOut)
+def login_google(
+    req: GoogleLoginRequest, 
+    db: Session = Depends(get_db)
+):
+    # 구글 클라이언트 ID (프론트에 넣은 것과 똑같은 거!)
+    GOOGLE_CLIENT_ID = "472072812397-f51bchihsifn54boars84kf82uv2eeia.apps.googleusercontent.com"
+
+    try:
+        # 1. 토큰 검증 (구글 라이브러리가 알아서 해줌)
+        id_info = google_id_token.verify_oauth2_token(
+            req.id_token, 
+            google_requests.Request(), 
+            GOOGLE_CLIENT_ID
+        )
+
+        # 2. 정보 추출
+        email = id_info.get("email")
+        name = id_info.get("name")
+        # google_user_id = id_info.get("sub") # 구글 고유 ID
+
+        if not email:
+            raise HTTPException(status_code=400, detail="이메일 정보가 없습니다.")
+
+        # 3. DB 확인 및 가입/로그인 처리 (카카오랑 똑같은 로직)
+        user = crud_user.get_by_email(db, email=email)
+        
+        if not user:
+            # 신규 가입
+            user_in = RegisterIn(
+                email=email,
+                password=uuid.uuid4().hex, # 랜덤 비번
+                name=name,
+                phone_number=None # 구글은 전화번호 잘 안 줌
+            )
+            print("🛑 [디버그] user_in의 정체:", user_in)
+            print("🛑 [디버그] 가지고 있는 필드들:", user_in.model_dump())
+            user = crud_user.create_user(db, user_in)
+        
+        # 4. 우리 앱 토큰 발급
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(sub=str(user.id))
+        
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "user_id": user.id,
+            "username": user.name
+        }
+
+    except ValueError:
+        # 토큰이 위조되었거나 만료됨
+        raise HTTPException(status_code=400, detail="유효하지 않은 구글 토큰입니다.")
