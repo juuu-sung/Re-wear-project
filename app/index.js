@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { login } from '@react-native-seoul/kakao-login';
 
 // ✅ 서버 주소 자동 설정
@@ -57,7 +58,57 @@ export default function LoginScreen() {
             Alert.alert("로그인 실패", "로그인 중 오류가 발생했습니다. 서버 연결을 확인해주세요.");
         }
     };
+// 🔥 [설정] 앱이 켜질 때 한 번만 실행되게 설정 (useEffect 안에 넣어도 됨)
+    // "웹 클라이언트 ID"를 넣어야 백엔드가 검증할 수 있는 토큰을 줍니다.
+    GoogleSignin.configure({
+        webClientId: '472072812397-f51bchihsifn54boars84kf82uv2eeia.apps.googleusercontent.com', 
+        iosClientId: '472072812397-6r17olqpffqsdioudtu0n8s6fjk80n2e.apps.googleusercontent.com',
+        offlineAccess: true, // 구글은 이거 켜야 idToken을 잘 줍니다.
+    });
 
+    // 🔥 [추가] 구글 로그인 핸들러
+    const handleGoogleLogin = async () => {
+        try {
+            console.log("구글 로그인 시도...");
+            
+            // 1. 구글 플레이 서비스 확인 (안드로이드 필수)
+            await GoogleSignin.hasPlayServices();
+            
+            // 2. 로그인 창 띄우기
+            const userInfo = await GoogleSignin.signIn();
+            const idToken = userInfo.data?.idToken; // 최신 버전은 구조가 이렇습니다.
+            // (혹시 userInfo.idToken 이라면 그걸 쓰세요)
+
+            console.log("✅ 구글 ID 토큰 확보:", idToken);
+
+            if (!idToken) {
+                Alert.alert("오류", "구글 토큰을 가져오지 못했습니다.");
+                return;
+            }
+
+            // 3. 백엔드로 토큰 전송
+            const res = await fetch(`${BASE_URL}/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token: idToken }),
+            });
+
+            const body = await res.json();
+
+            if (res.ok) {
+                // 로그인 성공! (저장 로직은 카카오와 동일)
+                await AsyncStorage.setItem("access_token", body.access_token);
+                await AsyncStorage.setItem("user_id", String(body.user_id));
+                // 필요하면 이름 등도 저장
+                router.replace("/(tabs)/home");
+            } else {
+                Alert.alert("로그인 실패", body.detail || "구글 로그인 실패");
+            }
+
+        } catch (error) {
+            console.error("구글 로그인 에러:", error);
+        }
+    };
     // ✅ 로그인 처리 함수
     const handleLogin = async () => {
   if (!email.trim() || !password.trim()) {
@@ -192,9 +243,13 @@ export default function LoginScreen() {
                         <Text style={styles.dividerText}>또는</Text>
                         <View style={styles.dividerLine} />
                     </View>
-                    <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
-                        <Text style={styles.socialButtonText}>구글로 시작하기</Text>
-                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.socialButton, { backgroundColor: 'white', borderWidth: 1, borderColor: '#ddd', marginTop: 10 }]} 
+            onPress={handleGoogleLogin}
+        >
+            {/* 구글은 보통 흰 배경에 검은 글씨 or 회색 글씨 */}
+            <Text style={[styles.socialButtonText, { color: 'black' }]}>구글로 시작하기</Text>
+        </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.socialButton, { backgroundColor: '#FEE500' }]}
                         onPress={handleKakaoLogin} // onPress에 handleKakaoLogin 연결

@@ -37,3 +37,7 @@ class TokenOut(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     password: Optional[str] = None 
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
