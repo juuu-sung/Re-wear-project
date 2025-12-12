@@ -20,31 +20,38 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+
 import ChevronIcon from "../assets/icons/chevron-forward.svg";
 import PencilIcon from "../assets/icons/pencil.svg";
 
-const accountMenuItems = [
-  { id: "1", title: "계정 정보 변경", screen: "/account-verify" },
-  { id: "2", title: "로그아웃", screen: "/logout" },
-];
-
+// --------------------------------------------------
+//  🌐 BASE_URL 안전 처리
+// --------------------------------------------------
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
+// --------------------------------------------------
+//  🔥 안전한 URL 생성 함수
+// --------------------------------------------------
+function safeUrl(base, path) {
+  if (!path || typeof path !== "string") return null;
+  if (path.startsWith("http")) return path;
+  return `${base}${path}`;
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
-  
+
   const [userInfo, setUserInfo] = useState({ name: "", email: "" });
   const [profileImage, setProfileImage] = useState(null);
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
 
-  // 🔴 회원탈퇴 상태
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
 
   // --------------------------------------------------
-  //  프로필 로딩
+  //  📌 프로필 로딩
   // --------------------------------------------------
   useFocusEffect(
     useCallback(() => {
@@ -80,12 +87,10 @@ export default function ProfileScreen() {
         email: email || ""
       });
 
-      if (profile_image) {
-        const url = profile_image.startsWith("http")
-          ? profile_image
-          : `${BASE_URL}${profile_image}`;
-        setProfileImage(url);
-      }
+      console.log("🔥 서버 profile_image:", profile_image);
+
+      const url = safeUrl(BASE_URL, profile_image);
+      if (url) setProfileImage(url);
 
     } catch (error) {
       console.log("🚨 프로필 로딩 오류:", error);
@@ -95,7 +100,7 @@ export default function ProfileScreen() {
   };
 
   // --------------------------------------------------
-  //  🔥 사진 선택 + 업로드
+  //  📸 프로필 사진 선택
   // --------------------------------------------------
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -116,43 +121,51 @@ export default function ProfileScreen() {
     uploadProfileImage(result.assets[0].uri);
   };
 
+  // --------------------------------------------------
+  //  🔥 프로필 이미지 업로드
+  // --------------------------------------------------
   const uploadProfileImage = async (uri) => {
-    try {
-      const token = await AsyncStorage.getItem("access_token");
-      const userId = await AsyncStorage.getItem("user_id");
+  try {
+    const token = await AsyncStorage.getItem("access_token");
+    const userId = await AsyncStorage.getItem("user_id");
 
-      const formData = new FormData();
-      formData.append("file", {
-        uri,
-        name: "profile.jpg",
-        type: "image/jpeg",
-      });
+    const formData = new FormData();
+    formData.append("file", {
+      uri,
+      name: "profile.jpg",
+      type: "image/jpeg",
+    });
 
-      const res = await axios.post(
-        `${BASE_URL}/v1/users/${userId}/profile-image`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+    const res = await axios.post(
+      `${BASE_URL}/v1/users/${userId}/profile-image`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-      const savedUrl = res.data.profile_image;
+    console.log("🔥 업로드 전체 응답:", res.data);
 
-      const absUrl = savedUrl.startsWith("http")
-        ? savedUrl
-        : `${BASE_URL}${savedUrl}`;
+    // 🔥 서버 키 이름은 'url'
+    const savedUrl = res.data?.url;
 
-      setProfileImage(absUrl);
-      loadProfile();
-
-    } catch (err) {
-      console.log("🚨 업로드 에러:", err);
-      Alert.alert("업로드 실패", "프로필 사진 업로드 중 문제가 발생했습니다.");
+    if (!savedUrl || typeof savedUrl !== "string") {
+      Alert.alert("업로드 실패", "서버에서 URL이 반환되지 않았습니다.");
+      return;
     }
-  };
+
+    setProfileImage(savedUrl);
+    loadProfile();
+
+  } catch (err) {
+    console.log("🚨 업로드 에러:", err);
+    Alert.alert("업로드 실패", "프로필 사진 업로드 중 문제가 발생했습니다.");
+  }
+};
+
 
   // --------------------------------------------------
   //  로그아웃
@@ -176,7 +189,7 @@ export default function ProfileScreen() {
   };
 
   // --------------------------------------------------
-  //  🔥 회원탈퇴 로직 추가 (행님이 말한 “잘 되던 코드 그대로”)
+  //  🔥 회원탈퇴
   // --------------------------------------------------
   const performDeleteAccount = async () => {
     if (!deletePassword) {
@@ -222,7 +235,6 @@ export default function ProfileScreen() {
         {/* 프로필 */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            
             {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.profileImage} />
             ) : (
@@ -234,7 +246,6 @@ export default function ProfileScreen() {
             <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
               <PencilIcon width={16} height={16} fill="#000" />
             </TouchableOpacity>
-
           </View>
 
           {loading ? (
@@ -269,7 +280,10 @@ export default function ProfileScreen() {
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>계정</Text>
           <View style={styles.menuList}>
-            {accountMenuItems.map((item) => (
+            {[
+              { id: "1", title: "계정 정보 변경", screen: "/account-verify" },
+              { id: "2", title: "로그아웃", screen: "/logout" },
+            ].map((item) => (
               <TouchableOpacity
                 key={item.id}
                 style={styles.menuItem}
@@ -283,7 +297,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* 🔴 회원탈퇴 */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.menuItem, { margin: 20, backgroundColor: "white", borderRadius: 10 }]}
           onPress={() => setDeleteModalVisible(true)}
         >
@@ -307,9 +321,7 @@ export default function ProfileScreen() {
         >
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>계정 삭제</Text>
-            <Text style={styles.modalSub}>
-              계정 삭제를 위해 비밀번호를 입력하세요.
-            </Text>
+            <Text style={styles.modalSub}>비밀번호를 입력하세요.</Text>
 
             <TextInput
               value={deletePassword}
@@ -353,11 +365,16 @@ const styles = StyleSheet.create({
 
   profileImageContainer: { position: "relative", marginBottom: 15 },
   profileImage: { width: 100, height: 100, borderRadius: 50 },
+
   profileImagePlaceholder: {
-    width: 100, height: 100, borderRadius: 50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: "#e9e9e9",
-    justifyContent: "center", alignItems: "center",
+    justifyContent: "center",
+    alignItems: "center",
   },
+
   editIcon: {
     position: "absolute",
     bottom: 0,
@@ -374,6 +391,7 @@ const styles = StyleSheet.create({
 
   menuSection: { marginTop: 25, paddingHorizontal: 20 },
   sectionTitle: { fontSize: 14, color: "gray", marginBottom: 10 },
+
   menuList: { backgroundColor: "white", borderRadius: 10, overflow: "hidden" },
 
   menuItem: {
@@ -384,7 +402,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
 
-  // 🔴 모달 스타일
   modalWrap: {
     flex: 1,
     justifyContent: "center",
@@ -399,6 +416,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
   modalSub: { fontSize: 14, color: "#666", marginBottom: 20 },
+
   modalInput: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -420,6 +438,7 @@ const styles = StyleSheet.create({
   },
   cancelBtn: { backgroundColor: "#ddd", marginRight: 10 },
   deleteBtn: { backgroundColor: "#ff4444", marginLeft: 10 },
+
   cancelText: { color: "#333", fontWeight: "700" },
-  deleteText: { color: "white", fontWeight: "700" }
+  deleteText: { color: "white", fontWeight: "700" },
 });
