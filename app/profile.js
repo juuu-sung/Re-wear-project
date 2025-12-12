@@ -44,11 +44,28 @@ export default function ProfileScreen() {
 
   const [userInfo, setUserInfo] = useState({ name: "", email: "" });
   const [profileImage, setProfileImage] = useState(null);
+  
   const [loading, setLoading] = useState(true);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
+  console.log("🖼 profileImage raw =", profileImage);
+  console.log("🌐 BASE_URL =", BASE_URL);
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+
+  // --------------------------------------------------
+  // 🌐 프로필 이미지 URL 정규화 12/12 오후 11시... 추가
+  // --------------------------------------------------
+  const toAbsoluteUrl = (v) => {
+    if (!v) return null;
+    v = String(v).trim();
+    if (v.startsWith("http://") || v.startsWith("https://")) return v;
+    if (v.startsWith("/")) return `${BASE_URL}${v}`;
+    return `${BASE_URL}/${v}`;
+  };
+
+  const imageUri = toAbsoluteUrl(profileImage);
+  console.log("🧷 imageUri =", imageUri);
 
   // --------------------------------------------------
   //  📌 프로필 로딩
@@ -86,9 +103,6 @@ export default function ProfileScreen() {
         name: name || username || "이름 없음",
         email: email || ""
       });
-
-      console.log("🔥 서버 profile_image:", profile_image);
-
       const url = safeUrl(BASE_URL, profile_image);
       if (url) setProfileImage(url);
 
@@ -110,7 +124,7 @@ export default function ProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -149,17 +163,15 @@ export default function ProfileScreen() {
 
     console.log("🔥 업로드 전체 응답:", res.data);
 
-    // 🔥 서버 키 이름은 'url'
-    const savedUrl = res.data?.url;
+    const savedPath = res.data?.path;
 
-    if (!savedUrl || typeof savedUrl !== "string") {
-      Alert.alert("업로드 실패", "서버에서 URL이 반환되지 않았습니다.");
+    if (!savedPath || typeof savedPath !== "string") {
+      Alert.alert("업로드 실패", "서버에서 경로(path)가 반환되지 않았습니다.");
       return;
     }
 
-    setProfileImage(savedUrl);
-    loadProfile();
-
+    setProfileImage(savedPath.trim());
+    
   } catch (err) {
     console.log("🚨 업로드 에러:", err);
     Alert.alert("업로드 실패", "프로필 사진 업로드 중 문제가 발생했습니다.");
@@ -236,7 +248,12 @@ export default function ProfileScreen() {
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
             {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              <Image
+                key={imageUri}
+                source={{ uri: imageUri ? `${imageUri}?t=${Date.now()}` : "" }}
+                style={styles.profileImage}
+                onError={(e) => console.log("🧨 Image load error:", e.nativeEvent)}
+              />
             ) : (
               <View style={styles.profileImagePlaceholder}>
                 <Ionicons name="person" size={50} color="#ccc" />

@@ -45,6 +45,15 @@ from fastapi.staticfiles import StaticFiles
 # FastAPI 초기화
 app = FastAPI(title="ReWear API", version="0.1.0")
 
+from fastapi.staticfiles import StaticFiles
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
 # 정적 파일 업로드 경로
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

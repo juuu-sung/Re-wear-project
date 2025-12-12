@@ -125,16 +125,20 @@ async def upload_profile_image(
     ext = "jpg"
     if file.filename and "." in file.filename:
         ext = file.filename.rsplit(".", 1)[-1]
+
     filename = f"{user_id}_{uuid.uuid4().hex}.{ext}"
     save_path = os.path.join(PROFILE_UPLOAD_DIR, filename)
 
     with open(save_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    image_url = f"{BASE_URL}/uploads/profile/{filename}"
-    crud_user.update_profile_image(db, user_id, image_url)
+    # ✅ 절대 URL ❌ / path만 저장 ⭕
+    image_path = f"/uploads/profile/{filename}"
 
-    return {"url": image_url}
+    crud_user.update_profile_image(db, user_id, image_path)
+
+    # 응답도 path로
+    return {"path": image_path}
 
 @router.post("/delete", summary="회원 탈퇴")
 def delete_my_account(
