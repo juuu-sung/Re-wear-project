@@ -1,10 +1,10 @@
-// app/result.js
+ 
 
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 function ResultScreen() {
-  // 다른 페이지에서 전달받은 파라미터(데이터)를 가져옵니다.
+   
   const { scanResult } = useLocalSearchParams();
 
   return (
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   resultText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2c7a7b', // 결과 텍스트에 포인트 색상
+    color: '#2c7a7b',  
     textAlign: 'center',
   },
 });

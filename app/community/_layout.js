@@ -12,7 +12,7 @@ export default function CommunityLayout() {
         headerShown: true,
       }}
     >
-      {/* 🔥 커뮤니티 메인(index) → 중앙 타이틀: Rewear Lounge */}
+      {/*   커뮤니티 메인(index) → 중앙 타이틀: Rewear Lounge */}
       <Stack.Screen
         name="index"
         options={{

@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Dimensions, FlatList, Image, Text, TouchableOpacity, View } from "react-native";
 
-// 🔥 app/components 기준 경로 정확하게 수정
+//   app/components 기준 경로 정확하게 수정
 import GalleryImageItem from "../components/GalleryImageItem"; // ✔️ 정답
 import useGalleryLoad from "../hooks/useGalleryLoad";
 

@@ -1,17 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect, useRouter } from "expo-router"; // ⭐ 추가
+import { useFocusEffect, useRouter } from "expo-router"; //  추가
 import { Animated, Image } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -24,7 +24,7 @@ export default function MessageList() {
   const [myId, setMyId] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);   // ⭐ 추가
+  const [refreshing, setRefreshing] = useState(false);   //  추가
 
   // ============================================
   // 1) user_id 불러오기
@@ -40,7 +40,7 @@ export default function MessageList() {
   // ============================================
   // 2) 실제 DM 목록 fetch 함수
   // ============================================
-  const loadRooms = useCallback(async () => {       // ⭐ useCallback 적용
+  const loadRooms = useCallback(async () => {       //  useCallback 적용
     if (!myId) return;
 
     try {
@@ -51,7 +51,7 @@ export default function MessageList() {
       console.log("채팅방 목록 불러오기 오류:", err);
     } finally {
       setLoading(false);
-      setRefreshing(false);   // ⭐ refresh 끝내기
+      setRefreshing(false);   //  refresh 끝내기
     }
   }, [myId]);
 
@@ -59,7 +59,7 @@ export default function MessageList() {
   // 3) 처음 로드시 실행
   // ============================================
   useEffect(() => {
-    if (myId) loadRooms();   // ⭐ fetch
+    if (myId) loadRooms();   //  fetch
   }, [myId]);
 
   // ============================================
@@ -76,7 +76,7 @@ export default function MessageList() {
   // ============================================
   const onRefresh = () => {
     setRefreshing(true);
-    loadRooms();   // ⭐ 바로 재요청
+    loadRooms();   //  바로 재요청
   };
 
   // ============================================
@@ -156,7 +156,7 @@ export default function MessageList() {
           data={rooms}
           keyExtractor={(item) => item.room_id.toString()}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />  // ⭐ 추가
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />  //  추가
           }
           renderItem={({ item }) => {
             const hasProfile =

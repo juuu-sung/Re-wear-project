@@ -20,6 +20,6 @@ from .clothes import (
 from .event import (
     EventBase,
     EventCreate,
-    EventUpdate,   # ✅ 추가
+    EventUpdate,   #  추가
     EventResponse,
 )

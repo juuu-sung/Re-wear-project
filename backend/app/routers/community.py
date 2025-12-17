@@ -72,7 +72,7 @@ def upload_post_images(
 
 
 # ================================================
-# 🔥 이미지 삭제 (수정 시 X 누른 사진)
+#   이미지 삭제 (수정 시 X 누른 사진)
 # ================================================
 @router.delete("/posts/{post_id}/images/{image_id}")
 def delete_image(post_id: int, image_id: int, user_id: int, db: Session = Depends(get_db)):
@@ -290,7 +290,7 @@ def delete_post(post_id: int, user_id: int, db: Session = Depends(get_db)):
 
 
 # ================================================
-# 게시글 수정 (🔥 이미지 삭제/추가 반영)
+# 게시글 수정 (  이미지 삭제/추가 반영)
 # ================================================
 @router.put("/posts/{post_id}")
 def update_post(

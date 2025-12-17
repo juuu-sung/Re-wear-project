@@ -35,7 +35,7 @@ export default function CareLabelScreen() {
     setExpandedCategory(expandedCategory === key ? null : key);
   };
 
-  // 🔹 4개씩 나누기 함수 (13개 → [4,4,4,1])
+   
   const chunkArray = (arr, size) => {
     const chunks = [];
     for (let i = 0; i < arr.length; i += size) {
@@ -59,7 +59,7 @@ export default function CareLabelScreen() {
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!selectedLabel} // ✅ 모달 열릴 때 스크롤 잠금
+        scrollEnabled={!selectedLabel}  
       >
         <View style={styles.innerWrapper}>
           <Text style={styles.title}>세탁 라벨 선택</Text>
@@ -121,7 +121,7 @@ export default function CareLabelScreen() {
                           styles.gridRow,
                           group.length < 4 && {
                             justifyContent: "flex-start",
-                            marginLeft: 4, // ✅ 왼쪽선 보정
+                            marginLeft: 4,  
                           },
                         ]}
                       >
@@ -195,8 +195,8 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    justifyContent: "flex-start", // ✅ 위 줄도 같은 기준선 시작
-    gap: 12, // ✅ 간격 일정하게
+    justifyContent: "flex-start",  
+    gap: 12,  
     alignItems: "center",
     marginTop: 5,
   },
@@ -214,8 +214,8 @@ const styles = StyleSheet.create({
   expandWrapper: { marginTop: 8 },
   gridRow: {
     flexDirection: "row",
-    justifyContent: "flex-start", // ✅ 모든 줄 같은 기준선
-    gap: 12, // ✅ 위/아래 줄 간격 동일
+    justifyContent: "flex-start",  
+    gap: 12,  
     marginBottom: 10,
   },
   labelBox: {

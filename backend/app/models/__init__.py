@@ -24,3 +24,5 @@ from app.models.chat import (
     ChatRoom,
     ChatMessage
 )
+from app.models.laundry_basket import LaundryBasket
+from app.models.clothing_activity import ClothingActivity

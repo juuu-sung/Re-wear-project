@@ -24,15 +24,15 @@ import {
 import ChevronIcon from "../assets/icons/chevron-forward.svg";
 import PencilIcon from "../assets/icons/pencil.svg";
 
-// --------------------------------------------------
-//  🌐 BASE_URL 안전 처리
-// --------------------------------------------------
+ 
+ 
+ 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
-// --------------------------------------------------
-//  🔥 안전한 URL 생성 함수
-// --------------------------------------------------
+ 
+ 
+ 
 function safeUrl(base, path) {
   if (!path || typeof path !== "string") return null;
   if (path.startsWith("http")) return path;
@@ -50,9 +50,9 @@ export default function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
 
-  // --------------------------------------------------
-  //  📌 프로필 로딩
-  // --------------------------------------------------
+   
+   
+   
   useFocusEffect(
     useCallback(() => {
       loadProfile();
@@ -87,7 +87,7 @@ export default function ProfileScreen() {
         email: email || ""
       });
 
-      console.log("🔥 서버 profile_image:", profile_image);
+      console.log("  서버 profile_image:", profile_image);
 
       const url = safeUrl(BASE_URL, profile_image);
       if (url) setProfileImage(url);
@@ -99,9 +99,9 @@ export default function ProfileScreen() {
     }
   };
 
-  // --------------------------------------------------
-  //  📸 프로필 사진 선택
-  // --------------------------------------------------
+   
+   
+   
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -121,9 +121,9 @@ export default function ProfileScreen() {
     uploadProfileImage(result.assets[0].uri);
   };
 
-  // --------------------------------------------------
-  //  🔥 프로필 이미지 업로드
-  // --------------------------------------------------
+   
+   
+   
   const uploadProfileImage = async (uri) => {
   try {
     const token = await AsyncStorage.getItem("access_token");
@@ -147,9 +147,9 @@ export default function ProfileScreen() {
       }
     );
 
-    console.log("🔥 업로드 전체 응답:", res.data);
+    console.log("  업로드 전체 응답:", res.data);
 
-    // 🔥 서버 키 이름은 'url'
+     
     const savedUrl = res.data?.url;
 
     if (!savedUrl || typeof savedUrl !== "string") {
@@ -167,9 +167,9 @@ export default function ProfileScreen() {
 };
 
 
-  // --------------------------------------------------
-  //  로그아웃
-  // --------------------------------------------------
+   
+   
+   
   const handleLogout = async () => {
     Alert.alert("로그아웃", "로그아웃 하시겠습니까?", [
       { text: "취소", style: "cancel" },
@@ -188,9 +188,9 @@ export default function ProfileScreen() {
     router.push(item.screen);
   };
 
-  // --------------------------------------------------
-  //  🔥 회원탈퇴
-  // --------------------------------------------------
+   
+   
+   
   const performDeleteAccount = async () => {
     if (!deletePassword) {
       Alert.alert("알림", "비밀번호를 입력해주세요.");
@@ -225,9 +225,9 @@ export default function ProfileScreen() {
     }
   };
 
-  // --------------------------------------------------
-  //  UI
-  // --------------------------------------------------
+   
+   
+   
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -308,7 +308,7 @@ export default function ProfileScreen() {
 
       </ScrollView>
 
-      {/* 🔥 회원탈퇴 모달 */}
+      {/*   회원탈퇴 모달 */}
       <Modal
         transparent
         visible={deleteModalVisible}

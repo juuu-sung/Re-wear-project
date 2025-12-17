@@ -3,17 +3,17 @@ import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
-import { Ionicons } from "@expo/vector-icons"; // ←🔥 추가됨
+import { Ionicons } from "@expo/vector-icons"; // ←  추가됨
 import {
-  Dimensions,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -134,7 +134,7 @@ export default function PostDetail() {
           </Text>
         </View>
 
-        {/* 🔥 좋아요 + 댓글 아이콘 (피드랑 동일 디자인) */}
+        {/*   좋아요 + 댓글 아이콘 (피드랑 동일 디자인) */}
         <View
           style={{
             flexDirection: "row",

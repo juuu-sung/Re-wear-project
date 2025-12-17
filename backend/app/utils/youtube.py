@@ -15,7 +15,7 @@ def fetch_youtube_results(query: str, pageToken: str = None, cache_bust: float =
         "key": YOUTUBE_API_KEY,
     }
 
-    # 🔥 캐싱 우회용 랜덤 파라미터 (검색어에는 영향 없음)
+    #   캐싱 우회용 랜덤 파라미터 (검색어에는 영향 없음)
     if cache_bust is not None:
         params["cache_bust"] = cache_bust
 

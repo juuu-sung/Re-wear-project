@@ -9,14 +9,14 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -89,7 +89,7 @@ export default function WritePost() {
   };
 
   // =====================================================
-  // ⭐ 사진 선택 (미리보기 즉시 + 사진칸 로딩 + 진행률)
+  //  사진 선택 (미리보기 즉시 + 사진칸 로딩 + 진행률)
   // =====================================================
   const pickImages = async () => {
     setImageLoading(true);
@@ -154,7 +154,7 @@ export default function WritePost() {
   };
 
   // =====================================================
-  // ⭐ 업로드용 이미지 병렬 처리 + 진행률
+  //  업로드용 이미지 병렬 처리 + 진행률
   // =====================================================
   const uploadNewImages = async (postId) => {
     const newImgs = images.filter((i) => i.isNew);
@@ -356,7 +356,7 @@ export default function WritePost() {
               </TouchableOpacity>
             )}
 
-            {/* ⭐ 사진칸 로딩 */}
+            {/*  사진칸 로딩 */}
             {imageLoading && (
               <View
                 style={{

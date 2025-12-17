@@ -13,6 +13,6 @@ class Event(Base):
     description = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
 
-    # ✅ 관계 설정 (명시적 foreign_keys 추가)
+    #  관계 설정 (명시적 foreign_keys 추가)
     user = relationship("User", back_populates="events")
     clothes = relationship("Clothes", back_populates="events", foreign_keys=[garment_id])

@@ -37,7 +37,7 @@ class EventResponse(EventBase):
     id: int
     user_id: int
     description: Optional[str] = None
-    clothes: Optional[ClothesResponse] = None  # ✅ 옷 정보까지 반환
+    clothes: Optional[ClothesResponse] = None  #  옷 정보까지 반환
 
     class Config:
         orm_mode = True

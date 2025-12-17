@@ -97,7 +97,7 @@ def get_messages(room_id: int, db: Session = Depends(get_db)):
         .all()
     )
 
-    # ⭐ 무조건 배열로 변환해서 JSON으로 보냄
+    #  무조건 배열로 변환해서 JSON으로 보냄
     return [
         {
             "id": m.id,
@@ -145,7 +145,7 @@ def send_message(
 
 
 # =================================================================
-# 4) WebSocket 메시지 전송 (🔥 핵심 multi-image 지원)
+# 4) WebSocket 메시지 전송 (  핵심 multi-image 지원)
 # =================================================================
 
 active_connections = {}  # {"room_id": [ws1, ws2]}
@@ -166,7 +166,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
             data = await websocket.receive_json()
 
             # ======================================================
-            # ⭐ 1) read_receipt (카카오톡/DM 방식)
+            #  1) read_receipt (카카오톡/DM 방식)
             # ======================================================
             if data.get("type") == "read_receipt":
                 reader_id = data["user_id"]
@@ -196,7 +196,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
                 continue
 
             # ======================================================
-            # ⭐ 2) 일반 메시지 저장
+            #  2) 일반 메시지 저장
             # ======================================================
             msg = ChatMessage(
                 room_id=room_id,
@@ -215,7 +215,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, db: Session = D
             db.refresh(msg)
 
             # ======================================================
-            # ⭐ 3) 메시지 broadcast
+            #  3) 메시지 broadcast
             # ======================================================
             payload = {
                 "type": "message",
@@ -267,7 +267,7 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
         opponent_id = room.user2_id if room.user1_id == user_id else room.user1_id
         opponent = db.query(User).filter(User.id == opponent_id).first()
 
-        # 🔥 마지막 메시지
+        #   마지막 메시지
         last_msg = (
             db.query(ChatMessage)
             .filter(ChatMessage.room_id == room.id)
@@ -275,7 +275,7 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
             .first()
         )
 
-        # 🔥 읽지 않은 메시지 개수(unread_count) 계산
+        #   읽지 않은 메시지 개수(unread_count) 계산
         unread_count = (
             db.query(ChatMessage)
             .filter(
@@ -298,7 +298,7 @@ def get_my_rooms(user_id: int, db: Session = Depends(get_db)):
             "last_media_urls": last_msg.media_urls if last_msg else None,
             "last_thumbnail_url": last_msg.thumbnail_url if last_msg else None,
 
-            # 🔥 추가된 unread_count
+            #   추가된 unread_count
             "unread_count": unread_count,
 
             "updated_at": room.updated_at

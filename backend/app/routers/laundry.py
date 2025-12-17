@@ -70,7 +70,7 @@ async def scan_care_label(file: UploadFile = File(...)):
         
         detections = []
         
-        # --- 👇 여기가 바뀝니다! ---
+        # ---  여기가 바뀝니다! ---
         
         # 2. 결과에서 [박스], [클래스], [확신도]를 한번에 추출
         boxes = result.boxes.xyxyn.tolist()     # [x1, y1, x2, y2] (0~1 정규화 좌표)

@@ -1,4 +1,4 @@
-// app/scan.js  (🚨 기존 내용 다 지우고 이걸로 덮어쓰세요!)
+ 
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -7,19 +7,19 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 
-// -----------------------------------------------------------
-// 서버 URL
-// -----------------------------------------------------------
+ 
+ 
+ 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 export const BASE_URL = RAW_BASE_URL.replace(/\/+$/, "");
 export const BACKEND_API_URL = `${BASE_URL}/laundry/scan`;
-// -----------------------------------------------------------
+ 
 
 export default function ScanScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  // 화면 진입 시 카메라 자동 실행
+   
   useEffect(() => {
     const timer = setTimeout(() => {
       launchNativeCamera();
@@ -57,7 +57,7 @@ export default function ScanScreen() {
     setIsLoading(false);
   };
 
-  // ✅ 세탁 라벨 미션 완료 처리
+   
   const markScanMissionDone = async () => {
     try {
       const userId = await AsyncStorage.getItem("user_id");
@@ -84,19 +84,19 @@ export default function ScanScreen() {
     }
   };
 
-  // 백엔드로 이미지 업로드 (결과 페이지로 이동)
+   
   const uploadImage = async (imageUri) => {
     setIsLoading(true);
     let manipResult;
     try {
-      // 1. 이미지 리사이징
+       
       manipResult = await ImageManipulator.manipulateAsync(
         imageUri,
         [{ resize: { width: 800 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
 
-      // 2. FormData 구성
+       
       const formData = new FormData();
       formData.append("file", {
         uri: manipResult.uri,
@@ -104,7 +104,7 @@ export default function ScanScreen() {
         type: "image/jpeg",
       });
 
-      // 3. 백엔드로 POST
+       
       const response = await fetch(BACKEND_API_URL, {
         method: "POST",
         body: formData,
@@ -120,13 +120,13 @@ export default function ScanScreen() {
       console.log("스캔 결과:", result.detections);
 
       
-      // 미션 완료 처리
+       
       await markScanMissionDone();
 
-      // 미션 변경 플래그 기록
+       
       await AsyncStorage.setItem("mission_changed", "1");
 
-      // 결과 페이지 이동
+       
       router.replace({
         pathname: "/scanResult",
         params: {

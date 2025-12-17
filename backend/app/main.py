@@ -30,8 +30,11 @@ from app.routers import (
     laundry as laundry_router,
     alerts as alerts_router,
     game as game_router,
-    
+    laundry_basket as laundry_basket_router,
+    clothing_activity as clothing_activity_router,
 )
+    
+
 from app.routers import like_brands
 # Services
 from app.core.scheduler import start_scheduler, stop_scheduler
@@ -152,3 +155,5 @@ app.include_router(laundry_router.router, prefix="/laundry", tags=["laundry"])
 app.include_router(alerts_router.router)
 app.include_router(like_brands.router)
 app.include_router(game_router.router)
+app.include_router(laundry_basket_router.router)
+app.include_router(clothing_activity_router.router)
