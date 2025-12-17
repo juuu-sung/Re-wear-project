@@ -7,11 +7,11 @@ import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -40,7 +40,7 @@ export default function UserPosts() {
   const finalName = user_name ?? "사용자";
   const profileImg = profile_image && profile_image !== "" ? profile_image : null;
 
-  // 🔥 방 생성하지 않고 "DM 화면으로만 이동"
+  //   방 생성하지 않고 "DM 화면으로만 이동"
   const handleSendMessage = async () => {
     const myId = await AsyncStorage.getItem("user_id");
     if (!myId) return;

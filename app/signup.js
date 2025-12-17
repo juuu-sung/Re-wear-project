@@ -1,15 +1,14 @@
-// app/signup.js
-import { useRouter } from 'expo-router';
+ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// ✅ 서버 주소 자동 설정 (환경변수 or 로컬 IP)
+ 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
-// RAW_BASE_URL이 비어있으면 replace 호출 안 함
+ 
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
-console.log("🌍 EXPO_PUBLIC_BASE_URL:", process.env.EXPO_PUBLIC_BASE_URL);
-console.log("✅ 최종 BASE_URL:", BASE_URL);
+console.log("  EXPO_PUBLIC_BASE_URL:", process.env.EXPO_PUBLIC_BASE_URL);
+console.log(" 최종 BASE_URL:", BASE_URL);
 
 
 export default function SignUpScreen() {
@@ -22,20 +21,20 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
 
   const handlePhoneChange = (text) => {
-    // 1. 숫자만 남기고 다 지움
+     
     let clean = text.replace(/[^0-9]/g, '');
 
-    // 2. '010'으로 시작하지 않으면 강제로 '010' 고정 (지우기 방지)
+     
     if (!clean.startsWith('010')) {
       clean = '010';
     }
 
-    // 3. 최대 11자리까지만 입력 가능 (010 + 8자리)
+     
     if (clean.length > 11) {
       clean = clean.substring(0, 11);
     }
 
-    // 4. 하이픈(-) 자동 추가 로직
+     
     let formatted = clean;
     if (clean.length > 3) {
       formatted = `${clean.slice(0, 3)}-${clean.slice(3)}`;
@@ -47,13 +46,13 @@ export default function SignUpScreen() {
     setPhoneNumber(formatted);
   };
 
-  // ✅ 앱 시작 시 서버 연결 확인 (네트워크 체크)
+   
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch(`${BASE_URL}/healthz`);
         const body = await res.text();
-        console.log("✅ 서버 연결 성공:", body);
+        console.log(" 서버 연결 성공:", body);
       } catch (err) {
         console.log("❌ 서버 연결 실패:", err.message);
         Alert.alert("서버 연결 실패", "FastAPI 서버가 실행 중인지 확인하세요.");
@@ -61,9 +60,9 @@ export default function SignUpScreen() {
     })();
   }, []);
   
-  // 이메일/비번 검증
+   
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // 영문+숫자, 8자 이상
+const PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;  
 const PHONE_RE = /^010-\d{4}-\d{4}$/;
 
   function validateInputs({ name, email, password, confirmPassword , phoneNumber}) {
@@ -85,7 +84,7 @@ const PHONE_RE = /^010-\d{4}-\d{4}$/;
     return null;
   }
 
-  // 백엔드 에러 본문 예쁘게 뽑기 (FastAPI 422 등 대응)
+   
   function extractErrorMessage(body) {
     if (typeof body === "string") return body;
   
@@ -95,14 +94,14 @@ const PHONE_RE = /^010-\d{4}-\d{4}$/;
   
     if (body && typeof body === "object") {
       if (Array.isArray(body.detail)) {
-        // FastAPI 422 유효성 오류
+         
         return body.detail
           .map((d) => d.msg || d.detail || JSON.stringify(d))
           .join("\n");
       }
   
       if (typeof body.detail === "string") {
-        // ✅ 이메일 중복 감지
+         
         if (body.detail.toLowerCase().includes("already") || body.detail.includes("존재")) {
           return "이미 존재하는 이메일입니다.";
         }
@@ -127,7 +126,7 @@ const PHONE_RE = /^010-\d{4}-\d{4}$/;
   }
   
 
-  // ✅ 회원가입 요청
+   
   const handleSignUp = async () => {
     const errMsg = validateInputs({ name, email, password, confirmPassword, phoneNumber });
     if (errMsg) {
@@ -164,7 +163,7 @@ const PHONE_RE = /^010-\d{4}-\d{4}$/;
       Alert.alert("회원가입 성공", "로그인 페이지로 이동합니다.", [
         { text: "확인", onPress: () => router.back() },
       ]);
-      console.log("✅ 회원가입 성공:", body);
+      console.log(" 회원가입 성공:", body);
   
     } catch (err) {
       console.error("❌ 네트워크 오류:", err);

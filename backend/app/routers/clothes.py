@@ -18,7 +18,7 @@ router = APIRouter(prefix="/clothes", tags=["Clothes"])
 UPLOAD_DIR = "uploads/clothes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# ✅ 옷 등록
+#  옷 등록
 @router.post("/add")
 async def add_clothes(
     name: str = Form(...),
@@ -32,7 +32,7 @@ async def add_clothes(
     with open(path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
-    # ✅ 저장 직후 AI 추론 수행 (업로드 파일 재열기)
+    #  저장 직후 AI 추론 수행 (업로드 파일 재열기)
     with open(path, "rb") as f:
         infer = predict_bytes(f.read())
     # 최종 멀티라벨(predicted) 중 가장 높은 후보를 소재로 사용(간단화)
@@ -68,7 +68,7 @@ async def add_clothes(
         "material_breakdown": breakdown,
     }
 
-# ✅ 옷 목록 조회
+#  옷 목록 조회
 @router.get("", response_model=List[dict])
 def list_clothes(
     db: Session = Depends(get_db),
@@ -88,7 +88,7 @@ def list_clothes(
         })
     return out
 
-# ✅ 옷 수정 (세탁법 수동 수정 + 이미지 변경 시 재분석 둘 다 지원)
+#  옷 수정 (세탁법 수동 수정 + 이미지 변경 시 재분석 둘 다 지원)
 @router.put("/{item_id}")
 async def update_clothes(
     item_id: int,
@@ -131,7 +131,7 @@ async def update_clothes(
     db.refresh(item)
     return {"ok": True, "updated": item.id}
 
-# ✅ 옷 삭제
+#  옷 삭제
 @router.delete("/{item_id}")
 def delete_clothes(
     item_id: int,

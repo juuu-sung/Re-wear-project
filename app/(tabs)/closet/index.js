@@ -29,7 +29,7 @@ export default function ClosetMain() {
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
 
-  // 사용자 이름 + 카테고리
+   
   useEffect(() => {
     const init = async () => {
       try {
@@ -52,7 +52,7 @@ export default function ClosetMain() {
     init();
   }, []);
 
-  // 옷 목록 불러오기
+   
   const loadClothes = async () => {
     try {
       setLoading(true);
@@ -84,7 +84,7 @@ export default function ClosetMain() {
     }, [selected])
   );
 
-  // 당겨서 새로고침
+   
   const onRefresh = useCallback(async () => {
     try {
       setRefreshing(true);
@@ -94,7 +94,7 @@ export default function ClosetMain() {
     }
   }, [selected]);
 
-  // 카테고리 추가
+   
   const addCategory = () => {
     Alert.prompt("새 옷장 추가", "추가할 옷장 이름을 입력하세요.", async (text) => {
       const name = text?.trim();
@@ -110,7 +110,7 @@ export default function ClosetMain() {
     });
   };
 
-  // 카테고리 롱프레스
+   
   const handleCategoryLongPress = (name) => {
     if (["상의", "하의", "아우터"].includes(name)) {
       Alert.alert("기본 옷장은 수정/삭제할 수 없습니다.");

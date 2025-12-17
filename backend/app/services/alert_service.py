@@ -5,22 +5,57 @@ from app.services.db_service import (
     get_wear_events,
 )
 from app.services.push_service import send_push
+from app.models import LaundryBasket
+
 
 
 # -------------------------------------------
 # 1) 소재/카테고리 기준 세탁 필요 횟수
 # -------------------------------------------
 THRESHOLDS = {
-    "cotton":     {"상의": 2, "하의": 4, "아우터": 7},
-    "nylon":      {"상의": 3, "하의": 4, "아우터": 8},
-    "polyester":  {"상의": 3, "하의": 4, "아우터": 8},
-    "rayon":      {"상의": 2, "하의": 3, "아우터": 6},
-    "spandex":    {"상의": 2, "하의": 3, "아우터": 5},
-    "synthetic":  {"상의": 3, "하의": 4, "아우터": 8},
-    "wool":       {"상의": 5, "하의": 6, "아우터": 15},
+    "cotton": {
+        "상의": 2,   # 땀·피지 흡수 큼 → 1~2회 착용 후 세탁 권장
+        "하의": 3,   # 직접 접촉 적음
+        "아우터": 10 # 외피, 잦은 세탁 불필요
+    },
+    "nylon": {
+        "상의": 3,   # 흡습 낮음, 냄새 누적 느림
+        "하의": 4,
+        "아우터": 12
+    },
+    "polyester": {
+        "상의": 3,   # 땀 흡수는 낮지만 냄새 잔존 가능
+        "하의": 4,
+        "아우터": 15
+    },
+    "rayon": {
+        "상의": 2,   # 면보다 더 약하고 땀 흡수 큼
+        "하의": 3,
+        "아우터": 12
+    },
+    "spandex": {
+        "상의": 2,   # 스트레치 복원력 보호 필요
+        "하의": 3,
+        "아우터": 8
+    },
+    "synthetic": {
+        "상의": 3,   # 혼방 평균치
+        "하의": 4,
+        "아우터": 12
+    },
+    "wool": {
+        "상의": 5,   # 항균성·탈취성 우수
+        "하의": 7,
+        "아우터": 20 # 실제로는 시즌 1~2회 세탁 권장
+    },
 }
 
-SILK_THRESHOLD = 3
+SILK_THRESHOLD = {
+    "상의": 3,
+    "하의": 4,
+    "아우터": 10
+}
+
 
 
 # -------------------------------------------
@@ -82,26 +117,32 @@ def evaluate_single_cloth(cloth, wear_events):
 # -------------------------------------------
 def get_wash_needed(db, user_id: int):
     clothes = get_user_clothes(db, user_id)
+
+    # 🔥 빨래통에 있는 옷 id 목록
+    basket_ids = {
+        b.clothes_id
+        for b in db.query(LaundryBasket)
+                  .filter(LaundryBasket.user_id == user_id)
+                  .all()
+    }
+
     results = []
 
     for cloth in clothes:
-        # 마지막 세탁 기록 가져오기
         last_wash = get_last_wash(db, cloth.id)
         last_wash_date = to_safe_date(last_wash.date) if last_wash else None
 
-        # 착용 기록
         wear_events = get_wear_events(db, cloth.id)
-
-        # 안전 필터링
         filtered_wears = filter_wears_after(wear_events, last_wash_date)
 
-        # 평가
         info = evaluate_single_cloth(cloth, filtered_wears)
 
-        if info["need_wash"]:
+        #  세탁 필요 + 아직 빨래통에 안 들어간 경우만 알림
+        if info["need_wash"] and cloth.id not in basket_ids:
             results.append(info)
 
     return results
+
 
 
 # -------------------------------------------

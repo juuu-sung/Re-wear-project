@@ -1,4 +1,4 @@
-// app/infer.js
+ 
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
@@ -20,7 +20,7 @@ async function pickImage(source = "camera") {
 
   if (picker.canceled) return null;
 
-  // 사이즈 줄이기(네트워크 부담↓)
+   
   const m = await ImageManipulator.manipulateAsync(
     picker.assets[0].uri,
     [{ resize: { width: 1024 } }],
@@ -45,9 +45,9 @@ async function postInfer(path, imageBase64) {
 }
 
 export default function InferScreen() {
-  const [img, setImg] = useState(null);            // { uri, base64 }
-  const [labelRes, setLabelRes] = useState(null);  // { ok, label, ... }
-  const [matRes, setMatRes] = useState(null);      // { ok, materials, primary, ... }
+  const [img, setImg] = useState(null);             
+  const [labelRes, setLabelRes] = useState(null);   
+  const [matRes, setMatRes] = useState(null);       
   const [loading, setLoading] = useState(false);
 
   const choose = async (from) => {

@@ -4,25 +4,25 @@ from logging.config import fileConfig
 from sqlalchemy import pool, create_engine
 from alembic import context
 
-# ✅ 1. backend 기준으로 app 경로 추가
+#  1. backend 기준으로 app 경로 추가
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
-# ✅ 2. app 내부 모듈 import
+#  2. app 내부 모듈 import
 from app.db import Base  # Base 정의
 from app.models import *  # 모든 모델 (article 포함)
 from app.core.config import settings  # DATABASE_URL 포함
 
-# ✅ 3. Alembic 기본 설정
+#  3. Alembic 기본 설정
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# ✅ 4. DB URL 환경변수 덮어쓰기 (.env 사용 시)
+#  4. DB URL 환경변수 덮어쓰기 (.env 사용 시)
 if settings.DATABASE_URL:
     config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
-# ✅ 5. Alembic이 참고할 metadata
+#  5. Alembic이 참고할 metadata
 target_metadata = Base.metadata
 
 

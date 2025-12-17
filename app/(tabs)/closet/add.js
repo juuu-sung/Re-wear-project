@@ -1,6 +1,6 @@
-// ============================================
-// AddClothesScreen — 미션 연동 완성본
-// ============================================
+ 
+ 
+ 
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -34,14 +34,14 @@ export default function AddClothesScreen() {
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
 
-  // 팁 모달
+   
   const [showTipModal, setShowTipModal] = useState(false);
   const [hideTipNextTime, setHideTipNextTime] = useState(false);
   const [triggerCamera, setTriggerCamera] = useState(false);
 
-  // ======================
-  // 유저 로드
-  // ======================
+   
+   
+   
   useEffect(() => {
     (async () => {
       const id = await AsyncStorage.getItem("user_id");
@@ -49,9 +49,9 @@ export default function AddClothesScreen() {
     })();
   }, []);
 
-  // ======================
-  // 카테고리 로드
-  // ======================
+   
+   
+   
   useEffect(() => {
     (async () => {
       const saved = await AsyncStorage.getItem("categories");
@@ -62,7 +62,7 @@ export default function AddClothesScreen() {
     })();
   }, []);
 
-  // 파일 확장자 → MIME
+   
   const resolveMime = (extRaw) => {
     const ext = (extRaw || "").toLowerCase();
     if (["jpg", "jpeg"].includes(ext)) return "image/jpeg";
@@ -72,9 +72,9 @@ export default function AddClothesScreen() {
     return "image/jpeg";
   };
 
-  // ======================
-  // 카메라
-  // ======================
+   
+   
+   
   const launchCamera = async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -148,9 +148,9 @@ export default function AddClothesScreen() {
     setShowTipModal(false);
   };
 
-  // ======================
-  // 🟩 add_cloth 미션 자동 완료 함수
-  // ======================
+   
+   
+   
   const completeAddClothMission = async () => {
     try {
       if (!userId) return;
@@ -164,13 +164,13 @@ export default function AddClothesScreen() {
 
       if (!missionsRaw) return;
 
-      // 날짜가 바뀌었으면 무시 (DailyMissionTab이 자동 초기화함)
+       
       if (storedDate !== today) return;
 
       const missions = JSON.parse(missionsRaw);
       const target = missions.find((m) => m.key === "add_cloth");
 
-      // 이미 완료면 패스
+       
       if (!target || target.done) return;
 
       const updated = missions.map((m) =>
@@ -185,9 +185,9 @@ export default function AddClothesScreen() {
     }
   };
 
-  // ======================
-  // 등록 처리
-  // ======================
+   
+   
+   
   const handleSubmit = async () => {
     if (!name.trim()) return Alert.alert("입력 오류", "옷 이름을 입력하세요!");
     if (!image) return Alert.alert("입력 오류", "사진을 선택하세요.");
@@ -223,7 +223,7 @@ export default function AddClothesScreen() {
         return Alert.alert("오류", data.detail || "등록 실패");
       }
 
-      // 🟩 미션 완료!
+       
       await completeAddClothMission();
 
       Alert.alert("등록 완료", `"${name}"이 등록되었습니다!`);

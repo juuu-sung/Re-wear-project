@@ -1,16 +1,15 @@
-// app/carelabel/[carelabel].js
+ 
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import CareLabelModal from "./CareLabelModal";
 import { washLabels } from "./washLabels";
-import { bleachLabels } from "./bleachLabels";
 
 export default function CategoryDetail() {
   const { carelabel } = useLocalSearchParams();
   const [selected, setSelected] = useState(null);
 
-  // 카테고리별 분기 (현재는 물세탁만)
+   
   const labels = carelabel === "wash" ? washLabels : [];
 
   return (

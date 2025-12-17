@@ -12,7 +12,7 @@ from app.crud import user as crud_user
 from app.routers.auth import get_current_user, verify_password 
 from app.models import User
 
-# 👇 [추가] 삭제 요청 시 받을 데이터 (비밀번호)
+#  [추가] 삭제 요청 시 받을 데이터 (비밀번호)
 class UserDeleteRequest(BaseModel):
     password: str
 
@@ -70,7 +70,7 @@ def register_user(payload: RegisterIn, db: Session = Depends(get_db)):
 def list_users(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     return crud_user.list_users(db, skip=skip, limit=limit)
 
-# 🔥 [추가] 사용자 정보 조회 API (GET /users/{user_id})
+#   [추가] 사용자 정보 조회 API (GET /users/{user_id})
 @router.get("/{user_id}", response_model=UserOut)
 def read_user(user_id: int, db: Session = Depends(get_db)):
     # DB에서 ID로 유저 찾기

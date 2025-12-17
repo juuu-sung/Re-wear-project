@@ -1,4 +1,4 @@
-// app/(tabs)/closet/detail.js
+ 
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
@@ -41,7 +41,7 @@ export default function ClothesDetail() {
   const [editedCategory, setEditedCategory] = useState(String(category ?? ""));
   const [imageUri, setImageUri] = useState(String(image ?? ""));
 
-  // ✅ 소재/세탁법 상태
+   
   const parseBreakdown = (raw) => {
     if (!raw) return [];
     if (Array.isArray(raw)) return raw;
@@ -54,9 +54,9 @@ export default function ClothesDetail() {
   };
 
   const [material, setMaterial] = useState(() => (initMaterial ? String(initMaterial) : ""));
-  // UI에 보여줄 '주요 소재' (서버 요약/후보 기반으로 갱신)
+   
   const [displayMajor, setDisplayMajor] = useState(() => (initMaterial ? String(initMaterial) : ""));
-  const [washingInfo, setWashingInfo] = useState(""); // string 또는 object
+  const [washingInfo, setWashingInfo] = useState("");  
   const [materialBreakdown, setMaterialBreakdown] = useState(() => parseBreakdown(initMaterialBreakdown));
 
   const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
@@ -66,42 +66,42 @@ export default function ClothesDetail() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [showAll, setShowAll] = useState(false);
 
-  // ✅ Gemini 요약 상태
+   
   const [careSummary, setCareSummary] = useState(null);
   const [careLoading, setCareLoading] = useState(false);
   const [careError, setCareError] = useState(null);
 
-  // 요약 UI 개선 상태
+   
   const [expandCare, setExpandCare] = useState(false);
 
-  // 요약 텍스트를 보기 좋게 파싱 (HTML 태그 제거, 한줄요약 추출, 1)~6) 섹션 파싱)
+   
   const parseCareSummary = (text) => {
     if (!text || typeof text !== "string") return { sections: [], oneLiner: "" };
 
-    // 1) HTML 태그 제거
+     
     const stripTags = (s) => s.replace(/<[^>]+>/g, "");
     const cleaned = stripTags(text).replace(/\s+$/g, "");
 
-    // 2) 한줄요약 추출
+     
     const oneLinerMatch = cleaned.match(/한줄요약\s*:\s*(.+)$/m);
     const oneLiner = oneLinerMatch ? oneLinerMatch[1].trim() : "";
     const body = oneLinerMatch ? cleaned.replace(oneLinerMatch[0], "").trim() : cleaned;
 
-    // 3) 줄 기준 분할
+     
     const lines = body.split(/\n+/).map((l) => l.trim()).filter(Boolean);
 
-    // 4) 1)~6) 섹션 파싱
+     
     const sections = [];
     let current = null;
     lines.forEach((line) => {
-      const m = line.match(/^(\d\))\s*([^:：]+)\s*[:：]?\s*(.*)$/); // 1) 제목: 내용
+      const m = line.match(/^(\d\))\s*([^:：]+)\s*[:：]?\s*(.*)$/);  
       if (m) {
-        // 새 섹션 시작
+         
         if (current) sections.push(current);
         current = { num: m[1], title: m[2].trim(), lines: [] };
         if (m[3]) current.lines.push(m[3].trim());
       } else if (current) {
-        // 이어지는 문장(마침표 단위로 다시 쪼갬)
+         
         line
           .split(/(?<=\.)\s+/)
           .map((s) => s.trim())
@@ -111,7 +111,7 @@ export default function ClothesDetail() {
     });
     if (current) sections.push(current);
 
-    // 5) 잡음 제거
+     
     const cleanedSections = sections.map((sec) => ({
       ...sec,
       lines: sec.lines.filter((t) => t.replace(/[.\s]/g, "").length > 0),
@@ -120,7 +120,7 @@ export default function ClothesDetail() {
     return { sections: cleanedSections, oneLiner };
   };
 
-  // 기본 세탁요약(세탁/건조/다림질/표백) 파싱
+   
   const toBasicCare = (info) => {
     const def = { wash: "-", dry: "-", iron: "-", bleach: "-" };
     if (!info) return def;
@@ -157,7 +157,7 @@ export default function ClothesDetail() {
     }
   };
 
-  // 후보 형태를 백엔드 규격으로 정규화
+   
   const buildCandidates = () => {
     try {
       return (materialBreakdown || []).map((m) => ({
@@ -176,10 +176,10 @@ export default function ClothesDetail() {
     }
   };
 
-  // 후보들로부터 주요 소재 선택 (민감도 우선 + 비율 보정)
+   
   const pickMajorFromCandidates = (cands = []) => {
     if (!Array.isArray(cands) || cands.length === 0) return material || "";
-    // 확률 정규화
+     
     const list = cands
       .map((c) => ({
         label: (c.label || c.name || c.material || "").toLowerCase(),
@@ -187,25 +187,25 @@ export default function ClothesDetail() {
       }))
       .filter((x) => x.label && x.prob > 0);
     if (list.length === 0) return material || "";
-    // 상위 확률
+     
     const top = [...list].sort((a, b) => b.prob - a.prob)[0];
-    // 민감도 테이블
+     
     const sens = { wool: 5, silk: 5, cashmere: 5, linen: 3, rayon: 3, tencel: 3, modal: 3, nylon: 2, spandex: 2, polyester: 1, cotton: 1, synthetic: 1, acrylic: 3 };
-    // 민감 후보(임계치)
-    const SENS_THR = 0.20;        // 20% 이상이면 후보
-    const BOOST_MARGIN = 0.10;    // 상위와 10%p 이내면 가산
+     
+    const SENS_THR = 0.20;         
+    const BOOST_MARGIN = 0.10;     
     const sensitive = list
       .filter((x) => (sens[x.label] || 0) >= 3 && x.prob >= SENS_THR)
       .sort((a, b) => (sens[b.label] - sens[a.label]) || (b.prob - a.prob));
     if (sensitive.length) {
       const bestSens = sensitive[0];
-      // 상위 확률과 크게 차이 나지 않으면 민감도 우선
+       
       if (bestSens.prob + BOOST_MARGIN >= top.prob) return bestSens.label;
     }
     return top.label;
   };
 
-  // ✅ 최초 진입 시 washing 파라미터가 JSON 문자열이면 파싱
+   
   useEffect(() => {
     if (!initWashing) return;
     try {
@@ -220,7 +220,7 @@ export default function ClothesDetail() {
     setMaterialBreakdown(parseBreakdown(initMaterialBreakdown));
   }, [initMaterialBreakdown]);
 
-  // ✅ 카테고리 불러오기
+   
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -234,7 +234,7 @@ export default function ClothesDetail() {
     loadCategories();
   }, []);
 
-  // ✅ “이 옷의 기록” 불러오기
+   
   useEffect(() => {
     const fetchHistory = async () => {
       try {
@@ -259,7 +259,7 @@ export default function ClothesDetail() {
     fetchHistory();
   }, [id]);
 
-  // ✅ 날짜/정렬
+   
   const sortedHistory = [...history].sort((a, b) => {
     const da = new Date(a.date);
     const db = new Date(b.date);
@@ -267,7 +267,7 @@ export default function ClothesDetail() {
   });
   const formatDate = (s) => (s ? String(s).replace(/-/g, ".") : "");
 
-  // ✅ 사진 변경
+   
   const changePhoto = async () => {
     const launch = async (mode) => {
       const result =
@@ -311,7 +311,7 @@ export default function ClothesDetail() {
     }
   };
 
-  // ✅ AI 재분석
+   
   const analyzeAgain = async () => {
     try {
       const token = await AsyncStorage.getItem("access_token");
@@ -332,12 +332,12 @@ export default function ClothesDetail() {
           ? data.top5
           : parseBreakdown(data.material_breakdown)
       );
-      // 후보 변경되었으니 표시용 주요소재 재계산
+       
       try {
         const cand = Array.isArray(data.top5) && data.top5.length ? data.top5 : parseBreakdown(data.material_breakdown);
         setDisplayMajor(pickMajorFromCandidates(cand));
       } catch {}
-      // 분석 결과가 바뀌었으니 이전 Gemini 요약은 초기화
+       
       setCareSummary(null);
       Alert.alert("분석 완료", "AI 세탁 가이드를 업데이트했어요.");
     } catch (e) {
@@ -346,7 +346,7 @@ export default function ClothesDetail() {
     }
   };
 
-  // ✅ Gemini 세탁 설명 생성
+   
   const fetchCareSummary = async () => {
     try {
       setCareError(null);
@@ -379,7 +379,7 @@ export default function ClothesDetail() {
       });
 
       const data = await res.json();
-      // 서버가 주요 소재를 함께 주면 우선 반영 (백엔드 키 다양성 대응)
+       
       const serverMajor =
         data?.major_material ||
         data?.primary_material ||
@@ -389,7 +389,7 @@ export default function ClothesDetail() {
       if (serverMajor) {
         setDisplayMajor(String(serverMajor));
       } else {
-        // 그렇지 않으면 로컬 규칙으로 산출
+         
         setDisplayMajor(pickMajorFromCandidates(body.candidates));
       }
       if (!res.ok) {
@@ -403,16 +403,16 @@ export default function ClothesDetail() {
       setCareLoading(false);
     }
   };
-  // 소재/세탁 정보가 변하면 이전 Gemini 요약 초기화
+   
   useEffect(() => {
     setCareSummary(null);
-    // 표시용 주요소재도 후보 기반으로 갱신 시도
+     
     try {
       setDisplayMajor(pickMajorFromCandidates(buildCandidates()));
     } catch {}
   }, [material, washingInfo, JSON.stringify(materialBreakdown)]);
 
-  // ✅ 수정 저장
+   
   const handleUpdate = async () => {
     try {
       setLoading(true);
@@ -464,7 +464,7 @@ export default function ClothesDetail() {
     }
   };
 
-  // ✅ 삭제
+   
   const handleDelete = async () => {
     Alert.alert("삭제 확인", `"${name}"을(를) 삭제할까요?`, [
       { text: "취소", style: "cancel" },
@@ -547,7 +547,7 @@ export default function ClothesDetail() {
             <Text style={styles.name}>{editedName}</Text>
             <Text style={styles.category}>{editedCategory}</Text>
 
-            {/* ✅ 소재 표기 */}
+            {/*  소재 표기 */}
             <View style={styles.materialHeaderRow}>
               <Text style={styles.material}>
                 {material ? `민감 소재: ${material}` : "민감 소재 정보 없음"}

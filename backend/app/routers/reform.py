@@ -6,7 +6,7 @@ import random
 router = APIRouter(prefix="/v1/reform", tags=["reform"])
 
 # ======================================
-# 🔥 랜덤 카테고리 목록
+#   랜덤 카테고리 목록
 # ======================================
 CATEGORIES = [
     "업사이클링 옷", "업사이클링 패션", "DIY 의류",
@@ -72,7 +72,7 @@ def filter_results(mode, src, tgt, items):
 
 
 # ======================================
-# ⭐ 기본 추천 (랜덤 카테고리)
+#  기본 추천 (랜덤 카테고리)
 # ======================================
 @router.get("/")
 def reform_default(pageToken: str = None, r: float = None):
@@ -89,7 +89,7 @@ def reform_default(pageToken: str = None, r: float = None):
     pool = raw["results"]
     random.shuffle(pool)
 
-    selected = pool[:10]  # 🔥 여기서 랜덤 영상 10개 보내기
+    selected = pool[:10]  #   여기서 랜덤 영상 10개 보내기
 
     return {
         "category": category,
@@ -99,7 +99,7 @@ def reform_default(pageToken: str = None, r: float = None):
 
 
 # ======================================
-# ⭐ 검색 API
+#  검색 API
 # ======================================
 @router.get("/search")
 def reform_search(query: str, pageToken: str = None, r: float = None):

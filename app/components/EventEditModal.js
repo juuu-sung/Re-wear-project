@@ -23,10 +23,10 @@ export default function EventEditModal({ visible, onClose, event, onDelete, onUp
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          {/* ✅ 제목 */}
+          {/*  제목 */}
           <Text style={styles.title}>기록 수정</Text>
 
-          {/* ✅ 달력 (추가 모달과 동일) */}
+          {/*  달력 (추가 모달과 동일) */}
           <Calendar
             onDayPress={(day) => setSelectedDate(day.dateString)}
             markedDates={
@@ -46,7 +46,7 @@ export default function EventEditModal({ visible, onClose, event, onDelete, onUp
             }}
           />
 
-          {/* ✅ 타입 선택 (추가 모달과 동일) */}
+          {/*  타입 선택 (추가 모달과 동일) */}
           <View style={styles.typeContainer}>
             <TouchableOpacity
               style={[
@@ -89,7 +89,7 @@ export default function EventEditModal({ visible, onClose, event, onDelete, onUp
             </TouchableOpacity>
           </View>
 
-          {/* ✅ 저장 / 삭제 버튼 (좌우 배치) */}
+          {/*  저장 / 삭제 버튼 (좌우 배치) */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               onPress={handleSave}
@@ -106,7 +106,7 @@ export default function EventEditModal({ visible, onClose, event, onDelete, onUp
             </TouchableOpacity>
           </View>
 
-          {/* ✅ 닫기 버튼 (맨 아래) */}
+          {/*  닫기 버튼 (맨 아래) */}
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Text style={styles.closeText}>닫기</Text>
           </TouchableOpacity>
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ✅ 타입 선택 영역
+    
   typeContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ✅ 저장 / 삭제 버튼 나란히
+    
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     color: "#B71C1C",
   },
 
-  // ✅ 닫기 버튼 (맨 아래)
+    
   closeBtn: {
     marginTop: 15,
     alignSelf: "center",

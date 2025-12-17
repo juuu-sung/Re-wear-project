@@ -1,7 +1,3 @@
-// ===============================================================
-// RewearVillage.js — DAILY MISSION + 게임 화면 전체
-// ===============================================================
-
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
@@ -20,7 +16,7 @@ import {
   View,
 } from "react-native";
 
-// 🔥 서버 URL 적용
+ 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
@@ -29,9 +25,9 @@ const TOP_RATIO = 0.65;
 const BOTTOM_RATIO = 1 - TOP_RATIO;
 const TOP_H = SCREEN_H * TOP_RATIO;
 
-// ======================================================
-// ⭐ DAILY MISSION TAB
-// ======================================================
+ 
+ 
+ 
 function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
   const [missions, setMissions] = useState([]);
   const [userId, setUserId] = useState(null);
@@ -43,7 +39,7 @@ function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
     })();
   }, []);
 
-  // 기본 미션 목록
+   
   const FIXED_MISSIONS = [
     { id: 1, title: "1회 접속", key: "login", reward: 10 },
     { id: 2, title: "캘린더에 착용기록 추가하기", key: "add_wear", reward: 30 },
@@ -54,10 +50,10 @@ function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
     { id: 7, title: "오늘의 환경뉴스 읽기", key: "read_news", reward: 30 },
   ];
 
-  // ✅ 유저/탭 상태에 따라 미션 초기화 & 리로드
+   
   useEffect(() => {
     if (!userId) return;
-    if (selectedTab !== "mission") return; // 미션 탭일 때만 동작
+    if (selectedTab !== "mission") return;  
 
     const init = async () => {
       const today = new Date().toISOString().split("T")[0];
@@ -70,7 +66,7 @@ function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
       if (storedDate !== today || !saved) {
         const newList = FIXED_MISSIONS.map((m) => ({
           ...m,
-          done: m.key === "login", // 접속 미션은 자동 완료
+          done: m.key === "login",  
           claimed: false,
         }));
 
@@ -88,17 +84,17 @@ function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
     init();
   }, [userId, selectedTab]);
 
-  // ⭐ 미션 보상 받기
+   
   const claimReward = async (mission) => {
     if (!mission.done || mission.claimed) return;
 
     const newRP = userRP + mission.reward;
 
-    // 1) 프론트 로컬 저장
+     
     setUserRP(newRP);
     await AsyncStorage.setItem("user_rp", String(newRP));
 
-    // 2) 서버(DB)에 저장
+     
     const userId = await AsyncStorage.getItem("user_id");
     await fetch(`${BASE_URL}/v1/game/rp/set?user_id=${userId}&rp=${newRP}`, {
       method: "POST",
@@ -117,7 +113,7 @@ function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
     Alert.alert("미션 완료!", `+${mission.reward} RP 획득!`);
   };
 
-  // ⭐ 모두 받기
+   
   const claimAll = async () => {
     const claimable = missions.filter((m) => m.done && !m.claimed);
     if (claimable.length === 0)
@@ -126,11 +122,11 @@ function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
     const total = claimable.reduce((acc, m) => acc + m.reward, 0);
     const newRP = userRP + total;
 
-    // 1) 프론트 로컬 저장
+     
     setUserRP(newRP);
     await AsyncStorage.setItem("user_rp", String(newRP));
 
-    // 2) 서버(DB)에 저장
+     
     const userId = await AsyncStorage.getItem("user_id");
     await fetch(`${BASE_URL}/v1/game/rp/set?user_id=${userId}&rp=${newRP}`, {
       method: "POST",
@@ -190,9 +186,9 @@ function DailyMissionTab({ userRP, setUserRP, selectedTab }) {
   );
 }
 
-// ===============================================================
-// RewearVillage — MAIN SCREEN
-// ===============================================================
+ 
+ 
+ 
 export default function RewearVillage() {
   const BG_PATH = require("../../../assets/game/grass.png");
   const TWINKLE_PATH = require("../../../assets/game/twinkle.json");
@@ -216,7 +212,7 @@ export default function RewearVillage() {
   const [pendingPlacement, setPendingPlacement] = useState(null);
   const [scaleValue, setScaleValue] = useState(1);
 
-  // ⭐ 백엔드: 동물 상태 저장
+   
   const saveActiveAnimals = async (updated) => {
     const userId = await AsyncStorage.getItem("user_id");
     if (!userId) return;
@@ -228,9 +224,9 @@ export default function RewearVillage() {
     });
   };
 
-  // ======================================================
-  // ⭐ SHOP ITEM LIST
-  // ======================================================
+   
+   
+   
   const shopItems = [
     { id: 1, type: "animal", name: "브로콜리", desc: "건강한 마을 주민!", price: 0, anim: require("../../../assets/game/walk_broccoli.json") },
     { id: 2, type: "animal", name: "강아지", desc: "활발한 친구!", price: 400, anim: require("../../../assets/game/walk_dog.json") },
@@ -255,9 +251,9 @@ export default function RewearVillage() {
     
   ];
 
-  // ======================================================
-  // ⭐ 백엔드에서 초기 데이터 로드 (RP 포함)
-  // ======================================================
+   
+   
+   
   useEffect(() => {
     const loadAll = async () => {
       const userId = await AsyncStorage.getItem("user_id");
@@ -271,7 +267,7 @@ export default function RewearVillage() {
       setPlacedObjects(data.placedObjects || []);
       setActiveAnimals(data.activeAnimals || []);
 
-      // 서버 RP → 프론트 반영
+       
       if (data.rp !== undefined) {
         setUserRP(data.rp);
         await AsyncStorage.setItem("user_rp", String(data.rp));
@@ -281,13 +277,13 @@ export default function RewearVillage() {
     loadAll();
   }, []);
 
-  // ======================================================
-  // ⭐ DAY/NIGHT 모드 변경
-  // ======================================================
+   
+   
+   
   useEffect(() => {
     const updateMode = () => {
       const now = new Date();
-      const hour = (now.getUTCHours() + 9) % 24; // KST
+      const hour = (now.getUTCHours() + 9) % 24;  
       setIsNight(hour < 6 || hour >= 18);
     };
 
@@ -296,9 +292,9 @@ export default function RewearVillage() {
     return () => clearInterval(timer);
   }, []);
 
-  // ======================================================
-  // ⭐ ACTIVE ANIMAL MOVEMENT
-  // ======================================================
+   
+   
+   
   useEffect(() => {
     activeAnimals.forEach((id, idx) => {
       if (!positions[id]) {
@@ -359,15 +355,15 @@ export default function RewearVillage() {
     }, 1500);
   };
 
-  // ======================================================
-  // ⭐ TOUCH → 별 생성 OR 구조물 설치
-  // ======================================================
+   
+   
+   
   const handleTouch = (e) => {
     const { locationX, locationY } = e.nativeEvent;
 
     if (locationY > TOP_H) return;
 
-    // 구조물 설치 모드
+     
     if (pendingPlacement) {
       const newObj = {
         id: Date.now(),
@@ -383,7 +379,7 @@ export default function RewearVillage() {
       return;
     }
 
-    // 별 생성
+     
     if (!isNight) return;
 
     const opacity = new Animated.Value(1);
@@ -409,9 +405,9 @@ export default function RewearVillage() {
     });
   };
 
-  // ======================================================
-  // ⭐ PURCHASE (포인트 DB 저장도 함께 적용)
-  // ======================================================
+   
+   
+   
   const handlePurchase = async (item) => {
     const currentRP = parseInt(
       (await AsyncStorage.getItem("user_rp")) || "500",
@@ -428,17 +424,17 @@ export default function RewearVillage() {
 
     const newRP = currentRP - item.price;
 
-    // 1) 프론트 저장
+     
     await AsyncStorage.setItem("user_rp", newRP.toString());
     setUserRP(newRP);
 
-    // 2) 서버 저장
+     
     const userId = await AsyncStorage.getItem("user_id");
     await fetch(`${BASE_URL}/v1/game/rp/set?user_id=${userId}&rp=${newRP}`, {
       method: "POST",
     });
 
-    // 구매 처리
+     
     if (item.type === "animal") {
       await fetch(
         `${BASE_URL}/v1/game/buy/animal?user_id=${userId}&animal_id=${item.id}`,
@@ -462,9 +458,9 @@ export default function RewearVillage() {
     }
   };
 
-  // ======================================================
-  // ⭐ 친구 미션
-  // ======================================================
+   
+   
+   
   const completeFriendMission = async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -496,9 +492,9 @@ export default function RewearVillage() {
     }
   };
 
-  // ======================================================
-  // ⭐ 동물 맵 추가/제거
-  // ======================================================
+   
+   
+   
   const handleAddToMap = async (id) => {
     completeFriendMission();
 
@@ -518,9 +514,9 @@ export default function RewearVillage() {
     await saveActiveAnimals(updated);
   };
 
-  // ======================================================
-  // ⭐ 구조물 제거
-  // ======================================================
+   
+   
+   
   const handleLongPressObject = (objId) => {
     Alert.alert("삭제", "이 구조물을 제거할까요?", [
       { text: "취소" },
@@ -533,9 +529,9 @@ export default function RewearVillage() {
     ]);
   };
 
-  // ======================================================
-  // ⭐ RENDER
-  // ======================================================
+   
+   
+   
   return (
     <View style={styles.container}>
       <TouchableWithoutFeedback onPressIn={handleTouch}>
@@ -804,9 +800,9 @@ export default function RewearVillage() {
   );
 }
 
-// ===============================================================
-// 🎨 STYLE
-// ===============================================================
+ 
+ 
+ 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
 

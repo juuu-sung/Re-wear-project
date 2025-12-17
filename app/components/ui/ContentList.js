@@ -1,9 +1,9 @@
-// components/ui/ContentList.js
+  
 
 import { useRouter } from 'expo-router';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// ✅ SVG 아이콘 import
+  
 import StarOutlineIcon from '../../../assets/icons/star-outline.svg';
 import StarIcon from '../../../assets/icons/star.svg';
 

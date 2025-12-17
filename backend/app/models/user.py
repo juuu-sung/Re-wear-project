@@ -21,7 +21,7 @@ class User(Base):
     events = relationship("Event", back_populates="user", cascade="all, delete")
     liked_brands = relationship("LikedBrand", back_populates="user", cascade="all, delete-orphan")
 
-    # --- 🔥 추가된 모든 관계들 ---
+    # ---   추가된 모든 관계들 ---
     chat_messages = relationship("ChatMessage", back_populates="sender", cascade="all, delete")
 
     chat_rooms_user1 = relationship(
@@ -48,3 +48,16 @@ class User(Base):
     reform_posts = relationship("ReformPost", back_populates="user", cascade="all, delete")
     reform_comments = relationship("ReformComment", back_populates="user", cascade="all, delete")
     reform_likes = relationship("ReformLike", back_populates="user", cascade="all, delete")
+        #  의류 활동 로그 (WEAR / LAUNDRY)
+    clothing_activities = relationship(
+        "ClothingActivity",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    #  세탁바구니
+    laundry_baskets = relationship(
+        "LaundryBasket",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )

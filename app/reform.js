@@ -25,15 +25,15 @@ export default function ReformScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [history, setHistory] = useState([]);
-  const [category, setCategory] = useState(""); // 🔥 현재 추천 카테고리
+  const [category, setCategory] = useState("");  
 
   useEffect(() => {
     loadDefault();
   }, []);
 
-  // ----------------------------------------------------------
-  // ⭐ 기본 목록 가져오기
-  // ----------------------------------------------------------
+   
+   
+   
   const loadDefault = async () => {
     setLoading(true);
     const rand = Math.random();
@@ -48,10 +48,7 @@ export default function ReformScreen() {
     setLoading(false);
   };
 
-  // ----------------------------------------------------------
-  // ⭐ 검색 실행
-  // ----------------------------------------------------------
-  const search = async () => {
+   const search = async () => {
     const q = query.trim();
     if (!q) return;
 
@@ -69,20 +66,14 @@ export default function ReformScreen() {
     setLoading(false);
   };
 
-  // ----------------------------------------------------------
-  // ⭐ 최근 검색어 5개 저장
-  // ----------------------------------------------------------
-  const saveSearchHistory = (term) => {
+   const saveSearchHistory = (term) => {
     setHistory((prev) => {
       const filtered = prev.filter((v) => v !== term);
       return [term, ...filtered].slice(0, 5);
     });
   };
 
-  // ----------------------------------------------------------
-  // ⭐ 새로고침
-  // ----------------------------------------------------------
-  const onRefresh = async () => {
+   const onRefresh = async () => {
     setRefreshing(true);
 
     if (query.trim()) {
@@ -94,9 +85,9 @@ export default function ReformScreen() {
     setRefreshing(false);
   };
 
-  // ----------------------------------------------------------
-  // ⭐ 더보기
-  // ----------------------------------------------------------
+   
+   
+   
   const loadMore = async () => {
     if (!nextPageToken) return;
 
@@ -116,9 +107,9 @@ export default function ReformScreen() {
 
   const openLink = (url) => Linking.openURL(url);
 
-  // ----------------------------------------------------------
-  // ⭐ Skeleton
-  // ----------------------------------------------------------
+   
+   
+   
   const SkeletonCard = () => (
     <View style={styles.skeletonCard}>
       <View style={styles.skeletonThumb} />
@@ -126,9 +117,9 @@ export default function ReformScreen() {
     </View>
   );
 
-  // ----------------------------------------------------------
-  // ⭐ UI
-  // ----------------------------------------------------------
+   
+   
+   
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <ScrollView
@@ -140,7 +131,7 @@ export default function ReformScreen() {
         <Text style={styles.header}>리폼/업사이클링</Text>
         <Text style={styles.sub}>검색하실 때 예시에 맞게 입력해주세요!</Text>
 
-        {/* 🔥 추천 카테고리 */}
+        {/*   추천 카테고리 */}
         {category !== "" && (
           <Text style={styles.categoryText}>오늘 추천 카테고리: {category}</Text>
         )}
@@ -159,7 +150,7 @@ export default function ReformScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 🔥 최근 검색어 */}
+        {/*   최근 검색어 */}
         {history.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={styles.historyTitle}>최근 검색어</Text>
@@ -180,11 +171,11 @@ export default function ReformScreen() {
           </View>
         )}
 
-        {/* 🔥 로딩 스켈레톤 */}
+        {/*   로딩 스켈레톤 */}
         {loading &&
           [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
 
-        {/* 🔥 영상 목록 */}
+        {/*   영상 목록 */}
         {!loading &&
           videos.map((item, idx) => (
             <TouchableOpacity
@@ -197,7 +188,7 @@ export default function ReformScreen() {
             </TouchableOpacity>
           ))}
 
-        {/* 🔥 더보기 */}
+        {/*   더보기 */}
         {nextPageToken && !loading && (
           <TouchableOpacity style={styles.moreBtn} onPress={loadMore}>
             {loadingMore ? (

@@ -12,13 +12,13 @@ import {
   View
 } from 'react-native';
 
-// 👇 1. (NEW) 방금 만든 '설명' 파일을 import 합니다.
+ 
 import { careLabelInfo, defaultCareLabelInfo } from './util/careLabelDescriptions';
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? '').toString().trim();
 const BASE_URL = RAW_BASE_URL.replace(/\/+$/, '');
 
-// ... (COLORS 배열은 동일) ...
+ 
 const COLORS = [
   '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE', '#30B0C7',
   '#007AFF', '#5856D6', '#AF52DE', '#FF2D55',
@@ -202,7 +202,7 @@ export default function ScanResultScreen() {
                         <Text style={styles.resultIconPlaceholderText}>?</Text>
                       </View>
                     )}
-                    {/* 👇 3. (NEW) 텍스트를 담을 컨테이너와 '설명' 텍스트를 추가합니다. */}
+                    {/*  3. (NEW) 텍스트를 담을 컨테이너와 '설명' 텍스트를 추가합니다. */}
                     <View style={styles.textContainer}>
                       <Text style={styles.className}>{item.class_name}</Text>
                       <Text style={styles.description}>{info.description}</Text>
@@ -291,11 +291,11 @@ export default function ScanResultScreen() {
   );
 }
 
-// ... (SCREEN_WIDTH 부분은 동일) ...
+ 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  // ... (기존 스타일은 동일) ...
+   
   safeArea: { flex: 1, backgroundColor: '#f9f9f9' },
   container: { padding: 20 },
   header: { fontSize: 22, fontWeight: 'bold', marginBottom: 15, color: '#333' },
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   resultItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center', // (수직 중앙 정렬)
+    alignItems: 'center',  
     backgroundColor: '#fff',
     paddingVertical: 15,
     paddingHorizontal: 20,
@@ -352,26 +352,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // --- 👇 4. (NEW) 텍스트 관련 스타일 추가/수정 ---
+   
   textContainer: {
-    flex: 1, // (중요) 퍼센트 텍스트를 제외한 모든 공간을 차지
+    flex: 1,  
   },
   className: { 
     fontSize: 16, 
-    fontWeight: 'bold', // (수정) 클래스 이름을 더 강조
+    fontWeight: 'bold',  
     color: '#333', 
-    marginBottom: 4, // 설명과의 간격
+    marginBottom: 4,  
   },
   description: {
     fontSize: 14,
-    color: '#555', // (NEW) 설명 텍스트 스타일
+    color: '#555',  
   },
   confidence: { 
     fontSize: 14, 
     color: '#555', 
     fontWeight: 'bold',
   },
-  // --- ----------------------------------- ---
+   
 
   geminiContainer: {
     width: '100%',
