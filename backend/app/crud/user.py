@@ -5,7 +5,7 @@ from app.models.user import User
 from app.schemas.user import UserUpdate, RegisterIn
 from passlib.context import CryptContext
 
-# 🔥 auth.py와 동일하게 세팅 (중요!)
+#   auth.py와 동일하게 세팅 (중요!)
 pwd_context = CryptContext(
     schemes=["pbkdf2_sha256", "bcrypt"],
     deprecated="auto",
@@ -33,7 +33,7 @@ def create_user(db: Session, user_in: RegisterIn, kakao_id: int = None) -> User:
     if not kakao_id and get_by_email(db, user_in.email):
         raise ValueError("EMAIL_ALREADY_EXISTS")
 
-    # 🔥 auth.py와 동일한 방식으로 hash 생성
+    #   auth.py와 동일한 방식으로 hash 생성
     hashed_password = pwd_context.hash(str(user_in.password))
 
     db_user = User(
@@ -51,7 +51,7 @@ def create_user(db: Session, user_in: RegisterIn, kakao_id: int = None) -> User:
 
 
 # ==========================================================
-# 🔥 계정 정보 수정 (name + password 변경)
+#   계정 정보 수정 (name + password 변경)
 # ==========================================================
 def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
     obj = get_by_id(db, user_id)
@@ -62,7 +62,7 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
     if data.name is not None:
         obj.name = data.name
 
-    # 🔥 비밀번호 변경 (auth.py 방식과 동일)
+    #   비밀번호 변경 (auth.py 방식과 동일)
     if data.password is not None and data.password != "":
         # 기존 비밀번호와 동일한지 검사
         try:
@@ -72,7 +72,7 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
             # verify 불가해도 무시하고 새 비밀번호로 덮어쓰기
             pass
 
-        # 🔥 auth.py와 동일한 bcrypt/pbkdf2 자동 hash
+        #   auth.py와 동일한 bcrypt/pbkdf2 자동 hash
         new_hash = pwd_context.hash(str(data.password))
         obj.hashed_password = new_hash
 

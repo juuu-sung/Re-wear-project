@@ -5,12 +5,13 @@ from app.db import get_db
 from app import models, schemas
 from app.routers.auth import get_current_user
 from app.services.alert_service import check_and_notify_immediately  
+from app.models import LaundryBasket
 
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
-# ✅ 이벤트 생성
+#  이벤트 생성
 @router.post("", response_model=schemas.EventResponse)
 def create_event(
     event: schemas.EventCreate,
@@ -19,16 +20,23 @@ def create_event(
 ):
     db_event = models.Event(**event.dict(), user_id=current_user.id)
     db.add(db_event)
+    db.flush()  # PK 확보
+
+    if db_event.type.lower() == "wash":
+        db.query(LaundryBasket).filter(
+            LaundryBasket.user_id == current_user.id,
+            LaundryBasket.clothes_id == db_event.garment_id,
+        ).delete(synchronize_session=False)
+
     db.commit()
     db.refresh(db_event)
 
-    # 🔥 wear/wash 기록이 추가된 즉시 n회 체크 + 필요시 즉시 푸시 알림
     check_and_notify_immediately(db, current_user.id)
-
     return db_event
 
 
-# ✅ 전체 이벤트 조회 (user_id별)
+
+#  전체 이벤트 조회 (user_id별)
 @router.get("", response_model=list[schemas.EventResponse])
 def get_events(user_id: int = Query(...), db: Session = Depends(get_db)):
     events = (
@@ -40,7 +48,7 @@ def get_events(user_id: int = Query(...), db: Session = Depends(get_db)):
     return events
 
 
-# ✅ 월별 캘린더용
+#  월별 캘린더용
 @router.get("/calendar")
 def get_calendar(month: str, user_id: int, db: Session = Depends(get_db)):
     year, month = map(int, month.split("-"))
@@ -64,7 +72,7 @@ def get_calendar(month: str, user_id: int, db: Session = Depends(get_db)):
     return {"wear": list(wear_dates), "wash": list(wash_dates)}
 
 
-# ✅ 이벤트 수정 (exclude_unset으로 None 무시)
+#  이벤트 수정 (exclude_unset으로 None 무시)
 @router.put("/{event_id}", response_model=schemas.EventResponse)
 def update_event(
     event_id: int,
@@ -75,7 +83,7 @@ def update_event(
     if not db_event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    update_data = new.dict(exclude_unset=True)  # ✅ None 필드 무시
+    update_data = new.dict(exclude_unset=True)  #  None 필드 무시
     for key, value in update_data.items():
         setattr(db_event, key, value)
 
@@ -89,7 +97,7 @@ def update_event(
     return db_event
 
 
-# ✅ 이벤트 삭제
+#  이벤트 삭제
 @router.delete("/{event_id}")
 def delete_event(event_id: int, db: Session = Depends(get_db)):
     db_event = db.query(models.Event).filter(models.Event.id == event_id).first()
@@ -116,3 +124,27 @@ def get_events_by_clothes(
         .all()
     )
     return events
+
+@router.post("", response_model=schemas.EventResponse)
+def create_event(
+    event: schemas.EventCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    db_event = models.Event(**event.dict(), user_id=current_user.id)
+    db.add(db_event)
+    db.commit()
+    db.refresh(db_event)
+
+    # 🔥 [핵심] 세탁 이벤트면 빨래통에서 제거
+    if db_event.type.lower() == "wash":
+        db.query(LaundryBasket).filter(
+            LaundryBasket.user_id == current_user.id,
+            LaundryBasket.clothes_id == db_event.garment_id,
+        ).delete()
+        db.commit()
+
+    # 🔔 알림 체크
+    check_and_notify_immediately(db, current_user.id)
+
+    return db_event

@@ -1,4 +1,4 @@
-// app/carelabel/washLabels.js
+ 
 const careLabelData = [
   { id: 1, code: 'water_wash_30', img: require("../../assets/careLabels/wash/water_wash_30.png"), desc: "물의 온도 최대 30°C에서 세탁기로 약하게 세탁할 수 있다." },
   { id: 2, code: 'water_wash_30_weak', img: require("../../assets/careLabels/wash/water_wash_30_weak.png"), desc: "물의 온도 최대 30°C에서 세탁기로 약하게 세탁 할 수 있다." },

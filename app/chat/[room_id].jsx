@@ -1,6 +1,6 @@
-// ==========================
-//      CHATROOM FULL CODE
-// ==========================
+ 
+ 
+ 
 
 import { Ionicons } from "@expo/vector-icons";
 import { Video } from "expo-av";
@@ -30,9 +30,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
-// =====================================================
-// 이미지 카드 스택
-// =====================================================
+ 
+ 
+ 
 const CardStack = ({ images, onPress }) => {
   if (!Array.isArray(images)) return null;
 
@@ -71,9 +71,9 @@ const CardStack = ({ images, onPress }) => {
   );
 };
 
-// =====================================================
-// 전체 화면 이미지 슬라이더
-// =====================================================
+ 
+ 
+ 
 const FullscreenImageSlider = ({ visible, onClose, images }) => {
   const formatted = images?.map((uri) => ({ uri })) ?? [];
   return (
@@ -86,9 +86,9 @@ const FullscreenImageSlider = ({ visible, onClose, images }) => {
   );
 };
 
-// =====================================================
-// CHATROOM MAIN
-// =====================================================
+ 
+ 
+ 
 export default function ChatRoom() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -124,9 +124,9 @@ export default function ChatRoom() {
   });
   const [previewVideoVisible, setPreviewVideoVisible] = useState(null);
 
-  // =====================================================
-  // 상대 프로필 이동
-  // =====================================================
+   
+   
+   
   const handleProfilePress = () => {
     if (!opponentId) return;
 
@@ -139,9 +139,9 @@ export default function ChatRoom() {
     });
   };
 
-  // =====================================================
-  // 방 생성
-  // =====================================================
+   
+   
+   
   const ensureRoomExists = async () => {
     if (currentRoomId) return currentRoomId;
 
@@ -154,9 +154,9 @@ export default function ChatRoom() {
     return data.room_id;
   };
 
-  // =====================================================
-  // 메시지 로드
-  // =====================================================
+   
+   
+   
   const loadMessages = async (rid) => {
     if (!rid || rid === "temp") return;
 
@@ -165,7 +165,7 @@ export default function ChatRoom() {
 
     const safeData = Array.isArray(data) ? data : [];
 
-    // read 필드가 없을 수도 있으니 기본값 처리
+     
     const normalized = safeData.map((m) => ({
       ...m,
       read: !!m.read,
@@ -179,15 +179,15 @@ export default function ChatRoom() {
     }, 30);
   };
 
-  // =====================================================
-  // 🔥 카카오톡/DM 방식 읽음 처리: 화면에 보이는 메시지 기준
-  // =====================================================
+   
+   
+   
   const lastSeenIdRef = useRef(null);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (!wsRef.current || wsRef.current.readyState !== 1) return;
 
-    // 화면에 보이는 "상대가 보낸 메시지"만
+     
     const opponentVisible = viewableItems.filter(
       (v) => Number(v.item.sender_id) === opponentIdNum
     );
@@ -198,11 +198,11 @@ export default function ChatRoom() {
 
     if (!lastMsg?.id) return;
 
-    // 이미 처리한 마지막 메시지면 패스
+     
     if (lastSeenIdRef.current === lastMsg.id) return;
     lastSeenIdRef.current = lastMsg.id;
 
-    // 서버에 last_read_id 전달
+     
     wsRef.current.send(
       JSON.stringify({
         type: "read_receipt",
@@ -212,9 +212,9 @@ export default function ChatRoom() {
     );
   }).current;
 
-  // =====================================================
-  // WebSocket 연결
-  // =====================================================
+   
+   
+   
   const connectSocket = (rid) => {
     if (!rid || rid === "temp") return;
 
@@ -225,14 +225,14 @@ export default function ChatRoom() {
     const socket = new WebSocket(`${wsUrl}/v1/chat/ws/${rid}`);
     wsRef.current = socket;
 
-    // onopen 에서 읽음 신호 절대 보내지 않음 (카카오톡/DM 방식)
+     
 
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
 
-      // =====================================================
-      // 🔥 읽음 이벤트 처리
-      // =====================================================
+       
+       
+       
       if (msg.type === "read_receipt") {
         if (String(msg.user_id) !== String(opponentId)) return;
 
@@ -251,12 +251,12 @@ export default function ChatRoom() {
 
 
 
-      // =====================================================
-      // 🔥 일반 메시지 처리
-      //    (서버에서 type: "message" 로 보낸다고 가정)
-      // =====================================================
+       
+       
+       
+       
       if (msg.type === "message" || !msg.type) {
-        // 중복 방지 (id 기준)
+         
         if (
           msg.id &&
           messagesRef.current.some((m) => Number(m.id) === Number(msg.id))
@@ -287,14 +287,14 @@ export default function ChatRoom() {
     return () => wsRef.current?.close();
   }, [currentRoomId]);
 
-  // =====================================================
-  // 사진 / 영상 선택
-  // =====================================================
+   
+   
+   
 
   const handleMediaPick = async (asset) => {
     if (pendingMedia.length >= 5) return;
 
-    // 사진
+     
     if (asset.type?.startsWith("image")) {
       setPendingMedia((prev) => [
         ...prev,
@@ -308,7 +308,7 @@ export default function ChatRoom() {
       return;
     }
 
-    // 동영상
+      
     if (asset.type?.startsWith("video")) {
       try {
         const thumb = await VideoThumbnails.getThumbnailAsync(asset.uri, {
@@ -342,9 +342,9 @@ export default function ChatRoom() {
     }
   };
 
-  // ===============================
-  // 📌 사진 앨범 (여러 장 가능)
-  // ===============================
+    
+    
+    
   const openAlbumImages = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -370,9 +370,9 @@ export default function ChatRoom() {
     setShowMenu(false);
   };
 
-  // ===============================
-  // 📌 동영상 앨범 (iCloud 대응)
-  // ===============================
+    
+    
+    
   const openAlbumVideo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -395,9 +395,9 @@ export default function ChatRoom() {
     setShowMenu(false);
   };
 
-  // ===============================
-  // 카메라
-  // ===============================
+    
+    
+    
   const openCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return;
@@ -412,9 +412,9 @@ export default function ChatRoom() {
     setShowMenu(false);
   };
 
-  // =====================================================
-  // 메시지 렌더링
-  // =====================================================
+    
+    
+    
   const renderItem = useCallback(
     ({ item }) => {
       const isMine = Number(item.sender_id) === myIdNum;
@@ -528,9 +528,9 @@ export default function ChatRoom() {
     [myIdNum]
   );
 
-  // =====================================================
-  // WebSocket READY 대기
-  // =====================================================
+    
+    
+    
   const waitForSocketReady = (callback) => {
     if (wsRef.current && wsRef.current.readyState === 1) {
       callback();
@@ -539,9 +539,9 @@ export default function ChatRoom() {
     }
   };
 
-  // =====================================================
-  // 메시지 전송
-  // =====================================================
+    
+    
+    
   const sendMessage = async () => {
     if (!text.trim() && pendingMedia.length === 0) return;
 
@@ -555,7 +555,7 @@ export default function ChatRoom() {
         connectSocket(rid);
       }
 
-      // 파일 업로드
+        
       if (pendingMedia.length > 0) {
         for (let item of pendingMedia) {
           const form = new FormData();
@@ -587,13 +587,13 @@ export default function ChatRoom() {
         }
       }
 
-      // PAYLOAD
+        
       const payload = {
         sender_id: myIdNum,
         message: text.trim() || null,
       };
 
-      // 단일 동영상
+        
       if (pendingMedia.length === 1 && pendingMedia[0].kind === "video") {
         payload.media_type = "video";
         payload.media_url = uploadedUrls[0];
@@ -615,19 +615,19 @@ export default function ChatRoom() {
         payload.thumbnail_url = `${BASE_URL}${thumbData.url}`;
       }
 
-      // 단일 이미지
+        
       if (pendingMedia.length === 1 && pendingMedia[0].kind === "image") {
         payload.media_type = "image";
         payload.media_url = uploadedUrls[0];
       }
 
-      // 멀티 이미지
+        
       if (pendingMedia.length > 1) {
         payload.media_type = "multi-image";
         payload.media_urls = uploadedUrls;
       }
 
-      // 메시지 전송
+        
       waitForSocketReady(() => {
         wsRef.current?.send(JSON.stringify(payload));
       });
@@ -639,9 +639,9 @@ export default function ChatRoom() {
     }
   };
 
-  // =====================================================
-  // 렌더링
-  // =====================================================
+    
+    
+    
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#fff" }}

@@ -13,7 +13,7 @@ export default function ChatLayout() {
       }}
     >
 
-      {/* 🔥 DM 리스트 */}
+      {/*   DM 리스트 */}
       <Stack.Screen
         name="dm"
         options={{
@@ -28,7 +28,7 @@ export default function ChatLayout() {
         }}
       />
 
-      {/* 🔥 개별 채팅방 — [room_id] */}
+      {/*   개별 채팅방 — [room_id] */}
       <Stack.Screen
         name="[room_id]"
         options={{

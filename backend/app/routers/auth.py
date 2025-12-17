@@ -64,7 +64,7 @@ def create_access_token(sub: str) -> str:
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
-# ✅ password 컬럼명 유연하게 대응
+#  password 컬럼명 유연하게 대응
 def get_user_password_hash(user: User) -> str | None:
     for attr in ("password_hash", "hashed_password", "password"):
         if hasattr(user, attr):
@@ -107,7 +107,7 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
         if get_user_by_email(db, email_norm):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 존재하는 이메일입니다.")
 
-        # ✅ 비밀번호 해싱
+        #  비밀번호 해싱
         hashed_pw = pwd_context.hash(str(payload.password))
 
         # 모델 컬럼 자동 탐색
@@ -124,7 +124,7 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-        print(f"✅ 회원가입 완료: {user.id} / {user.email}")
+        print(f" 회원가입 완료: {user.id} / {user.email}")
         return {
             "msg": "회원가입이 완료되었습니다.",
             "user": {"id": user.id, "name": user.name, "email": user.email},
@@ -135,7 +135,7 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="이미 존재하는 이메일입니다.")
     except Exception as e:
         db.rollback()
-        print("🔥 예외 발생:", e)
+        print("  예외 발생:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 # ----------------------------------------------------------
@@ -163,9 +163,9 @@ def login_json(payload: LoginIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="비밀번호가 일치하지 않습니다.")
 
     token = create_access_token(sub=str(user.id))
-    print("✅ 로그인 성공:", user.email)
+    print(" 로그인 성공:", user.email)
 
-    # ✅ user_id, username 추가
+    #  user_id, username 추가
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -202,9 +202,9 @@ def login_form(
         raise HTTPException(status_code=401, detail="비밀번호가 일치하지 않습니다.")
 
     token = create_access_token(sub=str(user.id))
-    print("✅ form 로그인 성공:", user.email)
+    print(" form 로그인 성공:", user.email)
 
-    # ✅ 동일하게 user_id, username 포함
+    #  동일하게 user_id, username 포함
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -241,13 +241,13 @@ async def kakao_login(token: KakaoToken, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="카카오 토큰이 유효하지 않습니다.")
     
     kakao_user_info = res.json()
-    kakao_id = kakao_user_info.get("id") # ✅ 이메일 대신 고유 ID를 가져옵니다.
+    kakao_id = kakao_user_info.get("id") #  이메일 대신 고유 ID를 가져옵니다.
     nickname = kakao_user_info.get("properties", {}).get("nickname", "Kakao User")
 
     if not kakao_id:
         raise HTTPException(status_code=400, detail="카카오 ID를 가져올 수 없습니다.")
 
-    # ✅ 이메일 대신 kakao_id로 사용자를 찾습니다.
+    #  이메일 대신 kakao_id로 사용자를 찾습니다.
     user = crud_user.get_by_kakao_id(db, kakao_id=kakao_id)
 
     if not user:
@@ -257,17 +257,17 @@ async def kakao_login(token: KakaoToken, db: Session = Depends(get_db)):
             name=nickname,
             password=f"kakao_pw_{kakao_id}"
         )
-        user = crud_user.create_user(db, user_in=new_user_data, kakao_id=kakao_id) # ✅ kakao_id 전달
+        user = crud_user.create_user(db, user_in=new_user_data, kakao_id=kakao_id) #  kakao_id 전달
 
     # 우리 앱 전용 JWT 토큰 생성 및 반환
     access_token = create_access_token(sub=str(user.id))
     return TokenOut(access_token=access_token, user_id=user.id)
 
-# 🔥 [추가] 구글 로그인 요청 데이터 모델
+#   [추가] 구글 로그인 요청 데이터 모델
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
-# 🔥 [추가] 구글 로그인 API
+#   [추가] 구글 로그인 API
 @router.post("/google", response_model=TokenOut)
 def login_google(
     req: GoogleLoginRequest, 

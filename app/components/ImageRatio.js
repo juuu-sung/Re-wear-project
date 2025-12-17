@@ -1,4 +1,4 @@
-// app/components/ImageRatio.js
+  
 import { Image as ExpoImage } from "expo-image";
 import { useState } from "react";
 import { Image as RNImage } from "react-native";

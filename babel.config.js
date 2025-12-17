@@ -7,7 +7,7 @@ module.exports = function (api) {
         "module-resolver",
         {
           alias: {
-            "@": "./app", // ✅ "@/"는 "app/" 폴더를 의미
+            "@": "./app", //  "@/"는 "app/" 폴더를 의미
           },
         },
       ],

@@ -6,7 +6,7 @@ from app.models.like_brands import LikedBrand
 router = APIRouter(prefix="/v1/brands", tags=["brands"])
 
 # ---------------------------------------------------------
-# ⭐ 좋아요 추가 (POST)
+#  좋아요 추가 (POST)
 # ---------------------------------------------------------
 @router.post("/like")
 def like_brand(
@@ -33,7 +33,7 @@ def like_brand(
     return {"status": "liked", "id": new_item.id}
 
 # ---------------------------------------------------------
-# ⭐ 좋아요 취소 (DELETE)
+#  좋아요 취소 (DELETE)
 # ---------------------------------------------------------
 @router.delete("/like")
 def unlike_brand(
@@ -55,7 +55,7 @@ def unlike_brand(
     return {"status": "unliked"}
 
 # ---------------------------------------------------------
-# ⭐ 좋아요 리스트 불러오기
+#  좋아요 리스트 불러오기
 # ---------------------------------------------------------
 @router.get("/liked")
 def get_liked_brands(user_id: int, db: Session = Depends(get_db)):

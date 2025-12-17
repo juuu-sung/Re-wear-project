@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ImageRatio from "./ImageRatio"; // 🔥 자동비율 컴포넌트
+import ImageRatio from "./ImageRatio";   
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
@@ -22,7 +22,7 @@ export default function ClosetPickerModal({
   const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
   const [selected, setSelected] = useState("상의");
 
-  // 🔥 모달 열릴 때 최신 카테고리 로드
+    
   useEffect(() => {
     if (visible) {
       (async () => {
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 
-  // 🔥 자동 비율 유지 카드
+    
   card: {
     width: "47%",
     backgroundColor: "#f9f9f9",
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  // 🔥 여기서 height 제거 (ImageRatio가 자동 계산)
+    
   image: {
     width: "100%",
     borderRadius: 10,

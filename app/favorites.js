@@ -1,12 +1,10 @@
-// app/favorites.js
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import ContentList from './components/ui/ContentList';
 
-// 임시 데이터 (upcycling, reform 파일과 동일해야 함)
+ 
 const MOCK_UPCYCLING_DATA = [
   { id: 'u1', title: '청바지로 에코백 만들기', author: 'Re:wear', thumbnail_url: 'https://placehold.co/60x60/2e7d32/white?text=EcoBag' },
   { id: 'u2', title: '남는 천으로 컵받침 만들기', author: '슬로우패션', thumbnail_url: 'https://placehold.co/60x60/2e7d32/white?text=Coaster' },
@@ -27,7 +25,7 @@ const ALL_DATA = {
 };
 
 export default function FavoritesScreen() {
-  const { type } = useLocalSearchParams(); // 'upcycling' 또는 'reform'
+  const { type } = useLocalSearchParams();  
   const [items, setItems] = useState([]);
   const [favorites, setFavorites] = useState([]);
   
@@ -35,7 +33,7 @@ export default function FavoritesScreen() {
   const data = ALL_DATA[type] || [];
   const key = FAVORITES_KEYS[type];
 
-  // 1. 화면에 들어올 때마다 즐겨찾기 목록을 새로고침
+   
   useFocusEffect(
     useCallback(() => {
       const loadFavorites = async () => {
@@ -43,7 +41,7 @@ export default function FavoritesScreen() {
         const favIds = saved ? JSON.parse(saved) : [];
         setFavorites(favIds);
         
-        // 전체 데이터에서 즐겨찾기한 아이템만 필터링
+         
         const favoritedItems = data.filter(item => favIds.includes(item.id));
         setItems(favoritedItems);
       };
@@ -51,7 +49,7 @@ export default function FavoritesScreen() {
     }, [key, data])
   );
 
-  // 2. 즐겨찾기 토글 함수 (이 페이지에서도 가능하도록)
+   
   const toggleFavorite = async (id) => {
     let newFavorites;
     if (favorites.includes(id)) {
@@ -62,7 +60,7 @@ export default function FavoritesScreen() {
     setFavorites(newFavorites);
     await AsyncStorage.setItem(key, JSON.stringify(newFavorites));
     
-    // 화면에 바로 반영
+     
     const favoritedItems = data.filter(item => newFavorites.includes(item.id));
     setItems(favoritedItems);
   };
