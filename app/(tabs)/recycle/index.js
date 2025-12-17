@@ -1,4 +1,4 @@
-// app/(tabs)/recycle/index.js
+ 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Asset } from "expo-asset";
 import * as FileSystem from "expo-file-system/legacy";
@@ -22,7 +22,7 @@ export default function RecycleScreen() {
   const [region, setRegion] = useState(null);
   const router = useRouter();
 
-  // ✅ CSV 자동 로드
+   
   const loadAllCSVs = async () => {
     try {
       const appDataDir = `${FileSystem.documentDirectory}data/`;
@@ -32,7 +32,7 @@ export default function RecycleScreen() {
         console.log("📂 data 폴더 생성됨:", appDataDir);
       }
 
-      // 🔄 CSV 복사
+       
       for (const csv of csvCandidates) {
         const asset = await Asset.fromModule(csv).downloadAsync();
         const fileName = asset.name.endsWith(".csv")
@@ -42,12 +42,12 @@ export default function RecycleScreen() {
         await FileSystem.copyAsync({ from: asset.localUri, to: dest });
       }
 
-      // 📄 파일 탐색
+       
       const files = await FileSystem.readDirectoryAsync(appDataDir);
       const csvFiles = files.filter((f) => f.endsWith("_bin.csv"));
-      console.log("✅ 탐색된 CSV:", csvFiles);
+      console.log(" 탐색된 CSV:", csvFiles);
 
-      // 📍 마커 생성
+       
       const allMarkers = [];
 
       for (const file of csvFiles) {
@@ -70,7 +70,7 @@ export default function RecycleScreen() {
         for (const row of rows) {
           const cols = row.split(",").map((v) => v.trim());
 
-          // 📌 case 1: (행정동, 위치, 기준일자, lat, lng)
+           
           if (cols.length === 5) {
             const [dong, address, date, lat, lng] = cols;
             const latitude = parseFloat(lat);
@@ -84,7 +84,7 @@ export default function RecycleScreen() {
             }
           }
 
-          // 📌 case 2: (행정동, 도로명주소, 지번주소, 날짜, lat, lng)
+           
           else if (cols.length >= 6) {
             const [dong, roadAddr, jibunAddr, date, lat, lng] = cols;
             const latitude = parseFloat(lat);
@@ -111,7 +111,7 @@ export default function RecycleScreen() {
     }
   };
 
-  // ✅ 내 위치 불러오기
+   
   const getUserLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();

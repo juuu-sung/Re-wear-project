@@ -27,7 +27,7 @@ export default function AccountVerifyScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // === 비밀번호 확인 ===
+   
   const handleVerify = async () => {
     if (!password.trim()) {
       Alert.alert("알림", "비밀번호를 입력해주세요.");
@@ -53,7 +53,7 @@ export default function AccountVerifyScreen() {
     }
   };
 
-  // === 저장 ===
+   
   const handleSave = async () => {
     if (newPassword.trim() === password.trim()) {
       Alert.alert("알림", "기존에 쓰던 비밀번호를 사용할 수 없습니다.");

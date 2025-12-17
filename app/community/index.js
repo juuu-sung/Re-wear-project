@@ -4,14 +4,14 @@ import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Easing,
-  FlatList,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    Easing,
+    FlatList,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,7 +21,7 @@ const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
 // ====================================================================
-// 🔥 메모된 PostItem (재렌더링 ZERO)
+//   메모된 PostItem (재렌더링 ZERO)
 // ====================================================================
 const PostItem = React.memo(function PostItem({ item, myUid, router, openSheet }) {
   const [post, setPost] = useState(item);
@@ -181,7 +181,7 @@ const PostItem = React.memo(function PostItem({ item, myUid, router, openSheet }
 });
 
 // ====================================================================
-// 🔥 메인 컴포넌트
+//   메인 컴포넌트
 // ====================================================================
 export default function CommunityFeed() {
   const router = useRouter();
@@ -286,7 +286,7 @@ export default function CommunityFeed() {
       />
 
       {/* =====================================================
-         🔥 깜빡임 없는 바텀시트 모달
+           깜빡임 없는 바텀시트 모달
       ===================================================== */}
       {menuVisible && (
         <>

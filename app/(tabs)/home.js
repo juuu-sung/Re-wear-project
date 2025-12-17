@@ -1,6 +1,3 @@
-// =========================
-// IMPORTS
-// =========================
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -22,13 +19,13 @@ import {
   View
 } from "react-native";
 
-import { Image } from "expo-image"; // 🔥 Expo Image 추가
+import { Image } from "expo-image";
 import brandsData from "../../assets/data/slowfashion_brands.json";
 
 
-// =========================
-// EXTERNAL LINK
-// =========================
+ 
+ 
+ 
 const openLink = async (url) => {
   try {
     await WebBrowser.openBrowserAsync(url);
@@ -38,21 +35,17 @@ const openLink = async (url) => {
 };
 
 
-// =========================
-// BASE URL
-// =========================
+ 
+ 
+ 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
-
-// =========================
-// HOME SCREEN
-// =========================
 export default function HomeScreen() {
   const router = useRouter();
   const scrollRef = useRef(null);
 
-  // 상태 관리
+   
   const [userId, setUserId] = useState(null);
   const [closetItems, setClosetItems] = useState([]);
   const [calendarDots, setCalendarDots] = useState({});
@@ -74,7 +67,7 @@ export default function HomeScreen() {
 
   const [displayBrands, setDisplayBrands] = useState([]);
 
-  // 로딩 애니메이션
+   
   const spinValue = useRef(new Animated.Value(0)).current;
   const spin = () => {
     spinValue.setValue(0);
@@ -91,9 +84,9 @@ export default function HomeScreen() {
   });
 
 
-  // =========================
-  // USER ID LOAD
-  // =========================
+   
+   
+   
   useEffect(() => {
     const loadUser = async () => {
       const id = await AsyncStorage.getItem("user_id");
@@ -112,9 +105,9 @@ export default function HomeScreen() {
   }, []);
 
 
-  // =========================
-  // SERVER → 좋아요 브랜드 로드
-  // =========================
+   
+   
+   
   useEffect(() => {
     const loadLikedFromServer = async () => {
       const myId = await AsyncStorage.getItem("user_id");
@@ -151,9 +144,9 @@ export default function HomeScreen() {
   }, []);
 
 
-  // =========================
-  // 좋아요 토글
-  // =========================
+   
+   
+   
   const toggleLike = async (name) => {
     const myId = await AsyncStorage.getItem("user_id");
     const token = await AsyncStorage.getItem("access_token");
@@ -184,20 +177,12 @@ export default function HomeScreen() {
       setLikedBrands([...likedBrands, name]);
     }
   };
-
-
-  // =========================
-  // 필터된 브랜드 리스트
-  // =========================
   const likedBrandList = brandsData.brands.filter((b) =>
     likedBrands.includes(b.name)
   );
 
 
-  // =========================
-  // 오늘의 알림
-  // =========================
-  const loadTodayAlerts = async () => {
+   const loadTodayAlerts = async () => {
     if (!userId) return;
 
     try {
@@ -212,10 +197,6 @@ export default function HomeScreen() {
     }
   };
 
-
-  // =========================
-  // 옷장 미리보기
-  // =========================
   const loadClosetPreview = async () => {
     try {
       const token = await AsyncStorage.getItem("access_token");
@@ -231,9 +212,9 @@ export default function HomeScreen() {
   };
 
 
-  // =========================
-  // 이번 주 날짜 계산
-  // =========================
+   
+   
+   
   useEffect(() => {
     const today = new Date();
     const day = today.getDay();
@@ -255,9 +236,9 @@ export default function HomeScreen() {
   }, []);
 
 
-  // =========================
-  // 캘린더 로드
-  // =========================
+   
+   
+   
   const loadCalendarPreview = async () => {
     if (!userId) return;
 
@@ -311,9 +292,9 @@ export default function HomeScreen() {
   };
 
 
-  // =========================
-  // 날짜 클릭 → 상세 모달
-  // =========================
+   
+   
+   
   const handleDatePress = (date) => {
     const events = allEvents[date] || [];
     setSelectedDate(date);
@@ -322,10 +303,10 @@ export default function HomeScreen() {
   };
 
 
-  // =========================
-  // 뉴스
-  // =========================
-// 🔥 환경 뉴스(read_news) 미션 완료 처리 (하루 1회)
+   
+   
+   
+ 
 const completeNewsMission = async () => {
   if (!userId) return;
 
@@ -337,18 +318,18 @@ const completeNewsMission = async () => {
   const missionsRaw = await AsyncStorage.getItem(missionKey);
 
   if (!storedDate || !missionsRaw) return;
-  if (storedDate !== today) return; // 날짜 다르면 무시
+  if (storedDate !== today) return;  
 
   const missions = JSON.parse(missionsRaw);
   const target = missions.find((m) => m.key === "read_news");
 
-  // 이미 완료된 경우 무시
+   
   if (target && target.done) {
     console.log("📰 '환경 뉴스' 미션 이미 완료됨");
     return;
   }
 
-  // 완료 처리
+   
   const updated = missions.map((m) =>
     m.key === "read_news" ? { ...m, done: true } : m
   );
@@ -390,9 +371,9 @@ const completeNewsMission = async () => {
   }, []);
 
 
-  // =========================
-  // 브랜드 로테이션
-  // =========================
+   
+   
+   
   useEffect(() => {
     const updateBrands = () => {
       const all = brandsData.brands;
@@ -413,9 +394,9 @@ const completeNewsMission = async () => {
   }, []);
 
 
-  // =========================
-  // Focus 시 로딩
-  // =========================
+   
+   
+   
   useFocusEffect(
     useCallback(() => {
       if (!userId) return;
@@ -427,9 +408,9 @@ const completeNewsMission = async () => {
   );
 
 
-  // =========================
-  // Pull refresh
-  // =========================
+   
+   
+   
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
@@ -442,9 +423,9 @@ const completeNewsMission = async () => {
   };
 
 
-  // =========================
-  // RENDER
-  // =========================
+   
+   
+   
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -628,8 +609,8 @@ const completeNewsMission = async () => {
               <TouchableOpacity
                 key={idx}
                 onPress={async () => {
-                  await completeNewsMission();   // 🔥 미션 완료
-                  openLink(n.url);               // 링크 열기
+                  await completeNewsMission();    
+                  openLink(n.url);                
                 }}
                 style={styles.newsCard}
               >
@@ -794,7 +775,7 @@ const completeNewsMission = async () => {
                         {event.type === "wear"
                           ? "👕 착용"
                           : event.type === "wash"
-                          ? "🧺 세탁"
+                          ? "  세탁"
                           : "📦 기타"}
                       </Text>
 
@@ -829,11 +810,6 @@ const completeNewsMission = async () => {
   );
 }
 
-
-
-// ==========================================
-// STYLE
-// ==========================================
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#ffffff" },
   container: { flex: 1 },

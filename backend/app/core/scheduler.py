@@ -24,7 +24,7 @@ def _refresh_news_job():
     try:
         fut.result(timeout=30)  # 예외 전파 및 타임아웃 설정
         print(
-            f"[Scheduler] ✅ 뉴스 갱신 완료 {datetime.now()} "
+            f"[Scheduler]  뉴스 갱신 완료 {datetime.now()} "
             f"(count={len(NEWS_CACHE.get('articles', []))})"
         )
     except Exception as e:
@@ -40,7 +40,7 @@ def start_scheduler(loop: asyncio.AbstractEventLoop):
     _loop = loop
     _scheduler = BackgroundScheduler(timezone="Asia/Seoul")
 
-    # ✅ 6시간마다 뉴스 자동 갱신
+    #  6시간마다 뉴스 자동 갱신
     _scheduler.add_job(
         _refresh_news_job,
         trigger="interval",
@@ -52,7 +52,7 @@ def start_scheduler(loop: asyncio.AbstractEventLoop):
     )
 
     _scheduler.start()
-    print("[Scheduler] ✅ 뉴스 자동 갱신 스케줄러 시작됨 (6시간 주기)")
+    print("[Scheduler]  뉴스 자동 갱신 스케줄러 시작됨 (6시간 주기)")
 
     # 서버 부팅 직후 1회 즉시 캐시 채우기
     asyncio.run_coroutine_threadsafe(get_daily_news(refresh=1), _loop)

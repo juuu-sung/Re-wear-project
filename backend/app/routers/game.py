@@ -12,7 +12,7 @@ router = APIRouter(prefix="/v1/game", tags=["game"])
 
 
 # ============================================================
-# ⭐ 일일 미션 기본 템플릿 (프론트와 동일한 key 유지)
+#  일일 미션 기본 템플릿 (프론트와 동일한 key 유지)
 # ============================================================
 FIXED_MISSIONS = [
     "login",
@@ -25,7 +25,7 @@ FIXED_MISSIONS = [
 
 
 # ============================================================
-# ⭐ 0) 미션 초기화 (오늘 날짜 기준)
+#  0) 미션 초기화 (오늘 날짜 기준)
 # ============================================================
 def init_missions_if_needed(db: Session, user_id: int):
     today = date.today()
@@ -52,7 +52,7 @@ def init_missions_if_needed(db: Session, user_id: int):
 
 
 # ============================================================
-# ⭐ 1) 전체 로드
+#  1) 전체 로드
 # ============================================================
 @router.get("/load/{user_id}")
 def load_game(user_id: int, db: Session = Depends(get_db)):
@@ -101,7 +101,7 @@ def load_game(user_id: int, db: Session = Depends(get_db)):
 
 
 # ============================================================
-# ⭐ 2) 동물 구매
+#  2) 동물 구매
 # ============================================================
 @router.post("/buy/animal")
 def buy_animal(user_id: int, animal_id: int, db: Session = Depends(get_db)):
@@ -111,7 +111,7 @@ def buy_animal(user_id: int, animal_id: int, db: Session = Depends(get_db)):
 
 
 # ============================================================
-# ⭐ 3) 구조물 구매
+#  3) 구조물 구매
 # ============================================================
 @router.post("/buy/object")
 def buy_object(user_id: int, object_id: int, db: Session = Depends(get_db)):
@@ -121,7 +121,7 @@ def buy_object(user_id: int, object_id: int, db: Session = Depends(get_db)):
 
 
 # ============================================================
-# ⭐ 4) 구조물 설치
+#  4) 구조물 설치
 # ============================================================
 @router.post("/place")
 def place_object(user_id: int, object_id: int, x: float, y: float, scale: float, db: Session = Depends(get_db)):
@@ -135,7 +135,7 @@ def place_object(user_id: int, object_id: int, x: float, y: float, scale: float,
 
 
 # ============================================================
-# ⭐ 5) 활성화된 동물 저장
+#  5) 활성화된 동물 저장
 # ============================================================
 @router.post("/active/set")
 def set_active_animals(user_id: int, animals: list[int], db: Session = Depends(get_db)):
@@ -149,7 +149,7 @@ def set_active_animals(user_id: int, animals: list[int], db: Session = Depends(g
 
 
 # ============================================================
-# ⭐ 6) RP 업데이트
+#  6) RP 업데이트
 # ============================================================
 @router.post("/rp/set")
 def update_rp(user_id: int, rp: int, db: Session = Depends(get_db)):
@@ -164,7 +164,7 @@ def update_rp(user_id: int, rp: int, db: Session = Depends(get_db)):
 
 
 # ============================================================
-# ⭐ 7) 미션 업데이트 (done / claimed)
+#  7) 미션 업데이트 (done / claimed)
 # ============================================================
 @router.post("/mission/update")
 def update_mission(user_id: int, mission_key: str, done: bool, claimed: bool, db: Session = Depends(get_db)):

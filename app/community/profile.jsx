@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Image } from "expo-image"; // 🔥 Expo Image
+import { Image } from "expo-image"; //   Expo Image
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -68,7 +68,7 @@ export default function MyProfile() {
   const finalName = localName || user.real_name || user.name || "사용자";
 
   // ============================================
-  // 🔥 프로필 이미지 (절대 URL 변환 포함)
+  //   프로필 이미지 (절대 URL 변환 포함)
   // ============================================
   let profileImg = null;
   if (user.profile_image && user.profile_image !== "") {

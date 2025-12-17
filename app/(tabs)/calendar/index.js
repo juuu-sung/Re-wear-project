@@ -19,7 +19,7 @@ import ClosetPickerModal from "../../components/ClosetPickerModal";
 import EventEditModal from "../../components/EventEditModal";
 import EventSelectModal from "../../components/EventSelectModal";
 
-// ✅ 서버 주소 설정
+ 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
@@ -38,7 +38,7 @@ export default function CalendarScreen() {
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
 
-  // ✅ 유저 ID 불러오기
+   
   useEffect(() => {
     loadUserId();
   }, []);
@@ -48,7 +48,7 @@ export default function CalendarScreen() {
     if (id) setUserId(Number(id));
   };
 
-  // ✅ userId 세팅 후 이벤트 로드
+   
   useEffect(() => {
     if (userId !== null && !isNaN(userId)) {
       const today = new Date().toISOString().split("T")[0];
@@ -57,7 +57,7 @@ export default function CalendarScreen() {
     }
   }, [userId]);
 
-  // ✅ 옷장 데이터 불러오기
+   
   const loadClosetItems = async () => {
     try {
       const token = await AsyncStorage.getItem("access_token");
@@ -72,7 +72,7 @@ export default function CalendarScreen() {
     }
   };
 
-  // ✅ 캘린더 dot 정보 불러오기
+   
   const fetchCalendar = async (date, uid) => {
     const [y, m] = date.split("-");
     try {
@@ -102,7 +102,7 @@ export default function CalendarScreen() {
     }
   };
 
-  // ✅ 전체 이벤트 불러오기
+   
   const fetchEvents = async (uid) => {
     try {
       const token = await AsyncStorage.getItem("access_token");
@@ -127,10 +127,10 @@ export default function CalendarScreen() {
     }
   };
 
-  // ✅ 이벤트 추가 (포인트 적립 추가됨)
-  // ✅ 이벤트 추가 (일일미션 완료 알림으로 변경)
-// ✅ 이벤트 추가 (일일미션 자동 완료 반영)
-// ✅ 이벤트 추가 (RP 및 알림 제거됨 — 미션 상태만 갱신)
+   
+   
+ 
+ 
 const saveEvent = async (date, newEvent) => {
   try {
     const payload = {
@@ -151,9 +151,9 @@ const saveEvent = async (date, newEvent) => {
 
     if (!res.ok) throw new Error("이벤트 저장 실패");
 
-    // ==============================
-    // ⭐ Daily Mission 연동 (수정됨)
-    // ==============================
+     
+     
+     
     const missionKey =
       newEvent.type === "wear"
         ? "add_wear"
@@ -175,7 +175,7 @@ const saveEvent = async (date, newEvent) => {
 
         const target = missions.find((m) => m.key === missionKey);
 
-        // 아직 완료되지 않은 경우만 처리
+         
         if (target && !target.done) {
           const updated = missions.map((m) =>
             m.key === missionKey ? { ...m, done: true } : m
@@ -191,9 +191,9 @@ const saveEvent = async (date, newEvent) => {
       }
     }
 
-    // ==============================
-    // 캘린더 갱신
-    // ==============================
+     
+     
+     
     fetchCalendar(date, userId);
     fetchEvents(userId);
 
@@ -207,7 +207,7 @@ const saveEvent = async (date, newEvent) => {
 
 
 
-  // ✅ 이벤트 삭제
+   
   const deleteEvent = async (eventId, date) => {
     try {
       const token = await AsyncStorage.getItem("access_token");
@@ -223,7 +223,7 @@ const saveEvent = async (date, newEvent) => {
     }
   };
 
-  // ✅ 이벤트 수정
+   
   const updateEvent = async (eventId, newDate, newType) => {
     try {
       const payload = {
@@ -253,14 +253,14 @@ const saveEvent = async (date, newEvent) => {
     }
   };
 
-  // ✅ 날짜 클릭 → 해당 날짜 이벤트 표시
+   
   const handleDayPress = (day) => {
     const date = day.dateString;
     setSelectedDate(date);
     setSelectedEvents(allEvents[date] || []);
   };
 
-  // ✅ 이미지 경로 처리
+   
   const getImageSource = (path) => {
     if (!path) return null;
     if (path.startsWith("http")) return { uri: path };

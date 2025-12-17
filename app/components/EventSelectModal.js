@@ -14,7 +14,7 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
 
   const handleSave = () => {
     if (!selectedDate || !selectedType) {
-      return; // 선택 안했을 때만 무시
+      return;   
     }
     onConfirm(selectedDate, selectedType);
     setSelectedDate("");
@@ -27,7 +27,7 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
         <View style={styles.modalContainer}>
           <Text style={styles.title}>{cloth?.name}</Text>
 
-          {/* ✅ 날짜 선택 */}
+          {/*  날짜 선택 */}
           <Calendar
             onDayPress={(day) => setSelectedDate(day.dateString)}
             markedDates={
@@ -37,8 +37,8 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
                       selected: true,
                       selectedColor:
                         selectedType === "wash"
-                          ? "#6AB7FF" // 세탁(파랑)
-                          : "#b8e2b1", // 착용(연두)
+                          ? "#6AB7FF"   
+                          : "#b8e2b1",   
                     },
                   }
                 : {}
@@ -49,7 +49,7 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
             }}
           />
 
-          {/* ✅ 착용 / 세탁 버튼 */}
+          {/*  착용 / 세탁 버튼 */}
           <View style={styles.typeContainer}>
             {/* 착용 */}
             <TouchableOpacity
@@ -94,7 +94,7 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
             </TouchableOpacity>
           </View>
 
-          {/* ✅ 저장 버튼 */}
+          {/*  저장 버튼 */}
           <TouchableOpacity
             onPress={handleSave}
             style={[
@@ -105,7 +105,7 @@ export default function EventSelectModal({ visible, onClose, cloth, onConfirm })
             <Text style={styles.saveText}>저장</Text>
           </TouchableOpacity>
 
-          {/* ✅ 닫기 버튼 */}
+          {/*  닫기 버튼 */}
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Text style={styles.closeText}>닫기</Text>
           </TouchableOpacity>
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ✅ 저장 버튼 (닫기보다 큼)
+    
   saveBtn: {
     alignSelf: "center",
     marginTop: 25,
@@ -163,10 +163,10 @@ const styles = StyleSheet.create({
   saveText: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#23422D", // 닫기와 동일 색
+    color: "#23422D",   
   },
 
-  // ✅ 닫기 버튼 (살짝 작음)
+    
   closeBtn: {
     marginTop: 14,
     alignSelf: "center",
@@ -176,6 +176,6 @@ const styles = StyleSheet.create({
   closeText: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#23422D", // 동일 색상
+    color: "#23422D",   
   },
 });

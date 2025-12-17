@@ -8,10 +8,10 @@
 const fs = require("fs");
 const path = require("path");
 
-// ✅ CSV 파일들이 들어있는 폴더
+//  CSV 파일들이 들어있는 폴더
 const dataDir = path.join(__dirname, "assets", "data");
 
-// ✅ 결과 저장 경로
+//  결과 저장 경로
 const outputFile = path.join(__dirname, "app", "(tabs)", "recycle", "csvList.js");
 
 const files = fs
@@ -35,5 +35,5 @@ ${files.join("\n")}
 `;
 
 fs.writeFileSync(outputFile, content, "utf8");
-console.log(`✅ CSV 리스트 생성 완료: ${outputFile}`);
+console.log(` CSV 리스트 생성 완료: ${outputFile}`);
 console.log(`📄 총 ${files.length}개 파일 포함됨.`);
