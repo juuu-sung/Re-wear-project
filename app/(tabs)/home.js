@@ -187,9 +187,14 @@ export default function HomeScreen() {
 
     try {
       const token = await AsyncStorage.getItem("access_token");
-      const res = await fetch(`${BASE_URL}/alerts/today?user_id=${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const res = await fetch(`${BASE_URL}/alerts/today?user_id=${userId}`, { headers });
+
+      if (!res.ok) {
+        const bodyText = await res.text();
+        throw new Error(`HTTP ${res.status} ${res.statusText}: ${bodyText}`);
+      }
+
       const data = await res.json();
       setTodayAlerts(Array.isArray(data.items) ? data.items : []);
     } catch (err) {
