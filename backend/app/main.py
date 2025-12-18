@@ -1,5 +1,8 @@
-from fastapi import FastAPI, Depends
+import logging
+
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
@@ -47,6 +50,7 @@ from fastapi.staticfiles import StaticFiles
 
 # FastAPI 초기화
 app = FastAPI(title="ReWear API", version="0.1.0")
+logger = logging.getLogger(__name__)
 
 # 정적 파일 업로드 경로
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -79,6 +83,11 @@ app.add_middleware(
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 
 # ---------- 임시 예측 API ----------

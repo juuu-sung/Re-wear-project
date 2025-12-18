@@ -44,7 +44,7 @@ THRESHOLDS = {
         "아우터": 12
     },
     "wool": {
-        "상의": 5,   # 항균성·탈취성 우수
+        "상의": 4,   # 항균성·탈취성 우수
         "하의": 7,
         "아우터": 20 # 실제로는 시즌 1~2회 세탁 권장
     },
@@ -118,7 +118,7 @@ def evaluate_single_cloth(cloth, wear_events):
 def get_wash_needed(db, user_id: int):
     clothes = get_user_clothes(db, user_id)
 
-    # 🔥 빨래통에 있는 옷 id 목록
+    # 빨래통에 있는 옷 id 목록
     basket_ids = {
         b.clothes_id
         for b in db.query(LaundryBasket)
