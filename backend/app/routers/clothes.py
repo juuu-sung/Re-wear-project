@@ -11,6 +11,7 @@ from app.routers.auth import get_current_user
 from app.routers.care import CareSummaryResponse
 from app.services.care_instructions import explain
 from app.services.material_infer import predict_bytes
+from app.services.material_select import choose_sensitive_material
 from app.services.wash_guide import guide_for
 
 router = APIRouter(prefix="/clothes", tags=["Clothes"])
@@ -35,11 +36,12 @@ async def add_clothes(
     #  저장 직후 AI 추론 수행 (업로드 파일 재열기)
     with open(path, "rb") as f:
         infer = predict_bytes(f.read())
-    # 최종 멀티라벨(predicted) 중 가장 높은 후보를 소재로 사용(간단화)
-    top1 = infer["top5"][0]["name"] if infer.get("top5") else None
-    material = (infer["predicted"][0] if infer.get("predicted") else top1) or None
+    # 멀티라벨 특성상 passed 목록(predicted)은 'vocab 순서'일 수 있어,
+    # 확률(top5) + 민감도 기준으로 대표 소재를 선택한다.
+    top5 = infer.get("top5") or []
+    material = choose_sensitive_material(top5, prob_threshold=0.25) or None
     washing = guide_for(material) if material else None
-    breakdown = json.dumps(infer.get("top5", []), ensure_ascii=False) if infer.get("top5") else None
+    breakdown = json.dumps(top5, ensure_ascii=False) if top5 else None
 
     new_item = Clothes(
         user_id=current_user.id,
@@ -118,10 +120,10 @@ async def update_clothes(
         # 이미지 바뀌면 AI 재분석으로 갱신
         with open(file_path, "rb") as f:
             infer = predict_bytes(f.read())
-        top1 = infer["top5"][0]["name"] if infer.get("top5") else None
-        item.material = (infer["predicted"][0] if infer.get("predicted") else top1) or None
+        top5 = infer.get("top5") or []
+        item.material = choose_sensitive_material(top5, prob_threshold=0.25) or None
         item.washing_info = json.dumps(guide_for(item.material), ensure_ascii=False)
-        item.material_breakdown = json.dumps(infer.get("top5", []), ensure_ascii=False) if infer.get("top5") else None
+        item.material_breakdown = json.dumps(top5, ensure_ascii=False) if top5 else None
     else:
         # 이미지 안 바뀌었고 프론트에서 세탁법을 보내주면 그 값 반영
         if washing_info is not None:
@@ -174,13 +176,13 @@ def analyze_item(
     with open(file_path, "rb") as f:
         infer = predict_bytes(f.read())
 
-    top1 = infer["top5"][0]["name"] if infer.get("top5") else None
-    material = (infer["predicted"][0] if infer.get("predicted") else top1) or None
+    top5 = infer.get("top5") or []
+    material = choose_sensitive_material(top5, prob_threshold=0.25) or None
     washing = guide_for(material) if material else None
 
     item.material = material
     item.washing_info = None if washing is None else json.dumps(washing, ensure_ascii=False)
-    item.material_breakdown = json.dumps(infer.get("top5", []), ensure_ascii=False) if infer.get("top5") else None
+    item.material_breakdown = json.dumps(top5, ensure_ascii=False) if top5 else None
     db.commit()
     db.refresh(item)
 
