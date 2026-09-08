@@ -1,4 +1,5 @@
-import { CLOTHING_CATEGORIES } from "../../../src/constants/clothingCategories";
+import { mergeClothingCategories } from "../../../src/constants/clothingCategories";
+import { materialCandidates, materialLabel, predictionScore } from "../../../src/util/materialPresentation";
  
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -47,8 +48,15 @@ export default function ClothesDetail() {
   const [displayMajor, setDisplayMajor] = useState(() => (initMaterial ? String(initMaterial) : ""));
   const [washingInfo, setWashingInfo] = useState("");  
   const [materialBreakdown, setMaterialBreakdown] = useState(() => parseBreakdown(initMaterialBreakdown));
+  const [showMaterialDetails, setShowMaterialDetails] = useState(false);
+  const rankedMaterials = materialCandidates(materialBreakdown);
+  const careMaterial = materialLabel(displayMajor || material);
 
-  const [categories, setCategories] = useState(CLOTHING_CATEGORIES);
+  useEffect(() => {
+    setShowMaterialDetails(false);
+  }, [id, materialBreakdown]);
+
+  const [categories, setCategories] = useState(() => mergeClothingCategories([String(category ?? "")]));
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
 
@@ -216,7 +224,7 @@ export default function ClothesDetail() {
         const saved = await AsyncStorage.getItem("categories");
         if (saved) {
           const parsed = JSON.parse(saved);
-          setCategories([...new Set([...CLOTHING_CATEGORIES, ...parsed])]);
+          setCategories((current) => mergeClothingCategories(current, parsed));
         }
       } catch {}
     };
@@ -549,29 +557,45 @@ export default function ClothesDetail() {
             <Text style={styles.category}>카테고리: {editedCategory || "미분류"}</Text>
 
             {/*  소재 표기 */}
-            <View style={styles.materialHeaderRow}>
-              <Text style={styles.material}>
-                {displayMajor || material
-                  ? `민감 소재: ${displayMajor || material}`
-                  : "민감 소재 정보 없음"}
-              </Text>
-              <TouchableOpacity style={styles.reanalyzeBtn} onPress={analyzeAgain}>
-                <Ionicons name="sparkles-outline" size={18} color="#2e7d32" />
-                <Text style={styles.reanalyzeText}>AI 재분석</Text>
-              </TouchableOpacity>
-            </View>
-            {materialBreakdown.length > 0 && (
-              <View style={styles.materialBreakdownBox}>
-                {materialBreakdown.map((m, idx) => {
-                  const prob = typeof m.prob === "number" ? m.prob : typeof m.confidence === "number" ? m.confidence : 0;
-                  return (
-                    <Text key={`${m.name ?? idx}-${idx}`} style={styles.materialBreakdownItem}>
-                      • {m.name ?? "-"} ({Math.round(prob * 100)}%)
-                    </Text>
-                  );
-                })}
+            <View style={styles.materialCard}>
+              <View style={styles.materialCareNotice}>
+                <Text style={styles.materialCareText}>세탁 시 주의할 소재: {careMaterial || "정보 없음"}</Text>
+                <TouchableOpacity style={styles.reanalyzeBtn} onPress={analyzeAgain} accessibilityRole="button">
+                  <Ionicons name="sparkles-outline" size={18} color="#2e7d32" />
+                  <Text style={styles.reanalyzeText}>AI 재분석</Text>
+                </TouchableOpacity>
               </View>
-            )}
+              {rankedMaterials.length > 0 && (
+                <>
+                  <TouchableOpacity
+                    style={styles.materialDetailsToggle}
+                    onPress={() => setShowMaterialDetails((current) => !current)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: showMaterialDetails }}
+                    accessibilityLabel={showMaterialDetails ? "분석 상세 접기" : "분석 상세 보기"}
+                  >
+                    <Text style={styles.materialDetailsToggleText}>
+                      {showMaterialDetails ? "분석 상세 접기" : "분석 상세 보기"}
+                    </Text>
+                    <Ionicons name={showMaterialDetails ? "chevron-up" : "chevron-down"} size={18} color="#2e7d32" />
+                  </TouchableOpacity>
+                  {showMaterialDetails && (
+                    <View style={styles.materialBreakdownBox}>
+                      <Text style={styles.materialScoreTitle}>AI 예측 점수</Text>
+                      <Text style={styles.materialHelp}>
+                        소재 함량이나 실제 정답률을 의미하지 않습니다. 소재별 점수는 독립적이며 합계가 100%일 필요는 없습니다.
+                      </Text>
+                      {rankedMaterials.map((candidate, idx) => (
+                        <View key={`${candidate.name}-${idx}`} style={styles.materialScoreRow}>
+                          <Text style={styles.materialBreakdownItem}>{candidate.label}</Text>
+                          <Text style={styles.materialScoreValue}>{predictionScore(candidate.prob)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
 
             {/* 세탁법 (기본 카드) */}
             {(() => {
@@ -777,17 +801,25 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 26, fontWeight: "700", color: "#000", marginBottom: 6 },
   category: { fontSize: 18, color: "#666", marginBottom: 6 },
-  materialHeaderRow: {
+  materialCard: { width: "90%", alignSelf: "center", marginTop: 12, marginBottom: 20 },
+  materialCareNotice: {
+    backgroundColor: "#F5FAF7",
+    borderRadius: 12,
+    padding: 14,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    width: "90%",
-    alignSelf: "center",
-    marginBottom: 6,
     gap: 8,
   },
-  material: { flex: 1, fontSize: 15, color: "#2e7d32" },
-  materialBreakdownBox: { width: "90%", alignSelf: "center", marginBottom: 16 },
+  materialCareText: { fontSize: 15, fontWeight: "600", color: "#0f5132", lineHeight: 22 },
+  materialHelp: { fontSize: 13, lineHeight: 20, color: "#526057" },
+  materialDetailsToggle: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", minHeight: 44, gap: 6, paddingVertical: 10 },
+  materialDetailsToggleText: { fontSize: 14, fontWeight: "600", color: "#2e7d32" },
+  materialBreakdownBox: { backgroundColor: "#F7F7F7", borderRadius: 12, padding: 14, gap: 8 },
+  materialScoreTitle: { fontSize: 14, fontWeight: "700", color: "#333" },
+  materialScoreRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 8 },
+  materialScoreValue: { fontSize: 14, color: "#444", lineHeight: 20, fontVariant: ["tabular-nums"] },
   materialBreakdownItem: { fontSize: 14, color: "#444", lineHeight: 20, textAlign: "left" },
   input: {
     width: "90%",

@@ -140,13 +140,14 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(self.db.add.call_args.args[0].material, "cotton")
 
     def test_registration_uses_multitask_prediction_without_external_category_call(self):
-        prediction = {"name": "sweater", "label": "니트", "category": "상의", "prob": 0.9}
+        prediction = {"name": "sweater", "label": "스웨터", "category": "스웨터", "group": "상의", "prob": 0.9}
         inference = {"predicted": ["wool"], "top5": [{"name": "wool", "prob": 0.95}], "category": prediction}
         with patch.object(self.router, "predict_bytes", return_value=inference), patch.object(category_infer, "predict_category", AsyncMock()) as gemini:
             result = self.client.post("/clothes/add", data={"name": "테스트", "category": "auto"}, files={"image": ("test.png", photo(), "image/png")})
         self.assertEqual(result.status_code, 200, result.text)
         self.assertEqual(result.json()["ai"]["category_prediction"], prediction)
-        self.assertEqual(self.db.add.call_args.args[0].category, "상의")
+        self.assertEqual(result.json()["category"], "스웨터")
+        self.assertEqual(self.db.add.call_args.args[0].category, "스웨터")
         gemini.assert_not_called()
 
     def test_existing_manual_clients_keep_custom_category_without_ai_call(self):
