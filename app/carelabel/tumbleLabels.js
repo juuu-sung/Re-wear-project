@@ -1,2 +1,1 @@
- 
-export { tumbleLabels } from "./washLabels";
+ export { tumbleLabels } from "./washLabels";

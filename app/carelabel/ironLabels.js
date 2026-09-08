@@ -1,2 +1,1 @@
- 
 export { ironLabels } from "./washLabels";

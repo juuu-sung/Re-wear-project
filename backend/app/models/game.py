@@ -1,4 +1,3 @@
-# app/models/game.py
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

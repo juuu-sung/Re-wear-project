@@ -1,3 +1,4 @@
+import { CLOTHING_CATEGORIES } from "../../src/constants/clothingCategories";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import {
@@ -19,7 +20,7 @@ export default function ClosetPickerModal({
   closetItems = [],
   onSelectCloth,
 }) {
-  const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
+  const [categories, setCategories] = useState(CLOTHING_CATEGORIES);
   const [selected, setSelected] = useState("상의");
 
     
@@ -29,9 +30,9 @@ export default function ClosetPickerModal({
         const saved = await AsyncStorage.getItem("categories");
         if (saved) {
           const list = JSON.parse(saved);
-          setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
+          setCategories([...new Set([...CLOTHING_CATEGORIES, ...list])]);
         } else {
-          setCategories(["상의", "하의", "아우터"]);
+          setCategories(CLOTHING_CATEGORIES);
         }
       })();
     }

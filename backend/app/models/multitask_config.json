@@ -1,0 +1,80 @@
+{
+  "architecture": "efficientnet_b0_late2_branch_eca",
+  "checkpoint_sha256": "d7bf9ebac6de0cf2902b5ddde6b9e687fe6c374accff7e23bc7a5548abec3182",
+  "image_size": 352,
+  "material_threshold": 0.5,
+  "materials": [
+    "cotton",
+    "nylon",
+    "polyester",
+    "rayon",
+    "silk",
+    "spandex",
+    "synthetic",
+    "wool"
+  ],
+  "categories": [
+    {
+      "name": "blouse",
+      "label": "블라우스",
+      "category": "상의"
+    },
+    {
+      "name": "cardigan",
+      "label": "가디건",
+      "category": "아우터"
+    },
+    {
+      "name": "coat",
+      "label": "코트",
+      "category": "아우터"
+    },
+    {
+      "name": "jacket",
+      "label": "재킷",
+      "category": "아우터"
+    },
+    {
+      "name": "jumper",
+      "label": "점퍼",
+      "category": "아우터"
+    },
+    {
+      "name": "shirt",
+      "label": "셔츠",
+      "category": "상의"
+    },
+    {
+      "name": "sweater",
+      "label": "니트",
+      "category": "상의"
+    },
+    {
+      "name": "t-shirt",
+      "label": "티셔츠",
+      "category": "상의"
+    },
+    {
+      "name": "vest",
+      "label": "조끼",
+      "category": "상의"
+    },
+    {
+      "name": "bottom",
+      "label": "하의",
+      "category": "하의"
+    },
+    {
+      "name": "onepiece(dress)",
+      "label": "원피스",
+      "category": "원피스"
+    },
+    {
+      "name": "onepiece(jumpsuite)",
+      "label": "점프수트",
+      "category": "원피스"
+    }
+  ],
+  "reference_training_source": "train_b_datacrops_only_phase2a_final_shared_trunk_vit_small_server.py",
+  "reference_training_source_sha256": "ee6cf1f76e2c4e66aff10982a7e4128b8cbcb7c064dec600fbdd99ba91109880"
+}
