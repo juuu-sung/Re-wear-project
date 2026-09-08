@@ -1,2 +1,1 @@
- 
-export { bleachLabels } from "./washLabels";
+ export { bleachLabels } from "./washLabels";

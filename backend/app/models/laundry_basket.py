@@ -1,5 +1,3 @@
-# backend/app/models/laundry_basket.py
-
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -16,7 +14,7 @@ class LaundryBasket(Base):
 
     # 관계
     user = relationship("User", back_populates="laundry_baskets")
-    clothes = relationship("Clothes")
+    clothes = relationship("Clothes", back_populates="laundry_baskets")
 
     __table_args__ = (
         UniqueConstraint(

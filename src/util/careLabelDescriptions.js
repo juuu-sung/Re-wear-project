@@ -1,4 +1,4 @@
-import { allCareLabels } from '../carelabel/washLabels';
+import { allCareLabels } from '../../app/carelabel/washLabels';
 
  
 export const careLabelInfo = allCareLabels.reduce((acc, cur) => {

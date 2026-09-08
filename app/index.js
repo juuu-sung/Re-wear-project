@@ -2,9 +2,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+// TEMP: disable Google Sign-In for Expo Go (native module unavailable)
+// import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { login } from '@react-native-seoul/kakao-login';
 
  
@@ -60,55 +62,49 @@ export default function LoginScreen() {
     };
  
      
-    GoogleSignin.configure({
-        webClientId: '472072812397-f51bchihsifn54boars84kf82uv2eeia.apps.googleusercontent.com', 
-        iosClientId: '472072812397-6r17olqpffqsdioudtu0n8s6fjk80n2e.apps.googleusercontent.com',
-        offlineAccess: true,  
-    });
+    // GoogleSignin.configure({
+    //     webClientId: '472072812397-f51bchihsifn54boars84kf82uv2eeia.apps.googleusercontent.com',
+    //     iosClientId: '472072812397-6r17olqpffqsdioudtu0n8s6fjk80n2e.apps.googleusercontent.com',
+    //     offlineAccess: true,
+    // });
 
      
-    const handleGoogleLogin = async () => {
-        try {
-            console.log("구글 로그인 시도...");
-            
-             
-            await GoogleSignin.hasPlayServices();
-            
-             
-            const userInfo = await GoogleSignin.signIn();
-            const idToken = userInfo.data?.idToken;  
-             
-
-            console.log(" 구글 ID 토큰 확보:", idToken);
-
-            if (!idToken) {
-                Alert.alert("오류", "구글 토큰을 가져오지 못했습니다.");
-                return;
-            }
-
-             
-            const res = await fetch(`${BASE_URL}/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_token: idToken }),
-            });
-
-            const body = await res.json();
-
-            if (res.ok) {
-                 
-                await AsyncStorage.setItem("access_token", body.access_token);
-                await AsyncStorage.setItem("user_id", String(body.user_id));
-                 
-                router.replace("/(tabs)/home");
-            } else {
-                Alert.alert("로그인 실패", body.detail || "구글 로그인 실패");
-            }
-
-        } catch (error) {
-            console.error("구글 로그인 에러:", error);
-        }
-    };
+    // const handleGoogleLogin = async () => {
+    //     try {
+    //         console.log("구글 로그인 시도...");
+    //
+    //         await GoogleSignin.hasPlayServices();
+    //
+    //         const userInfo = await GoogleSignin.signIn();
+    //         const idToken = userInfo.data?.idToken;
+    //
+    //         console.log(" 구글 ID 토큰 확보:", idToken);
+    //
+    //         if (!idToken) {
+    //             Alert.alert("오류", "구글 토큰을 가져오지 못했습니다.");
+    //             return;
+    //         }
+    //
+    //         const res = await fetch(`${BASE_URL}/auth/google`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({ id_token: idToken }),
+    //         });
+    //
+    //         const body = await res.json();
+    //
+    //         if (res.ok) {
+    //             await AsyncStorage.setItem("access_token", body.access_token);
+    //             await AsyncStorage.setItem("user_id", String(body.user_id));
+    //             router.replace("/(tabs)/home");
+    //         } else {
+    //             Alert.alert("로그인 실패", body.detail || "구글 로그인 실패");
+    //         }
+    //
+    //     } catch (error) {
+    //         console.error("구글 로그인 에러:", error);
+    //     }
+    // };
      
     const handleLogin = async () => {
   if (!email.trim() || !password.trim()) {
@@ -243,13 +239,7 @@ export default function LoginScreen() {
                         <Text style={styles.dividerText}>또는</Text>
                         <View style={styles.dividerLine} />
                     </View>
-                    <TouchableOpacity 
-                      style={[styles.socialButton, { backgroundColor: 'white', borderWidth: 1, borderColor: '#ddd', marginTop: 10 }]} 
-            onPress={handleGoogleLogin}
-        >
-            {/* 구글은 보통 흰 배경에 검은 글씨 or 회색 글씨 */}
-            <Text style={[styles.socialButtonText, { color: 'black' }]}>구글로 시작하기</Text>
-        </TouchableOpacity>
+                    {/* Google 로그인은 Expo Go에서 비활성화 */}
                     <TouchableOpacity 
                         style={[styles.socialButton, { backgroundColor: '#FEE500' }]}
                         onPress={handleKakaoLogin}  
