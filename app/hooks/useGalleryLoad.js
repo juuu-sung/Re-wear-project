@@ -1,4 +1,4 @@
-import * as MediaLibrary from "expo-media-library";
+import * as MediaLibrary from "expo-media-library/legacy";
 import { useEffect, useState } from "react";
 
 export default function useGalleryLoad() {
