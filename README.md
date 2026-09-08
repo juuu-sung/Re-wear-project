@@ -61,7 +61,7 @@ Re:wear는 일상에서 옷을 관리할 때 마주치는 질문에서 출발했
 
 - **케어라벨 인식**: 라벨 사진에서 YOLOv8이 세탁 기호와 위치를 감지하고, Gemini가 세탁·건조·다림질 방법과 주의사항을 설명합니다.
 - **기호 직접 선택**: 라벨이 흐리거나 인식 결과가 불완전할 때는 사용자가 기호를 직접 선택해 설명을 확인할 수 있습니다.
-- **의류 소재 분석**: 옷 사진을 등록하면 EfficientNet-B0가 소재 후보를 분석하고, 소재별 기본 세탁법과 Gemini 기반 관리 가이드를 제공합니다.
+- **의류 소재·카테고리 분석**: 옷 사진을 등록하면 EfficientNet-B0 기반 멀티태스크 모델이 소재 후보와 카테고리를 함께 분석하고, 소재별 기본 세탁법과 Gemini 기반 관리 가이드를 제공합니다.
 
 ### 2. 기록으로 이어지는 옷장 관리
 
@@ -124,25 +124,27 @@ flowchart LR
 | 입력 | 처리 | 사용자에게 제공하는 정보 |
 | :--- | :--- | :--- |
 | 케어라벨 사진 | YOLOv8 객체 감지 → Gemini 설명 생성 | 인식 기호·위치·신뢰도, 단계별 세탁 가이드 |
-| 의류 사진 | EfficientNet-B0 멀티라벨 분류 → 소재 후보 선택 → 기본 세탁법·Gemini 설명 | 소재 후보와 확률, 의류별 관리 정보 |
+| 의류 사진 | EfficientNet-B0 멀티태스크 분류 → 소재·카테고리 선택 → 기본 세탁법·Gemini 설명 | 소재 후보와 확률, 카테고리, 의류별 관리 정보 |
 | 직접 선택한 기호 | 선택한 케어라벨 정보 → 관리 설명 | 사진 인식 없이 확인하는 세탁법 |
 
-소재 모델은 13개 클래스와 클래스별 임계값을 사용하며 상위 5개 후보를 반환합니다. 케어라벨 모델의 학습 클래스는 발표 자료 기준 21개입니다. 소재 학습에는 발표 자료에 명시된 AI Hub 의류 이미지 데이터를 활용했습니다.
+현재 모델은 소재 8종과 의류 카테고리 12종을 함께 분류합니다. 소재는 임계값 0.5로 상위 5개 후보를 반환하고, 카테고리는 가장 높은 확률의 유형을 옷장의 큰 분류로 연결합니다. [모델 설정과 검증](docs/category-classification.md)을 참고하세요. 케어라벨 모델의 학습 클래스는 발표 자료 기준 21개입니다. 소재 학습에는 발표 자료에 명시된 AI Hub 의류 이미지 데이터를 활용했습니다.
 
 <details>
 <summary>모델 파일과 실제 추론 API</summary>
 
 | 파일 | 역할 |
 | :--- | :--- |
-| [`best_ml.pt`](backend/app/models/best_ml.pt) | EfficientNet-B0 소재 분류 가중치 |
-| [`vocab_multilabel.json`](backend/app/models/vocab_multilabel.json) | 13개 소재 클래스 목록 |
-| [`thresholds_per_class_v3.json`](backend/app/models/thresholds_per_class_v3.json) | 소재 클래스별 판정 임계값 |
+| [`best_multitask.pt`](backend/app/models/best_multitask.pt) | 현재 소재 8종·카테고리 12종 분류 가중치 |
+| [`multitask_config.json`](backend/app/models/multitask_config.json) | 새 모델의 라벨 순서·카테고리 매핑·임계값·체크섬 |
+| [`best_ml.pt`](backend/app/models/best_ml.pt) | 이전 소재 전용 모델 (복구용) |
+| [`vocab_multilabel.json`](backend/app/models/vocab_multilabel.json) | 이전 모델용 소재 사전 파일 (체크포인트 내 vocab 우선) |
+| [`thresholds_per_class_v3.json`](backend/app/models/thresholds_per_class_v3.json) | 이전 소재 모델용 클래스별 판정 임계값 |
 | [`best.pt`](backend/app/models/best.pt) | YOLOv8 케어라벨 감지 가중치 |
 
 - `POST /laundry/scan`: 케어라벨 이미지 감지
 - `POST /laundry/explain`: 감지한 기호를 바탕으로 Gemini 가이드 생성
-- `POST /v1/infer/material`: 의류 이미지의 소재 분석
-- `POST /clothes/add`: 옷 등록과 소재 분석
+- `POST /v1/infer/material`: 의류 이미지의 소재·카테고리 분석
+- `POST /clothes/add`: 옷 등록과 소재·카테고리 분석
 - `POST /clothes/{cid}/care-summary`: 등록한 의류의 관리 가이드 생성
 
 `/infer/label`, `/infer/material` 등에는 임시 응답을 반환하는 코드가 남아 있습니다. 실제 모델을 확인할 때는 위 경로를 사용합니다. AI 분석 결과는 추정치이므로 의류에 부착된 실제 케어라벨을 함께 확인해야 합니다.

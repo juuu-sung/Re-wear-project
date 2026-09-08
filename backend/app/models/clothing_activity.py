@@ -1,5 +1,3 @@
-# backend/app/models/clothing_activity.py
-
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
 from app.db import Base
@@ -17,4 +15,4 @@ class ClothingActivity(Base):
 
     # 관계
     user = relationship("User", back_populates="clothing_activities")
-    clothes = relationship("Clothes")
+    clothes = relationship("Clothes", back_populates="clothing_activities")

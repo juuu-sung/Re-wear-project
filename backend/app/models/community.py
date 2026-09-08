@@ -1,4 +1,3 @@
-# app/models/community.py
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, func
 from sqlalchemy.orm import relationship
 from app.db import Base

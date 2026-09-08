@@ -1,6 +1,4 @@
- 
-
-import { Tabs } from 'expo-router';
+ import { Tabs } from 'expo-router';
 
  
 import FontAwesome from '@expo/vector-icons/FontAwesome';
