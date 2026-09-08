@@ -1,3 +1,4 @@
+import { CLOTHING_CATEGORIES } from "../../../src/constants/clothingCategories";
  
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -5,20 +6,8 @@ import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  ActionSheetIOS,
-  ActivityIndicator,
-  Alert,
-  Image,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActionSheetIOS, ActivityIndicator, Alert, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
@@ -59,7 +48,7 @@ export default function ClothesDetail() {
   const [washingInfo, setWashingInfo] = useState("");  
   const [materialBreakdown, setMaterialBreakdown] = useState(() => parseBreakdown(initMaterialBreakdown));
 
-  const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
+  const [categories, setCategories] = useState(CLOTHING_CATEGORIES);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
 
@@ -227,7 +216,7 @@ export default function ClothesDetail() {
         const saved = await AsyncStorage.getItem("categories");
         if (saved) {
           const parsed = JSON.parse(saved);
-          setCategories([...new Set(["상의", "하의", "아우터", ...parsed])]);
+          setCategories([...new Set([...CLOTHING_CATEGORIES, ...parsed])]);
         }
       } catch {}
     };
@@ -466,13 +455,15 @@ export default function ClothesDetail() {
 
    
   const handleDelete = async () => {
-    Alert.alert("삭제 확인", `"${name}"을(를) 삭제할까요?`, [
+    if (loading) return;
+    Alert.alert("삭제 확인", `"${name}"을(를) 삭제할까요?\n빨래통과 착용·세탁 기록도 함께 삭제됩니다.`, [
       { text: "취소", style: "cancel" },
       {
         text: "삭제",
         style: "destructive",
         onPress: async () => {
           try {
+            setLoading(true);
             const token = await AsyncStorage.getItem("access_token");
             if (!token) return Alert.alert("로그인 필요", "다시 로그인해주세요.");
 
@@ -485,12 +476,21 @@ export default function ClothesDetail() {
               Alert.alert("삭제 완료", `"${name}"이(가) 삭제되었습니다.`);
               router.replace("/(tabs)/closet");
             } else {
-              const errData = await res.json();
-              Alert.alert("삭제 실패", errData.detail || "삭제 중 오류 발생");
+              const responseText = await res.text();
+              let message = "서버에서 삭제를 처리하지 못했습니다. 잠시 후 다시 시도해주세요.";
+              try {
+                const errData = JSON.parse(responseText);
+                if (typeof errData.detail === "string") message = errData.detail;
+              } catch {
+                // 일반 텍스트/HTML 서버 오류도 네트워크 오류와 구분한다.
+              }
+              Alert.alert("삭제 실패", message);
             }
           } catch (err) {
             console.error("삭제 오류:", err);
             Alert.alert("오류", "서버에 연결할 수 없습니다.");
+          } finally {
+            setLoading(false);
           }
         },
       },
@@ -498,8 +498,9 @@ export default function ClothesDetail() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
+      {/* 상하단 안전 여백은 Stack 헤더와 탭 바에서 처리한다. */}
+      <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="never">
         {/* 이미지 */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUri }} style={styles.image} />
@@ -545,12 +546,14 @@ export default function ClothesDetail() {
         ) : (
           <>
             <Text style={styles.name}>{editedName}</Text>
-            <Text style={styles.category}>{editedCategory}</Text>
+            <Text style={styles.category}>카테고리: {editedCategory || "미분류"}</Text>
 
             {/*  소재 표기 */}
             <View style={styles.materialHeaderRow}>
               <Text style={styles.material}>
-                {material ? `민감 소재: ${material}` : "민감 소재 정보 없음"}
+                {displayMajor || material
+                  ? `민감 소재: ${displayMajor || material}`
+                  : "민감 소재 정보 없음"}
               </Text>
               <TouchableOpacity style={styles.reanalyzeBtn} onPress={analyzeAgain}>
                 <Ionicons name="sparkles-outline" size={18} color="#2e7d32" />
@@ -731,7 +734,7 @@ export default function ClothesDetail() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleDelete}>
+              <TouchableOpacity onPress={handleDelete} disabled={loading}>
                 <View style={styles.textButton}>
                   <Ionicons name="trash-outline" size={20} color="#000" />
                   <Text style={styles.textBtnLabel}>삭제</Text>
@@ -754,7 +757,7 @@ export default function ClothesDetail() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  content: { alignItems: "center", paddingTop: 100, paddingBottom: 60 },
+  content: { alignItems: "center", paddingTop: 20, paddingBottom: 24 },
   imageContainer: { position: "relative" },
   image: { width: 260, height: 260, borderRadius: 16, marginBottom: 25 },
   editPhotoBtn: {

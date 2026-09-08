@@ -1,19 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
  
-import { careLabelInfo, defaultCareLabelInfo } from './util/careLabelDescriptions';
+import { careLabelInfo, defaultCareLabelInfo } from '../src/util/careLabelDescriptions';
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? '').toString().trim();
 const BASE_URL = RAW_BASE_URL.replace(/\/+$/, '');

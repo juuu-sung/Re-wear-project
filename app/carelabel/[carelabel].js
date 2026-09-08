@@ -1,5 +1,4 @@
- 
-import { useLocalSearchParams } from "expo-router";
+ import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import CareLabelModal from "./CareLabelModal";

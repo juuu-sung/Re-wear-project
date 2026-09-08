@@ -1,3 +1,4 @@
+import { CLOTHING_CATEGORIES } from "../../../src/constants/clothingCategories";
  
  
  
@@ -6,20 +7,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  ActionSheetIOS,
-  Alert,
-  Image,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActionSheetIOS, Alert, Image, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Modal from "react-native-modal";
 
 const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
@@ -28,8 +17,8 @@ const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 export default function AddClothesScreen() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("상의");
-  const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
+  const [category, setCategory] = useState("auto");
+  const [categories, setCategories] = useState(CLOTHING_CATEGORIES);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
@@ -57,7 +46,7 @@ export default function AddClothesScreen() {
       const saved = await AsyncStorage.getItem("categories");
       if (saved) {
         const list = JSON.parse(saved);
-        setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
+        setCategories([...new Set([...CLOTHING_CATEGORIES, ...list])]);
       }
     })();
   }, []);
@@ -189,6 +178,7 @@ export default function AddClothesScreen() {
    
    
   const handleSubmit = async () => {
+    if (loading) return;
     if (!name.trim()) return Alert.alert("입력 오류", "옷 이름을 입력하세요!");
     if (!image) return Alert.alert("입력 오류", "사진을 선택하세요.");
 
@@ -226,14 +216,18 @@ export default function AddClothesScreen() {
        
       await completeAddClothMission();
 
-      Alert.alert("등록 완료", `"${name}"이 등록되었습니다!`);
+      const savedCategory = data.category || (category === "auto" ? "미분류" : category);
+      const categoryNotice = savedCategory === "미분류"
+        ? "\n카테고리를 확인하지 못했어요. 상세 화면의 수정에서 직접 선택해 주세요."
+        : `\n카테고리: ${savedCategory}`;
+      Alert.alert("등록 완료", `"${name}"이 등록되었습니다!${categoryNotice}`);
 
       router.replace({
         pathname: "/(tabs)/closet/detail",
         params: {
           id: String(data.id),
           name,
-          category,
+          category: savedCategory,
           image: `${BASE_URL}/uploads/clothes/${data.image_path}`,
           material: data?.ai?.material ?? "",
           washing: data?.ai?.washing ? JSON.stringify(data.ai.washing) : "",
@@ -259,7 +253,7 @@ export default function AddClothesScreen() {
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>옷 사진</Text>
-            <Text style={styles.sectionSub}>빛 반사가 없도록 정면에서 촬영해 주세요.</Text>
+            <Text style={styles.sectionSub}>카테고리를 알아볼 수 있도록 옷 전체가 보이게 촬영해 주세요.</Text>
           </View>
 
           <TouchableOpacity
@@ -288,16 +282,27 @@ export default function AddClothesScreen() {
               placeholder="옷 이름을 입력하세요"
               value={name}
               onChangeText={setName}
+              editable={!loading}
             />
           </View>
 
           <Text style={styles.sectionSub}>카테고리</Text>
+          <Text style={styles.sectionSub}>자동 분류를 선택하면 등록할 때 소재와 카테고리를 함께 분석해요. 직접 선택할 수도 있어요.</Text>
           <View style={styles.categoryRow}>
+            <TouchableOpacity
+              style={[styles.catBtn, category === "auto" && styles.catBtnActive]}
+              onPress={() => setCategory("auto")}
+              disabled={loading}
+              activeOpacity={0.9}
+            >
+              <Text style={[styles.catText, category === "auto" && styles.catTextActive]}>자동 분류</Text>
+            </TouchableOpacity>
             {categories.map((cat) => (
               <TouchableOpacity
                 key={cat}
                 style={[styles.catBtn, category === cat && styles.catBtnActive]}
                 onPress={() => setCategory(cat)}
+                disabled={loading}
                 activeOpacity={0.9}
               >
                 <Text style={[styles.catText, category === cat && styles.catTextActive]}>{cat}</Text>
@@ -312,7 +317,7 @@ export default function AddClothesScreen() {
           onPress={handleSubmit}
           activeOpacity={0.85}
         >
-          <Text style={styles.submitText}>{loading ? "전송 중..." : "등록하기"}</Text>
+          <Text style={styles.submitText}>{loading ? "사진 분석 및 등록 중..." : "등록하기"}</Text>
         </TouchableOpacity>
       </ScrollView>
 

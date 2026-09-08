@@ -1,18 +1,10 @@
+import { CLOTHING_CATEGORIES } from "../../../src/constants/clothingCategories";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ImageRatio from "../../components/ImageRatio";
 
@@ -23,7 +15,7 @@ export default function ClosetMain() {
   const [selected, setSelected] = useState("상의");
   const [items, setItems] = useState([]);
   const [userName, setUserName] = useState("");
-  const [categories, setCategories] = useState(["상의", "하의", "아우터"]);
+  const [categories, setCategories] = useState(CLOTHING_CATEGORIES);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -41,7 +33,7 @@ export default function ClosetMain() {
         const saved = await AsyncStorage.getItem("categories");
         if (saved) {
           const list = JSON.parse(saved);
-          setCategories([...new Set(["상의", "하의", "아우터", ...list])]);
+          setCategories([...new Set([...CLOTHING_CATEGORIES, ...list])]);
         }
       } catch {
         setUserName("사용자");
@@ -112,7 +104,7 @@ export default function ClosetMain() {
 
    
   const handleCategoryLongPress = (name) => {
-    if (["상의", "하의", "아우터"].includes(name)) {
+    if (CLOTHING_CATEGORIES.includes(name)) {
       Alert.alert("기본 옷장은 수정/삭제할 수 없습니다.");
       return;
     }

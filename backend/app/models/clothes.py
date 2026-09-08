@@ -13,6 +13,12 @@ class Clothes(Base):
 
     user = relationship("User", back_populates="clothes")
     events = relationship("Event", back_populates="clothes", cascade="all, delete")
+    laundry_baskets = relationship(
+        "LaundryBasket", back_populates="clothes", cascade="all, delete-orphan"
+    )
+    clothing_activities = relationship(
+        "ClothingActivity", back_populates="clothes", cascade="all, delete-orphan"
+    )
 
     material = Column(String(100), nullable=True)
     washing_info = Column(Text, nullable=True)     # JSON 문자열 보관해도 됨
