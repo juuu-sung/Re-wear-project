@@ -1,3 +1,4 @@
+from app.utils.clothing_categories import category_group
 from datetime import datetime, date
 from app.services.db_service import (
     get_user_clothes,
@@ -97,7 +98,7 @@ def evaluate_single_cloth(cloth, wear_events):
     category = cloth.category
 
     # silk는 독자 규칙
-    threshold = SILK_THRESHOLD if material == "silk" else THRESHOLDS.get(material, {}).get(category, 5)
+    threshold = SILK_THRESHOLD if material == "silk" else THRESHOLDS.get(material, {}).get(category_group(category), 5)
 
     wear_count = len(wear_events)
 

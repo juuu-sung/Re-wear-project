@@ -17,62 +17,74 @@
     {
       "name": "blouse",
       "label": "블라우스",
-      "category": "상의"
+      "category": "블라우스",
+      "group": "상의"
     },
     {
       "name": "cardigan",
       "label": "가디건",
-      "category": "아우터"
+      "category": "가디건",
+      "group": "아우터"
     },
     {
       "name": "coat",
       "label": "코트",
-      "category": "아우터"
+      "category": "코트",
+      "group": "아우터"
     },
     {
       "name": "jacket",
       "label": "재킷",
-      "category": "아우터"
+      "category": "재킷",
+      "group": "아우터"
     },
     {
       "name": "jumper",
       "label": "점퍼",
-      "category": "아우터"
+      "category": "점퍼",
+      "group": "아우터"
     },
     {
       "name": "shirt",
       "label": "셔츠",
-      "category": "상의"
+      "category": "셔츠",
+      "group": "상의"
     },
     {
       "name": "sweater",
-      "label": "니트",
-      "category": "상의"
+      "label": "스웨터",
+      "category": "스웨터",
+      "group": "상의"
     },
     {
       "name": "t-shirt",
       "label": "티셔츠",
-      "category": "상의"
+      "category": "티셔츠",
+      "group": "상의"
     },
     {
       "name": "vest",
       "label": "조끼",
-      "category": "상의"
+      "category": "조끼",
+      "group": "상의"
     },
     {
       "name": "bottom",
       "label": "하의",
-      "category": "하의"
+      "category": "하의",
+      "group": "하의"
     },
     {
       "name": "onepiece(dress)",
       "label": "원피스",
-      "category": "원피스"
+      "category": "원피스",
+      "group": "원피스"
     },
     {
       "name": "onepiece(jumpsuite)",
       "label": "점프수트",
-      "category": "원피스"
+      "category": "점프수트",
+      "group": "원피스"
     }
   ],
   "reference_training_source": "train_b_datacrops_only_phase2a_final_shared_trunk_vit_small_server.py",

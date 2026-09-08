@@ -1,4 +1,4 @@
-import { CLOTHING_CATEGORIES } from "../../../src/constants/clothingCategories";
+import { CLOTHING_CATEGORIES, mergeClothingCategories } from "../../../src/constants/clothingCategories";
  
  
  
@@ -46,7 +46,7 @@ export default function AddClothesScreen() {
       const saved = await AsyncStorage.getItem("categories");
       if (saved) {
         const list = JSON.parse(saved);
-        setCategories([...new Set([...CLOTHING_CATEGORIES, ...list])]);
+        setCategories((current) => mergeClothingCategories(current, list));
       }
     })();
   }, []);

@@ -67,3 +67,6 @@ frontend/.env
 .env.*
 *.pem
 *.key
+
+# Local rollback backups (environment and native settings)
+.local-backups/

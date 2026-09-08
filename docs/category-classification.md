@@ -6,8 +6,9 @@
 
 - 옷 등록의 **자동 분류**는 사진을 한 번 모델에 입력해 소재 8종 후보와 의류 유형 12종 중 하나를 분석합니다. 카테고리 분류에 Gemini 사진 전송은 하지 않습니다.
 - 소재: cotton, nylon, polyester, rayon, silk, spandex, synthetic, wool. sigmoid 확률에 새 체크포인트의 평가 기준인 0.5를 적용합니다. 이전 모델 전용 `thresholds_per_class_v3.json`은 새 모델에 적용하지 않습니다.
-- 카테고리: blouse, cardigan, coat, jacket, jumper, shirt, sweater, t-shirt, vest, bottom, onepiece(dress), onepiece(jumpsuite). softmax로 가장 높은 후보를 선택합니다. `multitask_config.json`에서 한국어 이름과 옷장 분류(상의/하의/아우터/원피스)를 매핑합니다.
-- 옷장 필터와 호환되도록 DB에는 큰 분류를 저장합니다. 세부 유형과 확률은 등록 응답 `ai.category_prediction` 및 추론 응답 `category`, `category_top3`로 반환합니다.
+- 카테고리: blouse, cardigan, coat, jacket, jumper, shirt, sweater, t-shirt, vest, bottom, onepiece(dress), onepiece(jumpsuite). softmax로 가장 높은 후보를 선택합니다. `multitask_config.json`에서 한글 이름 12종(블라우스, 가디건, 코트, 재킷, 점퍼, 셔츠, 스웨터, 티셔츠, 조끼, 하의, 원피스, 점프수트)을 매핑합니다.
+- DB에는 해당 한글 세부 유형을 그대로 저장하며 등록·수정 선택지, 옷장 필터, 상세 화면에서도 같은 이름을 사용합니다. `기타`와 `미분류`는 예외 처리용으로 유지합니다. 유형과 확률은 등록 응답 `ai.category_prediction` 및 추론 응답 `category`, `category_top3`로 반환합니다.
+- 옷장과 옷 선택 창은 `전체`에서 시작하며, 기존 큰 분류·사용자 정의 옷장도 필터에 포함합니다. 세탁 알림 계산은 설정의 `group`으로 기존 큰 분류 기준을 유지합니다.
 - 수동 선택한 카테고리와 사용자 정의 옷장 이름은 예측보다 우선합니다. 기존 의류의 카테고리도 자동으로 바꾸지 않습니다.
 - 사진 교체/AI 재분석은 새 모델로 소재를 다시 계산합니다. 사용자가 지정한 옷장 분류는 보존합니다.
 - 세탁 설명 생성은 기존 Gemini 연동을 유지합니다.
