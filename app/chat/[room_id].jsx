@@ -3,7 +3,7 @@
  
 
 import { Ionicons } from "@expo/vector-icons";
-import { Video } from "expo-av";
+import ChatVideo from "../../src/components/ChatVideo";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
@@ -886,12 +886,7 @@ export default function ChatRoom() {
             <Ionicons name="close" size={40} color="#fff" />
           </TouchableOpacity>
 
-          <Video
-            source={{ uri: previewVideoVisible }}
-            useNativeControls
-            resizeMode="contain"
-            style={{ width: "90%", height: "60%" }}
-          />
+          <ChatVideo uri={previewVideoVisible} />
         </View>
       )}
 
