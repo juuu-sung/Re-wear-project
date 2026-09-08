@@ -17,8 +17,8 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "rewear", 
-              "com.googleusercontent.apps.472072812397-6r17olqpffqsdioudtu0n8s6fjk80n2e" 
+              "rewear",
+              "com.googleusercontent.apps.472072812397-6r17olqpffqsdioudtu0n8s6fjk80n2e"
             ]
           }
         ],
@@ -44,16 +44,19 @@
           "kakaoAppKey": "aaf137091c747bd3b71a75debd72d2a5"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
-    "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    }
+    "icon": "./assets/icon.png"
   }
 }
