@@ -8,6 +8,7 @@ from PIL import Image
 
 from app.services import material_infer
 from app.services.category_infer import resolve_category
+from app.utils.clothing_categories import CATEGORY_LABELS
 
 
 class MultitaskInferenceTests(unittest.TestCase):
@@ -30,7 +31,7 @@ class MultitaskInferenceTests(unittest.TestCase):
         self.assertEqual(len(result['top5']), 5)
         self.assertEqual(len(result['category_top3']), 3)
         self.assertEqual(result['thresholds'], {'type': 'global', 'value': 0.5})
-        self.assertIn(result['category']['category'], ['상의', '하의', '아우터', '원피스'])
+        self.assertIn(result['category']['category'], CATEGORY_LABELS)
         self.assertTrue(all(np.isfinite(c['prob']) and 0 <= c['prob'] <= 1 for c in result['top5'] + result['category_top3']))
         self.assertTrue(all(c['passed'] == (c['prob'] >= 0.5) for c in result['top5']))
 
@@ -55,8 +56,8 @@ class MultitaskInferenceTests(unittest.TestCase):
 class LocalCategoryRoutingTests(unittest.IsolatedAsyncioTestCase):
     async def test_local_result_does_not_call_gemini(self):
         with patch('app.services.category_infer.predict_category', new_callable=AsyncMock) as gemini:
-            result = await resolve_category('auto', b'image', {'category': {'name': 'sweater', 'category': '상의', 'prob': 0.95}})
-        self.assertEqual(result['category'], '상의')
+            result = await resolve_category('auto', b'image', {'category': {'name': 'sweater', 'label': '스웨터', 'category': '스웨터', 'group': '상의', 'prob': 0.95}})
+        self.assertEqual(result['category'], '스웨터')
         self.assertEqual(result['source'], 'local_model')
         gemini.assert_not_called()
 

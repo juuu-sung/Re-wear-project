@@ -1,4 +1,4 @@
-import { CLOTHING_CATEGORIES } from "../../../src/constants/clothingCategories";
+import { CLOTHING_CATEGORIES, mergeClothingCategories, ALL_CATEGORIES, filterClothesByCategory } from "../../../src/constants/clothingCategories";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -12,7 +12,7 @@ const RAW_BASE_URL = (process.env.EXPO_PUBLIC_BASE_URL ?? "").toString().trim();
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/+$/, "") : "";
 
 export default function ClosetMain() {
-  const [selected, setSelected] = useState("상의");
+  const [selected, setSelected] = useState(ALL_CATEGORIES);
   const [items, setItems] = useState([]);
   const [userName, setUserName] = useState("");
   const [categories, setCategories] = useState(CLOTHING_CATEGORIES);
@@ -33,7 +33,7 @@ export default function ClosetMain() {
         const saved = await AsyncStorage.getItem("categories");
         if (saved) {
           const list = JSON.parse(saved);
-          setCategories([...new Set([...CLOTHING_CATEGORIES, ...list])]);
+          setCategories((current) => mergeClothingCategories(current, list));
         }
       } catch {
         setUserName("사용자");
@@ -45,7 +45,7 @@ export default function ClosetMain() {
   }, []);
 
    
-  const loadClothes = async () => {
+  const loadClothes = useCallback(async () => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("access_token");
@@ -58,22 +58,20 @@ export default function ClosetMain() {
       const data = await res.json();
 
       if (res.ok) {
-        const filtered = data.filter((i) => i.category === selected);
-        setItems(filtered);
+        setItems(data);
+        setCategories((current) => mergeClothingCategories(current, data.map((item) => item.category)));
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => {
-    loadClothes();
-  }, [selected]);
+  const filteredItems = filterClothesByCategory(items, selected);
 
   useFocusEffect(
     useCallback(() => {
       loadClothes();
-    }, [selected])
+    }, [loadClothes])
   );
 
    
@@ -84,14 +82,14 @@ export default function ClosetMain() {
     } finally {
       setRefreshing(false);
     }
-  }, [selected]);
+  }, [loadClothes]);
 
    
   const addCategory = () => {
     Alert.prompt("새 옷장 추가", "추가할 옷장 이름을 입력하세요.", async (text) => {
       const name = text?.trim();
       if (!name) return;
-      if (categories.includes(name)) {
+      if (name === ALL_CATEGORIES || categories.includes(name)) {
         Alert.alert("중복된 이름", `"${name}"은 이미 존재합니다.`);
         return;
       }
@@ -104,7 +102,7 @@ export default function ClosetMain() {
 
    
   const handleCategoryLongPress = (name) => {
-    if (CLOTHING_CATEGORIES.includes(name)) {
+    if ([ALL_CATEGORIES, ...CLOTHING_CATEGORIES, "상의", "아우터"].includes(name)) {
       Alert.alert("기본 옷장은 수정/삭제할 수 없습니다.");
       return;
     }
@@ -119,7 +117,7 @@ export default function ClosetMain() {
             async (text) => {
               const newName = text?.trim();
               if (!newName) return;
-              if (categories.includes(newName)) {
+              if (newName === ALL_CATEGORIES || categories.includes(newName)) {
                 Alert.alert("중복된 이름", `"${newName}"은 이미 존재합니다.`);
                 return;
               }
@@ -141,7 +139,7 @@ export default function ClosetMain() {
           setCategories(updated);
           await AsyncStorage.setItem("categories", JSON.stringify(updated));
 
-          if (selected === name) setSelected("상의");
+          if (selected === name) setSelected(ALL_CATEGORIES);
           Alert.alert("삭제 완료", `"${name}" 옷장이 삭제되었습니다.`);
         },
       },
@@ -184,7 +182,7 @@ export default function ClosetMain() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabRow}
           >
-            {categories.map((cat) => (
+            {[ALL_CATEGORIES, ...categories].map((cat) => (
               <TouchableOpacity
                 key={cat}
                 style={[
@@ -207,14 +205,14 @@ export default function ClosetMain() {
         {/* 옷 리스트 */}
         {loading ? (
           <ActivityIndicator size="large" color="#18b36a" style={styles.listLoader} />
-        ) : items.length > 0 ? (
+        ) : filteredItems.length > 0 ? (
           <ScrollView
             contentContainerStyle={styles.grid}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const imgUri = item.image_path
                 ? `${BASE_URL}/uploads/clothes/${encodeURIComponent(item.image_path)}`
                 : null;
@@ -268,7 +266,7 @@ export default function ClosetMain() {
           >
             <View style={styles.emptyCard}>
             <Ionicons name="shirt-outline" size={26} color="#18b36a" />
-              <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
+              <Text style={styles.emptyText}>{selected === ALL_CATEGORIES ? "등록된 옷이 없습니다." : `등록된 ${selected}가 없습니다.`}</Text>
               <Text style={styles.emptySub}>
                 자주 입는 옷부터 천천히 추가해보세요.
               </Text>
