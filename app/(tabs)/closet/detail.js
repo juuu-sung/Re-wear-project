@@ -4,6 +4,7 @@ import { materialCandidates, materialLabel, predictionScore } from "../../../src
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -425,13 +426,7 @@ export default function ClothesDetail() {
       );
 
       if (imageUri && !imageUri.startsWith(BASE_URL)) {
-        const filename = imageUri.split("/").pop() || `photo_${Date.now()}.jpg`;
-        const ext = filename.includes(".") ? filename.split(".").pop() : "jpg";
-        formData.append("image", {
-          uri: imageUri,
-          name: filename,
-          type: `image/${ext === "jpg" ? "jpeg" : ext}`,
-        });
+        formData.append("image", new File(imageUri));
       }
 
       const res = await fetch(`${BASE_URL}/clothes/${id}`, {

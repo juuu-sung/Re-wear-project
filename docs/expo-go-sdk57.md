@@ -4,7 +4,7 @@
 
 - SDK 54 복구용 브랜치: `feature/sdk54-before-expo-upgrade` (`decbf8c0`)
 - SDK 57 작업 브랜치: `feature/expo-sdk57-upgrade`
-- `main`에는 이번 업그레이드를 병합하지 않았습니다.
+- 통합 브랜치: `feature/expo57-clothing-updates` (카테고리·소재 표시 개선 및 사진 전송 수정 포함).
 - `.local-backups/expo-sdk54-before-upgrade/`에 기존 환경파일, 패키지 잠금파일, 앱 설정과 iOS/Android 원본 설정을 저장했습니다. 이 폴더는 Git에서 제외됩니다. Pods와 빌드 산출물은 복사하지 않았습니다.
 - 기존 iOS/Android 폴더는 SDK 54 상태로 보존했습니다. Expo Go 실행에는 이 폴더의 재생성이 필요하지 않습니다.
 
@@ -30,6 +30,7 @@ npm run start:go -- --port 8082
 - SVG 변환기를 Expo 전용 진입점과 수정 버전으로 갱신하고, Babel 프리셋 및 직접 사용하는 Expo 패키지를 명시했습니다.
 - 시작 화면 설정을 `expo-splash-screen` 플러그인으로 옮겼습니다.
 - 중복 Safe Area 모듈을 없애도록 캘린더를 갱신하고, 사용하지 않는 `react-native-photo-view-ex`와 직접 설치하면 안 되는 `expo-modules-autolinking`을 제거했습니다.
+- Expo 57의 기본 fetch에 맞춰 옷 등록·수정, 라벨 스캔, 커뮤니티, 채팅의 첨부 데이터를 `expo-file-system`의 `File`로 변경했습니다. multipart 요청의 경계값은 fetch가 설정합니다.
 - 로컬 `.env`만 휴대폰에서 접근 가능한 Mac IP로 변경했습니다. 환경파일은 커밋하지 않습니다.
 
 네이티브 앱을 다시 빌드하려면 SDK 57에 맞는 네이티브 프로젝트 갱신과 Xcode가 별도로 필요합니다. 현재 Mac의 Xcode는 26.1.1이며 SDK 56 이후 공식 최소 요구사항은 26.4입니다. 이번 작업의 실행 대상은 Expo Go입니다.
@@ -59,3 +60,11 @@ SDK 54는 현재 휴대폰의 SDK 57용 Expo Go와 호환되지 않으므로, �
 - 새 동영상 컴포넌트, 변경한 탭 컴포넌트·갤러리 훅·Metro 설정은 린트 오류가 없습니다. 홈·캘린더·채팅 화면에서는 새 React Hooks 린트 규칙의 오류 10개가 남습니다. SDK 54 복구 커밋의 동일 파일을 새 린터로 검사해 동일한 오류가 있음을 확인했습니다.
 - 추가 웹 번들 검사는 기존 `react-native-image-viewing`의 웹 구현 부재로 실패했습니다. 웹 실행은 이번 Expo Go 검증 범위에 포함하지 않습니다.
 - 앱 폴더 안의 기존 데이터 파일 6개는 Expo Router에서 기본 화면 export가 없다는 경고를 냅니다. 앱 시작은 확인했으나 해당 파일 구조 정리는 별도 작업입니다.
+
+## 병합 전 추가 검증 (2026-09-10)
+
+- 백엔드 전체 단위 테스트 26건 통과 (`cd backend && venv/bin/python -m unittest discover -s tests -v`).
+- `node scripts/test-multipart-upload.cjs`: 설치된 React Native FormData와 Expo 변환기로 기존 오류를 재현하고, 수정된 화면 코드의 업로드 8건에서 한글 필드·파일명·MIME·바이너리 데이터 보존을 확인했습니다. 기기 파일 읽기는 대역을 사용하므로 실제 기기 업로드 완료를 보장하는 테스트는 아닙니다.
+- 사진 전송 수정 후 iOS·Android 번들 생성 통과.
+- 수정한 업로드 화면 5개의 린트 결과는 수정 전과 동일합니다. 옷 등록 화면은 오류·경고가 없고, 나머지 화면의 기존 React Hooks 오류는 이번 수정으로 증가하지 않았습니다.
+- 실제 휴대폰의 등록 완료 및 채팅 영상 재생은 별도 확인이 필요합니다. SDK 57에 맞는 네이티브 폴더 재생성과 네이티브 빌드 검증은 포함하지 않습니다.
