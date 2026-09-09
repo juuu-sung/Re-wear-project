@@ -19,8 +19,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 #  4. DB URL 환경변수 덮어쓰기 (.env 사용 시)
-if settings.DATABASE_URL:
-    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Pass the URL directly to SQLAlchemy to avoid percent interpolation of encoded passwords.
 
 #  5. Alembic이 참고할 metadata
 target_metadata = Base.metadata
@@ -28,7 +27,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,

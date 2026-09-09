@@ -22,10 +22,8 @@ export default function LoginScreen() {
      
     const handleKakaoLogin = async () => {
         try {
-            console.log("카카오 로그인 시도...");
              
             const kakaoToken = await login();
-            console.log(" 카카오 임시 팔찌 확보:", kakaoToken.accessToken);
 
              
             const res = await fetch(`${BASE_URL}/auth/kakao`, {
@@ -37,11 +35,9 @@ export default function LoginScreen() {
             const body = await res.json();
 
             if (!res.ok) {
-                console.error("❌ VIP 팔찌 교환 실패 (백엔드 오류):", body);
                 throw new Error(body.detail || "서버에서 토큰 교환에 실패했습니다.");
             }
 
-            console.log(" 진짜 VIP 팔찌(JWT) 확보:", body.access_token);
 
              
             await AsyncStorage.setItem('access_token', body.access_token);
@@ -52,7 +48,6 @@ export default function LoginScreen() {
             router.replace("/home");  
 
         } catch (error) {
-            console.error("❌ 전체 로그인 과정 실패:", error);
              
             if (error.message.includes('cancelled')) {
                 return;
@@ -71,14 +66,12 @@ export default function LoginScreen() {
      
     // const handleGoogleLogin = async () => {
     //     try {
-    //         console.log("구글 로그인 시도...");
     //
     //         await GoogleSignin.hasPlayServices();
     //
     //         const userInfo = await GoogleSignin.signIn();
     //         const idToken = userInfo.data?.idToken;
     //
-    //         console.log(" 구글 ID 토큰 확보:", idToken);
     //
     //         if (!idToken) {
     //             Alert.alert("오류", "구글 토큰을 가져오지 못했습니다.");
@@ -102,7 +95,6 @@ export default function LoginScreen() {
     //         }
     //
     //     } catch (error) {
-    //         console.error("구글 로그인 에러:", error);
     //     }
     // };
      
@@ -114,7 +106,6 @@ export default function LoginScreen() {
 
   try {
     setLoading(true);
-    console.log("📡 로그인 요청:", `${BASE_URL}/auth/login`);
 
     const res = await fetch(`${BASE_URL}/auth/login`, {
       method: "POST",
@@ -128,7 +119,6 @@ export default function LoginScreen() {
     const ct = res.headers.get("content-type") || "";
     const body = ct.includes("application/json") ? await res.json() : await res.text();
 
-    console.log("📩 서버 응답:", body);
 
     if (!res.ok) {
       let msg = "로그인에 실패했습니다.";
@@ -141,42 +131,32 @@ export default function LoginScreen() {
      
     if (body?.access_token) {
       await AsyncStorage.setItem("access_token", body.access_token);
-      console.log(" 토큰 저장 완료:", body.access_token);
     } else {
-      console.warn("⚠️ access_token 없음:", body);
     }
 
      
     if (body?.user?.id) {
       await AsyncStorage.setItem("user_id", String(body.user.id));
-      console.log("💾 저장된 user_id (user.id):", body.user.id);
     } else if (body?.id) {
       await AsyncStorage.setItem("user_id", String(body.id));
-      console.log("💾 저장된 user_id (id):", body.id);
     } else if (body?.user_id) {
       await AsyncStorage.setItem("user_id", String(body.user_id));
-      console.log("💾 저장된 user_id (user_id):", body.user_id);
     } else {
-      console.warn("⚠️ 로그인 응답에 user_id 없음:", body);
     }
 
      
     if (body?.username) {
       await AsyncStorage.setItem("username", body.username);
-      console.log("💾 저장된 username:", body.username);
     }
 
      
-    const savedId = await AsyncStorage.getItem("user_id");
-    console.log("🧠 AsyncStorage에 저장된 user_id:", savedId);
 
      
     Alert.alert("로그인 성공", "홈 화면으로 이동합니다.", [
       { text: "확인", onPress: () => router.replace("/home") },
     ]);
 
-  } catch (err) {
-    console.error("❌ 로그인 네트워크 오류:", err);
+  } catch (_err) {
     Alert.alert("네트워크 오류", "서버와 연결할 수 없습니다.");
   } finally {
     setLoading(false);

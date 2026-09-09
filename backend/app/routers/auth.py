@@ -1,3 +1,4 @@
+from app.core.config import settings
 # backend/app/routers/auth.py
 
 import httpx
@@ -33,7 +34,7 @@ pwd_context = CryptContext(
     pbkdf2_sha256__default_rounds=390000,
 )
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret")
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 3  # 3시간
 

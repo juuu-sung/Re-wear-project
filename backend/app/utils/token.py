@@ -1,12 +1,12 @@
+from app.core.config import settings
 from jose import jwt, JWTError
 from fastapi import HTTPException, Depends
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.user import User
-import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret")
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
 def create_access_token(data: dict, expires_minutes: int = 120):
