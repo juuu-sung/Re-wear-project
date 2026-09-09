@@ -70,3 +70,8 @@ frontend/.env
 
 # Local rollback backups (environment and native settings)
 .local-backups/
+
+# Private local media and model weights (obtain separately with permission)
+/backend/uploads/
+*.pt
+!backend/.env.example

@@ -1,4 +1,4 @@
-
 venv/
 .venv/
-backend/uploads/
+/uploads/
+*.pt
