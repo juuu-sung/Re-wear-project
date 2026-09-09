@@ -1,9 +1,10 @@
-import { CLOTHING_CATEGORIES } from "../../../src/constants/clothingCategories";
+import { CLOTHING_CATEGORIES, mergeClothingCategories } from "../../../src/constants/clothingCategories";
  
  
  
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -46,20 +47,12 @@ export default function AddClothesScreen() {
       const saved = await AsyncStorage.getItem("categories");
       if (saved) {
         const list = JSON.parse(saved);
-        setCategories([...new Set([...CLOTHING_CATEGORIES, ...list])]);
+        setCategories((current) => mergeClothingCategories(current, list));
       }
     })();
   }, []);
 
    
-  const resolveMime = (extRaw) => {
-    const ext = (extRaw || "").toLowerCase();
-    if (["jpg", "jpeg"].includes(ext)) return "image/jpeg";
-    if (ext === "png") return "image/png";
-    if (ext === "webp") return "image/webp";
-    if (["heic", "heif"].includes(ext)) return "image/jpeg";
-    return "image/jpeg";
-  };
 
    
    
@@ -186,14 +179,10 @@ export default function AddClothesScreen() {
       setLoading(true);
 
       const token = await AsyncStorage.getItem("access_token");
-      const filename = image.split("/").pop() || `photo_${Date.now()}.jpg`;
-      const ext = filename.includes(".") ? filename.split(".").pop() : "jpg";
-      const mime = resolveMime(ext);
-
       const formData = new FormData();
       formData.append("name", name);
       formData.append("category", category);
-      formData.append("image", { uri: image, name: filename, type: mime });
+      formData.append("image", new File(image));
 
       const res = await fetch(`${BASE_URL}/clothes/add`, {
         method: "POST",

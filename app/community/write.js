@@ -3,6 +3,7 @@
 // ===========================================
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { File } from "expo-file-system";
 import { Image as ExpoImage } from "expo-image";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -169,14 +170,8 @@ export default function WritePost() {
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
       );
 
-      const file = {
-        uri: compressed.uri,
-        type: "image/jpeg",
-        name: compressed.uri.split("/").pop(),
-      };
-
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", new File(compressed.uri));
 
       await fetch(`${BASE_URL}/v1/community/posts/${postId}/images`, {
         method: "POST",

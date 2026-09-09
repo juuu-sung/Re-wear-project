@@ -1,5 +1,6 @@
  import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImageManipulator from "expo-image-manipulator";
+import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -96,17 +97,12 @@ export default function ScanScreen() {
 
        
       const formData = new FormData();
-      formData.append("file", {
-        uri: manipResult.uri,
-        name: `scan_${Date.now()}.jpg`,
-        type: "image/jpeg",
-      });
+      formData.append("file", new File(manipResult.uri));
 
        
       const response = await fetch(BACKEND_API_URL, {
         method: "POST",
         body: formData,
-        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const result = await response.json();

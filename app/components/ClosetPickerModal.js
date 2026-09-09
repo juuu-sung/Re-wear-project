@@ -1,4 +1,4 @@
-import { CLOTHING_CATEGORIES } from "../../src/constants/clothingCategories";
+import { CLOTHING_CATEGORIES, ALL_CATEGORIES, mergeClothingCategories, filterClothesByCategory } from "../../src/constants/clothingCategories";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import {
@@ -21,7 +21,7 @@ export default function ClosetPickerModal({
   onSelectCloth,
 }) {
   const [categories, setCategories] = useState(CLOTHING_CATEGORIES);
-  const [selected, setSelected] = useState("상의");
+  const [selected, setSelected] = useState(ALL_CATEGORIES);
 
     
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function ClosetPickerModal({
         const saved = await AsyncStorage.getItem("categories");
         if (saved) {
           const list = JSON.parse(saved);
-          setCategories([...new Set([...CLOTHING_CATEGORIES, ...list])]);
+          setCategories(mergeClothingCategories(list));
         } else {
           setCategories(CLOTHING_CATEGORIES);
         }
@@ -38,7 +38,8 @@ export default function ClosetPickerModal({
     }
   }, [visible]);
 
-  const filtered = closetItems.filter((item) => item.category === selected);
+  const availableCategories = mergeClothingCategories(categories, closetItems.map((item) => item.category));
+  const filtered = filterClothesByCategory(closetItems, selected);
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -54,7 +55,7 @@ export default function ClosetPickerModal({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tabRow}
             >
-              {categories.map((cat) => (
+              {[ALL_CATEGORIES, ...availableCategories].map((cat) => (
                 <TouchableOpacity
                   key={cat}
                   style={[styles.tab, selected === cat && styles.activeTab]}
@@ -95,7 +96,7 @@ export default function ClosetPickerModal({
                 </TouchableOpacity>
               ))
             ) : (
-              <Text style={styles.emptyText}>등록된 {selected}가 없습니다.</Text>
+              <Text style={styles.emptyText}>{selected === ALL_CATEGORIES ? "등록된 옷이 없습니다." : `등록된 ${selected}가 없습니다.`}</Text>
             )}
           </ScrollView>
 

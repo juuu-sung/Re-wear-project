@@ -3,7 +3,8 @@
  
 
 import { Ionicons } from "@expo/vector-icons";
-import { Video } from "expo-av";
+import { File } from "expo-file-system";
+import ChatVideo from "../../src/components/ChatVideo";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
@@ -570,16 +571,11 @@ export default function ChatRoom() {
             uploadUri = compressed.uri;
           }
 
-          form.append("file", {
-            uri: uploadUri,
-            type: item.type,
-            name: item.fileName || "media",
-          });
+          form.append("file", new File(uploadUri));
 
           const r = await fetch(`${BASE_URL}/v1/chat/upload`, {
             method: "POST",
             body: form,
-            headers: { "Content-Type": "multipart/form-data" },
           });
 
           const uploaded = await r.json();
@@ -599,16 +595,11 @@ export default function ChatRoom() {
         payload.media_url = uploadedUrls[0];
 
         const thumbnailForm = new FormData();
-        thumbnailForm.append("file", {
-          uri: pendingMedia[0].thumbnail,
-          type: "image/jpeg",
-          name: "thumbnail.jpg",
-        });
+        thumbnailForm.append("file", new File(pendingMedia[0].thumbnail));
 
         const thumbRes = await fetch(`${BASE_URL}/v1/chat/upload`, {
           method: "POST",
           body: thumbnailForm,
-          headers: { "Content-Type": "multipart/form-data" },
         });
 
         const thumbData = await thumbRes.json();
@@ -886,12 +877,7 @@ export default function ChatRoom() {
             <Ionicons name="close" size={40} color="#fff" />
           </TouchableOpacity>
 
-          <Video
-            source={{ uri: previewVideoVisible }}
-            useNativeControls
-            resizeMode="contain"
-            style={{ width: "90%", height: "60%" }}
-          />
+          <ChatVideo uri={previewVideoVisible} />
         </View>
       )}
 
