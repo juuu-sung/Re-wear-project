@@ -1,0 +1,145 @@
+{
+  "checked_on": "2026-09-10",
+  "packages": {
+    "ionicons-5.5.4.tgz": {
+      "sha256": "2c8ee0aecc28fc6e382f72a05d11f16afd71c73213f354b16d2a51ef2ecebc20"
+    },
+    "expo-template-default-57.0.23.tgz": {
+      "sha256": "0918aeb6b931273e5b541f87e157f18175886b72a416d0b61d8ba685a788f185"
+    }
+  },
+  "verified_assets": [
+    {
+      "path": "assets/icons/add.svg",
+      "sha256": "343b84655eb8840e45bf4758e253786aff6d832f2f709e195f22aeed4a18eeb8",
+      "package_file": "package/dist/svg/add.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/calendar.svg",
+      "sha256": "3de46cc8b8822de1b9a686ecfa8ce3171fd26f2479d5a8f053ffbb1fb092ee3d",
+      "package_file": "package/dist/svg/calendar.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/camera-outline.svg",
+      "sha256": "8b440c67402125abdf6a922ec2b3ce6a34339b6d22856829732d10800578572c",
+      "package_file": "package/dist/svg/camera-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/checkbox-outline.svg",
+      "sha256": "b825524bcdb5d28b737e274cb9d4d2ae7ead593707cb0b63bede336ec6673ab7",
+      "package_file": "package/dist/svg/checkbox-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/chevron-forward.svg",
+      "sha256": "45b60431667cd0c03b123269a37a465b860903c0135780f58620b784b7dbc113",
+      "package_file": "package/dist/svg/chevron-forward.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/cut-outline.svg",
+      "sha256": "40a4fa5f3cc91db583b54690b3204f5d5fb41c70a4013df24cbe867206bd9dd8",
+      "package_file": "package/dist/svg/cut-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/home.svg",
+      "sha256": "7e5070b2fac37e3d4cb4c9ad9beb73b3289b4d2e6ebe3fbad0f465fbbd63de76",
+      "package_file": "package/dist/svg/home.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/leaf-outline.svg",
+      "sha256": "42ab55322f26e2e80e96e155dca17209c1b930e88a11def9c3735ec2371cc76f",
+      "package_file": "package/dist/svg/leaf-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/pencil.svg",
+      "sha256": "35eaeb0fa093762bb23200e48446be3d7f6ba8f3e3c2778ee85e1a1d3a18ca04",
+      "package_file": "package/dist/svg/pencil.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/person-circle-outline.svg",
+      "sha256": "84b767f8312b0f3fd92dbc72ae051e58b44f817f2887141fd43e343cc57983a1",
+      "package_file": "package/dist/svg/person-circle-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/shirt.svg",
+      "sha256": "9e075dc99baadc962af14527e325b31b4fe7147f088196c17bf345e9cc0372cd",
+      "package_file": "package/dist/svg/shirt.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/star-outline.svg",
+      "sha256": "e9fe0005f0474951df3c0ce9a3a7dd6e1b5c9ff99b56af6790dd4e533ccac850",
+      "package_file": "package/dist/svg/star-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/star.svg",
+      "sha256": "45c08fafecb4c995eb86c5059b930e3bdcde7db2f4e9a43892060a1f3fec8aec",
+      "package_file": "package/dist/svg/star.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/sync-circle-gray.svg",
+      "sha256": "c11d2f389bc6d3b99ab098e3ec8436b473665e42c1867ab016e36fb8a043c0e4",
+      "package_file": "package/dist/svg/sync-circle-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/icons/sync-circle-green.svg",
+      "sha256": "f931fe44fe14117ac1f76e710530c3c703dd4e4688b56c66a9bbddcbf06829b3",
+      "package_file": "package/dist/svg/sync-circle-outline.svg",
+      "verification": "SVG geometry and non-color attributes match official distribution"
+    },
+    {
+      "path": "assets/images/android-icon-background.png",
+      "sha256": "fb139c2dee362ebf2070e23b96da6fc0d43f8492de38b8af1fd7223e19b5861d",
+      "package_file": "package/assets/images/android-icon-background.png",
+      "verification": "SHA-256 identical to official template"
+    },
+    {
+      "path": "assets/images/android-icon-foreground.png",
+      "sha256": "9e3d0315a33c6799de601dd34cd8bf8cc3a8d16f3bf75592baec2ceb7240b391",
+      "package_file": "package/assets/images/android-icon-foreground.png",
+      "verification": "SHA-256 identical to official template"
+    },
+    {
+      "path": "assets/images/android-icon-monochrome.png",
+      "sha256": "6371fc2c12e33ad2215a86c281db3d682a81bebe7c957a842c13b8bf00cceb83",
+      "package_file": "package/assets/images/android-icon-monochrome.png",
+      "verification": "SHA-256 identical to official template"
+    },
+    {
+      "path": "assets/images/favicon.png",
+      "sha256": "a4e030697a7571b3e95d31860e4da55d2f98e5e861e2b55e414f45a8556828ba",
+      "package_file": "package/assets/images/favicon.png",
+      "verification": "SHA-256 identical to official template"
+    },
+    {
+      "path": "assets/images/react-logo.png",
+      "sha256": "224b7636b15e672801579b5b418077cbc2ca42f0146389062364356b0ecb5c5c",
+      "package_file": "package/assets/images/react-logo.png",
+      "verification": "SHA-256 identical to official template"
+    },
+    {
+      "path": "assets/images/react-logo@2x.png",
+      "sha256": "fa600be9ad2f869c7a8dbaffc78bb15af741123e1319c948f0be51753a153cde",
+      "package_file": "package/assets/images/react-logo@2x.png",
+      "verification": "SHA-256 identical to official template"
+    },
+    {
+      "path": "assets/images/react-logo@3x.png",
+      "sha256": "cd84e02a5d542a3e71b7fa10a685c1b9fb51db4aff92aca6c0da6461ce17be16",
+      "package_file": "package/assets/images/react-logo@3x.png",
+      "verification": "SHA-256 identical to official template"
+    }
+  ]
+}

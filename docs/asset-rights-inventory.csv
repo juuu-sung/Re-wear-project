@@ -1,131 +1,131 @@
-path,source_url,license,redistribution_confirmed
-assets/adaptive-icon.png,,,pending
-assets/careLabels/bleach/bleach_1.jpg,,,pending
-assets/careLabels/bleach/bleach_10.jpg,,,pending
-assets/careLabels/bleach/bleach_11.jpg,,,pending
-assets/careLabels/bleach/bleach_2.jpg,,,pending
-assets/careLabels/bleach/bleach_3.jpg,,,pending
-assets/careLabels/bleach/bleach_4.jpg,,,pending
-assets/careLabels/bleach/bleach_5.jpg,,,pending
-assets/careLabels/bleach/bleach_6.jpg,,,pending
-assets/careLabels/bleach/bleach_7.jpg,,,pending
-assets/careLabels/bleach/bleach_8.jpg,,,pending
-assets/careLabels/bleach/bleach_9.jpg,,,pending
-assets/careLabels/wash/bleach_any.png,,,pending
-assets/careLabels/wash/bleach_chlorine_only.png,,,pending
-assets/careLabels/wash/bleach_no.png,,,pending
-assets/careLabels/wash/bleach_no_chlorine_allowed.png,,,pending
-assets/careLabels/wash/bleach_no_oxygen_allowed.png,,,pending
-assets/careLabels/wash/bleach_oxygen_only.png,,,pending
-assets/careLabels/wash/dry_clean_f.png,,,pending
-assets/careLabels/wash/dry_clean_f_weak.png,,,pending
-assets/careLabels/wash/dry_clean_methane.png,,,pending
-assets/careLabels/wash/dry_clean_methane_weak.png,,,pending
-assets/careLabels/wash/dry_clean_no.png,,,pending
-assets/careLabels/wash/dry_clean_p.png,,,pending
-assets/careLabels/wash/dry_clean_p_weak.png,,,pending
-assets/careLabels/wash/dry_clean_silicon.png,,,pending
-assets/careLabels/wash/dry_clean_silicon_weak.png,,,pending
-assets/careLabels/wash/dry_clean_specialist.png,,,pending
-assets/careLabels/wash/dry_drip_flat_shade.png,,,pending
-assets/careLabels/wash/dry_drip_flat_sun.png,,,pending
-assets/careLabels/wash/dry_drip_line_shade.png,,,pending
-assets/careLabels/wash/dry_drip_line_sun.png,,,pending
-assets/careLabels/wash/dry_flat_shade.png,,,pending
-assets/careLabels/wash/dry_flat_sun.png,,,pending
-assets/careLabels/wash/dry_line_shade.png,,,pending
-assets/careLabels/wash/dry_line_sun.png,,,pending
-assets/careLabels/wash/fire_warning.png,,,pending
-assets/careLabels/wash/hand_wash_30.png,,,pending
-assets/careLabels/wash/hand_wash_30_very_weak.png,,,pending
-assets/careLabels/wash/hand_wash_40.png,,,pending
-assets/careLabels/wash/hand_wash_40_very_weak.png,,,pending
-assets/careLabels/wash/iron_high_210.png,,,pending
-assets/careLabels/wash/iron_high_210_cloth.png,,,pending
-assets/careLabels/wash/iron_low_120.png,,,pending
-assets/careLabels/wash/iron_low_120_cloth.png,,,pending
-assets/careLabels/wash/iron_medium_160.png,,,pending
-assets/careLabels/wash/iron_medium_160_cloth.png,,,pending
-assets/careLabels/wash/iron_no.png,,,pending
-assets/careLabels/wash/iron_no_steam.png,,,pending
-assets/careLabels/wash/tumble_dry_high_80.png,,,pending
-assets/careLabels/wash/tumble_dry_low_60.png,,,pending
-assets/careLabels/wash/tumble_dry_no.png,,,pending
-assets/careLabels/wash/water_wash_30.png,,,pending
-assets/careLabels/wash/water_wash_30_neutral.png,,,pending
-assets/careLabels/wash/water_wash_30_very_weak.png,,,pending
-assets/careLabels/wash/water_wash_30_weak.png,,,pending
-assets/careLabels/wash/water_wash_40.png,,,pending
-assets/careLabels/wash/water_wash_40_very_weak.png,,,pending
-assets/careLabels/wash/water_wash_40_weak.png,,,pending
-assets/careLabels/wash/water_wash_50.png,,,pending
-assets/careLabels/wash/water_wash_50_weak.png,,,pending
-assets/careLabels/wash/water_wash_60.png,,,pending
-assets/careLabels/wash/water_wash_60_weak.png,,,pending
-assets/careLabels/wash/water_wash_70.png,,,pending
-assets/careLabels/wash/water_wash_95.png,,,pending
-assets/careLabels/wash/water_wash_no.png,,,pending
-assets/careLabels/wash/wet_clean_no.png,,,pending
-assets/careLabels/wash/wet_clean_w.png,,,pending
-assets/careLabels/wash/wet_clean_w_very_weak.png,,,pending
-assets/careLabels/wash/wet_clean_w_weak.png,,,pending
-assets/careLabels/wash/wring_no.png,,,pending
-assets/careLabels/wash/wring_weak.png,,,pending
-assets/data/seoul_guro_bin.csv,,,pending
-assets/data/seoul_yangchun_bin.csv,,,pending
-assets/data/slowfashion_brands.json,,,pending
-assets/favicon.png,,,pending
-assets/game/banana.json,,,pending
-assets/game/bee.json,,,pending
-assets/game/christmas-tree.json,,,pending
-assets/game/cozy_garden.png,,,pending
-assets/game/grass.png,,,pending
-assets/game/home.png,,,pending
-assets/game/jump_pear.json,,,pending
-assets/game/peace.json,,,pending
-assets/game/peas.json,,,pending
-assets/game/rose.json,,,pending
-assets/game/tornado.json,,,pending
-assets/game/tree.png,,,pending
-assets/game/twinkle.json,,,pending
-assets/game/walk_avocado.json,,,pending
-assets/game/walk_bee.json,,,pending
-assets/game/walk_bird.json,,,pending
-assets/game/walk_broccoli.json,,,pending
-assets/game/walk_chicken.json,,,pending
-assets/game/walk_dog.json,,,pending
-assets/game/walk_dog2.json,,,pending
-assets/game/walk_fox.json,,,pending
-assets/game/walk_horse.json,,,pending
-assets/game/walk_monkey.json,,,pending
-assets/game/walk_mouse.json,,,pending
-assets/game/walk_orange.json,,,pending
-assets/game/walk_rabbit.json,,,pending
-assets/game/walk_strawberry.json,,,pending
-assets/icon.png,,,pending
-assets/icons/add.svg,,,pending
-assets/icons/calendar.svg,,,pending
-assets/icons/camera-outline.svg,,,pending
-assets/icons/checkbox-outline.svg,,,pending
-assets/icons/chevron-forward.svg,,,pending
-assets/icons/cut-outline.svg,,,pending
-assets/icons/home.svg,,,pending
-assets/icons/leaf-outline.svg,,,pending
-assets/icons/pencil.svg,,,pending
-assets/icons/person-circle-outline.svg,,,pending
-assets/icons/shirt.svg,,,pending
-assets/icons/star-outline.svg,,,pending
-assets/icons/star.svg,,,pending
-assets/icons/sync-circle-gray.svg,,,pending
-assets/icons/sync-circle-green.svg,,,pending
-assets/images/android-icon-background.png,,,pending
-assets/images/android-icon-foreground.png,,,pending
-assets/images/android-icon-monochrome.png,,,pending
-assets/images/favicon.png,,,pending
-assets/images/icon.png,,,pending
-assets/images/partial-react-logo.png,,,pending
-assets/images/react-logo.png,,,pending
-assets/images/react-logo@2x.png,,,pending
-assets/images/react-logo@3x.png,,,pending
-assets/images/splash-icon.png,,,pending
-assets/splash.png,,,pending
+path,source_url,license,redistribution_confirmed,verification_notes
+assets/adaptive-icon.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_1.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_10.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_11.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_2.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_3.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_4.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_5.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_6.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_7.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_8.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/bleach/bleach_9.jpg,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/bleach_any.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/bleach_chlorine_only.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/bleach_no.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/bleach_no_chlorine_allowed.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/bleach_no_oxygen_allowed.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/bleach_oxygen_only.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_f.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_f_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_methane.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_methane_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_no.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_p.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_p_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_silicon.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_silicon_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_clean_specialist.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_drip_flat_shade.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_drip_flat_sun.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_drip_line_shade.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_drip_line_sun.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_flat_shade.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_flat_sun.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_line_shade.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/dry_line_sun.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/fire_warning.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/hand_wash_30.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/hand_wash_30_very_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/hand_wash_40.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/hand_wash_40_very_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_high_210.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_high_210_cloth.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_low_120.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_low_120_cloth.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_medium_160.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_medium_160_cloth.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_no.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/iron_no_steam.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/tumble_dry_high_80.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/tumble_dry_low_60.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/tumble_dry_no.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_30.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_30_neutral.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_30_very_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_30_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_40.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_40_very_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_40_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_50.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_50_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_60.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_60_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_70.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_95.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/water_wash_no.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/wet_clean_no.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/wet_clean_w.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/wet_clean_w_very_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/wet_clean_w_weak.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/wring_no.png,,,pending,Original source and redistribution evidence still required
+assets/careLabels/wash/wring_weak.png,,,pending,Original source and redistribution evidence still required
+assets/data/seoul_guro_bin.csv,https://data.seoul.go.kr/dataList/OA-21855/F/1/datasetView.do,No restrictions stated for candidate address source; added coordinates unverified,pending,2023-03-31 matches official filename; 657 local rows; original CSV equality and coordinate provenance pending
+assets/data/seoul_yangchun_bin.csv,https://data.seoul.go.kr/dataList/OA-22070/F/1/datasetView.do,KOGL Type 1 for candidate address source; added coordinates unverified,pending,2023-04-20 matches official filename; 731 local rows; original CSV equality and coordinate provenance pending
+assets/data/slowfashion_brands.json,,,pending,Original source and redistribution evidence still required
+assets/favicon.png,,,pending,Original source and redistribution evidence still required
+assets/game/banana.json,,,pending,Original source and redistribution evidence still required
+assets/game/bee.json,,,pending,Original source and redistribution evidence still required
+assets/game/christmas-tree.json,,,pending,Original source and redistribution evidence still required
+assets/game/cozy_garden.png,,,pending,Original source and redistribution evidence still required
+assets/game/grass.png,,,pending,Original source and redistribution evidence still required
+assets/game/home.png,,,pending,Original source and redistribution evidence still required
+assets/game/jump_pear.json,,,pending,Original source and redistribution evidence still required
+assets/game/peace.json,,,pending,Original source and redistribution evidence still required
+assets/game/peas.json,,,pending,Embedded metadata: author Itay Alon; description Peas Playground; no verified download URL or license
+assets/game/rose.json,,,pending,Original source and redistribution evidence still required
+assets/game/tornado.json,,,pending,Original source and redistribution evidence still required
+assets/game/tree.png,,,pending,Original source and redistribution evidence still required
+assets/game/twinkle.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_avocado.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_bee.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_bird.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_broccoli.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_chicken.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_dog.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_dog2.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_fox.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_horse.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_monkey.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_mouse.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_orange.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_rabbit.json,,,pending,Original source and redistribution evidence still required
+assets/game/walk_strawberry.json,,,pending,Original source and redistribution evidence still required
+assets/icon.png,,,pending,Original source and redistribution evidence still required
+assets/icons/add.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/add.svg
+assets/icons/calendar.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/calendar.svg
+assets/icons/camera-outline.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/camera-outline.svg
+assets/icons/checkbox-outline.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/checkbox-outline.svg
+assets/icons/chevron-forward.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/chevron-forward.svg
+assets/icons/cut-outline.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/cut-outline.svg
+assets/icons/home.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/home.svg
+assets/icons/leaf-outline.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/leaf-outline.svg
+assets/icons/pencil.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/pencil.svg
+assets/icons/person-circle-outline.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/person-circle-outline.svg
+assets/icons/shirt.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/shirt.svg
+assets/icons/star-outline.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/star-outline.svg
+assets/icons/star.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/star.svg
+assets/icons/sync-circle-gray.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/sync-circle-outline.svg
+assets/icons/sync-circle-green.svg,https://www.npmjs.com/package/ionicons/v/5.5.4,MIT,yes_with_license_notice,SVG geometry and non-color attributes match official distribution; package/dist/svg/sync-circle-outline.svg
+assets/images/android-icon-background.png,https://www.npmjs.com/package/expo-template-default/v/57.0.23,MIT (bundled LICENSE; package metadata says 0BSD),yes_with_license_notice,SHA-256 identical to official template; package/assets/images/android-icon-background.png
+assets/images/android-icon-foreground.png,https://www.npmjs.com/package/expo-template-default/v/57.0.23,MIT (bundled LICENSE; package metadata says 0BSD),yes_with_license_notice,SHA-256 identical to official template; package/assets/images/android-icon-foreground.png
+assets/images/android-icon-monochrome.png,https://www.npmjs.com/package/expo-template-default/v/57.0.23,MIT (bundled LICENSE; package metadata says 0BSD),yes_with_license_notice,SHA-256 identical to official template; package/assets/images/android-icon-monochrome.png
+assets/images/favicon.png,https://www.npmjs.com/package/expo-template-default/v/57.0.23,MIT (bundled LICENSE; package metadata says 0BSD),yes_with_license_notice,SHA-256 identical to official template; package/assets/images/favicon.png
+assets/images/icon.png,,,pending,Original source and redistribution evidence still required
+assets/images/partial-react-logo.png,,,pending,Original source and redistribution evidence still required
+assets/images/react-logo.png,https://www.npmjs.com/package/expo-template-default/v/57.0.23,MIT (bundled LICENSE; package metadata says 0BSD),yes_with_license_notice,SHA-256 identical to official template; package/assets/images/react-logo.png
+assets/images/react-logo@2x.png,https://www.npmjs.com/package/expo-template-default/v/57.0.23,MIT (bundled LICENSE; package metadata says 0BSD),yes_with_license_notice,SHA-256 identical to official template; package/assets/images/react-logo@2x.png
+assets/images/react-logo@3x.png,https://www.npmjs.com/package/expo-template-default/v/57.0.23,MIT (bundled LICENSE; package metadata says 0BSD),yes_with_license_notice,SHA-256 identical to official template; package/assets/images/react-logo@3x.png
+assets/images/splash-icon.png,,,pending,Original source and redistribution evidence still required
+assets/splash.png,,,pending,Original source and redistribution evidence still required
