@@ -1,5 +1,9 @@
 <div align="center">
 
+<img src="docs/images/rewear-banner.png" alt="Re:wear — 세탁 라벨 인식과 착용·세탁 기록으로 옷을 관리하고 리폼·업사이클링까지 연결하는 플랫폼. 옷장과 캘린더 앱 화면." width="100%" />
+
+<br />
+
 # Re:wear
 
 **내 옷을 이해하고, 오래 입고, 다시 순환시키다.**
